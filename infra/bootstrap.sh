@@ -357,26 +357,29 @@ configure_pam_dms() {
 
 	local pam_file="/etc/pam.d/dankshell"
 
-	# Check if already exists and has fingerprint support
+	# Check if already exists with correct order (pam_unix before pam_fprintd)
 	if [[ -f "$pam_file" ]] && grep -q "pam_fprintd.so" "$pam_file" 2>/dev/null; then
-		log_info "PAM config for DMS lock screen already configured: $pam_file"
-		return 0
+		if awk '/^auth/ {print; exit}' "$pam_file" | grep -q "pam_unix.so"; then
+			log_info "PAM config for DMS lock screen already configured: $pam_file"
+			return 0
+		fi
 	fi
 
 	log_info "Creating $pam_file for DMS lock screen with fingerprint support..."
 
 	# Create PAM config for DMS lock screen
-	# - pam_fprintd.so: allows fingerprint unlock (sufficient = succeeds without password)
-	# - pam_unix.so: fallback to password if fingerprint fails or not enrolled
+	# - pam_unix.so: password auth (sufficient = succeeds without checking more)
+	# - pam_fprintd.so: fingerprint fallback if password fails
 	# - pam_deny.so: deny if all auth methods fail
-	# - pam_permit.so: allow account/session (user already logged in)
+	# Note: pam_unix must come first - if fprintd runs first it blocks waiting
+	# for fingerprint and the password input has nowhere to go
 	sudo tee "$pam_file" >/dev/null <<'EOF'
 # PAM configuration for DankMaterialShell lock screen
-# Supports fingerprint unlock via fprintd
+# Supports password and fingerprint unlock
 
-# Auth: try fingerprint first, fall back to password
+# Auth: password first, then fingerprint fallback
+auth        sufficient    pam_unix.so nullok
 auth        sufficient    pam_fprintd.so
-auth        required      pam_unix.so try_first_pass nullok
 auth        required      pam_deny.so
 
 # Account: use system defaults
