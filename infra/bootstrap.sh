@@ -14,12 +14,24 @@ SCRIPT_VERSION="2026-02-17-1"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
+
+# Current phase tracking for error messages
+CURRENT_PHASE="initialization"
 
 log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
 log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
 log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
 log_fatal() { printf "${RED}[FATAL]${NC} %s\n" "$1" >&2; }
+
+# Helper to exit with a clear error message
+die() {
+    log_fatal "$1"
+    log_fatal "Phase: ${CURRENT_PHASE}"
+    log_fatal "Bootstrap did NOT complete. Fix the error above and re-run."
+    exit 1
+}
 
 array_contains() {
     local needle="$1"
@@ -37,9 +49,20 @@ on_error() {
     local line="$1"
     local cmd="$2"
     local code="$3"
-    log_fatal "Bootstrap failed (exit ${code})"
-    log_fatal "At line ${line}: ${cmd}"
-    log_fatal "Exiting. Fix the error above and re-run: ./infra/bootstrap.sh"
+    echo "" >&2
+    printf "${RED}${BOLD}╔══════════════════════════════════════════════════════════════════╗${NC}\n" >&2
+    printf "${RED}${BOLD}║                      BOOTSTRAP FAILED                            ║${NC}\n" >&2
+    printf "${RED}${BOLD}╚══════════════════════════════════════════════════════════════════╝${NC}\n" >&2
+    echo "" >&2
+    log_fatal "Phase: ${CURRENT_PHASE}"
+    log_fatal "Exit code: ${code}"
+    log_fatal "Line ${line}: ${cmd}"
+    echo "" >&2
+    log_fatal "Bootstrap did NOT complete successfully."
+    log_fatal "Not all system configuration was applied."
+    log_fatal ""
+    log_fatal "To retry: ./infra/bootstrap.sh"
+    log_fatal "To debug: Run the failed command manually and check its output"
 }
 
 on_exit() {
@@ -63,14 +86,12 @@ check_prerequisites() {
 
     # Check if running on Arch Linux
     if [[ ! -f /etc/arch-release ]]; then
-        log_error "This script must run on Arch Linux"
-        exit 1
+        die "This script must run on Arch Linux (no /etc/arch-release found)"
     fi
 
     # Check network connectivity
     if ! ping -c 1 -W 5 archlinux.org >/dev/null 2>&1; then
-        log_error "No network connectivity to archlinux.org"
-        exit 1
+        die "No network connectivity to archlinux.org - check your internet connection"
     fi
 
     # Check sudo access
@@ -83,8 +104,7 @@ check_prerequisites() {
     local available_gb
     available_gb=$(df -BG / | awk 'NR==2 {print $4}' | tr -d 'G')
     if [[ "$available_gb" -lt 5 ]]; then
-        log_error "Insufficient disk space. Need at least 5GB free, found ${available_gb}GB"
-        exit 1
+        die "Insufficient disk space. Need at least 5GB free, found ${available_gb}GB"
     fi
 
     log_info "Pre-flight checks passed"
@@ -409,6 +429,127 @@ EOF
 # SNAPPER / BTRFS CONFIGURATION
 # =============================================================================
 
+# Print detailed guidance for manual Btrfs setup
+print_btrfs_setup_guidance() {
+    log_warn ""
+    log_warn "═══════════════════════════════════════════════════════════════════"
+    log_warn "MANUAL BTRFS SETUP REQUIRED"
+    log_warn "═══════════════════════════════════════════════════════════════════"
+    log_warn ""
+    log_warn "Expected subvolume layout:"
+    log_warn "  @           → /           (root)"
+    log_warn "  @home       → /home       (user data)"
+    log_warn "  @snapshots  → /.snapshots (snapper snapshots)"
+    log_warn "  @var_log    → /var/log    (logs, optional)"
+    log_warn ""
+    log_warn "To create the @snapshots subvolume manually:"
+    log_warn ""
+    log_warn "  1. Find your Btrfs device:"
+    log_warn "     findmnt -n -o SOURCE /"
+    log_warn ""
+    log_warn "  2. Mount the top-level subvolume:"
+    log_warn "     sudo mount -o subvolid=5 /dev/<device> /mnt"
+    log_warn ""
+    log_warn "  3. Create the @snapshots subvolume:"
+    log_warn "     sudo btrfs subvolume create /mnt/@snapshots"
+    log_warn ""
+    log_warn "  4. Unmount:"
+    log_warn "     sudo umount /mnt"
+    log_warn ""
+    log_warn "  5. Add to /etc/fstab (use same options as your @ subvolume):"
+    log_warn "     <device>  /.snapshots  btrfs  subvol=@snapshots,noatime,compress=zstd  0  0"
+    log_warn ""
+    log_warn "  6. Mount and re-run bootstrap:"
+    log_warn "     sudo mkdir -p /.snapshots"
+    log_warn "     sudo mount /.snapshots"
+    log_warn "     ./infra/bootstrap.sh"
+    log_warn ""
+    log_warn "═══════════════════════════════════════════════════════════════════"
+}
+
+# Get the Btrfs device for root filesystem
+get_btrfs_device() {
+    findmnt -n -o SOURCE / | sed 's/\[.*\]//'
+}
+
+# Get mount options from an existing Btrfs mount (for consistency)
+get_btrfs_mount_options() {
+    # Get options from root mount, remove subvol/subvolid specific ones
+    findmnt -n -o OPTIONS / | sed -E 's/,?subvol=[^,]*//g; s/,?subvolid=[^,]*//g; s/^,//; s/,$//'
+}
+
+# Check if @snapshots subvolume exists
+check_snapshots_subvolume_exists() {
+    local device="$1"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    
+    # Mount top-level subvolume to check
+    if ! sudo mount -o subvolid=5 "$device" "$tmpdir" 2>/dev/null; then
+        rm -rf "$tmpdir"
+        return 1
+    fi
+    
+    local exists=1
+    if [[ -d "$tmpdir/@snapshots" ]]; then
+        exists=0
+    fi
+    
+    sudo umount "$tmpdir"
+    rm -rf "$tmpdir"
+    return $exists
+}
+
+# Create @snapshots subvolume
+create_snapshots_subvolume() {
+    local device="$1"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    
+    log_info "Creating @snapshots subvolume..."
+    
+    if ! sudo mount -o subvolid=5 "$device" "$tmpdir"; then
+        log_error "Failed to mount top-level Btrfs subvolume"
+        rm -rf "$tmpdir"
+        return 1
+    fi
+    
+    if ! sudo btrfs subvolume create "$tmpdir/@snapshots"; then
+        log_error "Failed to create @snapshots subvolume"
+        sudo umount "$tmpdir"
+        rm -rf "$tmpdir"
+        return 1
+    fi
+    
+    sudo umount "$tmpdir"
+    rm -rf "$tmpdir"
+    
+    log_info "@snapshots subvolume created successfully"
+    return 0
+}
+
+# Add /.snapshots entry to fstab
+add_fstab_snapshots_entry() {
+    local device="$1"
+    local mount_options="$2"
+    
+    log_info "Adding /.snapshots entry to /etc/fstab..."
+    
+    # Build the fstab line with proper comma-separated options
+    local fstab_line="${device}  /.snapshots  btrfs  subvol=@snapshots,${mount_options}  0  0"
+    
+    # Backup fstab
+    sudo cp /etc/fstab "/etc/fstab.backup.$(date +%Y%m%d%H%M%S)"
+    
+    # Append the entry
+    echo "" | sudo tee -a /etc/fstab > /dev/null
+    echo "# Btrfs snapshots subvolume (added by archway bootstrap)" | sudo tee -a /etc/fstab > /dev/null
+    echo "$fstab_line" | sudo tee -a /etc/fstab > /dev/null
+    
+    log_info "Added to /etc/fstab: $fstab_line"
+    return 0
+}
+
 configure_snapper() {
     log_info "Checking for Btrfs snapshot configuration..."
 
@@ -427,21 +568,65 @@ configure_snapper() {
         return 0
     fi
 
+    local btrfs_device
+    btrfs_device=$(get_btrfs_device)
+    log_info "Btrfs device: $btrfs_device"
+
+    local mount_options
+    mount_options=$(get_btrfs_mount_options)
+    log_info "Mount options: $mount_options"
+
+    # Check if @snapshots subvolume exists, create if not
+    if ! check_snapshots_subvolume_exists "$btrfs_device"; then
+        log_warn "@snapshots subvolume does not exist"
+        
+        if ! create_snapshots_subvolume "$btrfs_device"; then
+            log_error "Failed to create @snapshots subvolume automatically"
+            print_btrfs_setup_guidance
+            return 0
+        fi
+    else
+        log_info "@snapshots subvolume exists"
+    fi
+
+    # Check if fstab has /.snapshots entry, add if not
+    if ! grep -Eq '^[^#].*[[:space:]]+/.snapshots[[:space:]]+' /etc/fstab 2>/dev/null; then
+        log_warn "/etc/fstab has no /.snapshots entry"
+        
+        if ! add_fstab_snapshots_entry "$btrfs_device" "$mount_options"; then
+            log_error "Failed to add /.snapshots to /etc/fstab automatically"
+            print_btrfs_setup_guidance
+            return 0
+        fi
+    else
+        log_info "/etc/fstab already has /.snapshots entry"
+    fi
+
+    # Ensure /.snapshots mount point exists and is mounted
     if ! findmnt -n /.snapshots >/dev/null 2>&1; then
-        log_warn "/.snapshots not mounted - ensure @snapshots subvolume exists"
-        log_warn "See docs for proper Btrfs subvolume layout"
-        return 0
+        log_info "Mounting /.snapshots..."
+        sudo mkdir -p /.snapshots
+        if ! sudo mount /.snapshots; then
+            log_error "Failed to mount /.snapshots"
+            print_btrfs_setup_guidance
+            return 0
+        fi
     fi
 
-    if ! sudo grep -Eq '^[^#].*[[:space:]]+/.snapshots[[:space:]]+' /etc/fstab 2>/dev/null; then
-        log_warn "/etc/fstab has no active /.snapshots entry"
-        return 0
-    fi
-
+    # Now configure snapper
     if sudo snapper -c root list >/dev/null 2>&1; then
         log_info "Snapper 'root' config already exists"
     else
         log_info "Creating snapper config for root..."
+        
+        # snapper create-config will create its own .snapshots subvolume
+        # We need to work around this by:
+        # 1. Backup fstab
+        # 2. Unmount our @snapshots
+        # 3. Let snapper create-config run
+        # 4. Restore fstab
+        # 5. Delete snapper's .snapshots subvolume
+        # 6. Remount our @snapshots
         
         local fstab_backup
         fstab_backup=$(mktemp)
@@ -458,13 +643,15 @@ configure_snapper() {
         sudo cp "$fstab_backup" /etc/fstab
         sudo rm -f "$fstab_backup"
 
+        # Delete the subvolume snapper created (we use our own @snapshots)
         if sudo btrfs subvolume show /.snapshots >/dev/null 2>&1; then
             sudo btrfs subvolume delete /.snapshots
         fi
 
         sudo mkdir -p /.snapshots
-        if ! sudo mount -a; then
-            log_warn "mount -a failed after snapper init; verify /etc/fstab"
+        if ! sudo mount /.snapshots; then
+            log_error "Failed to remount /.snapshots after snapper init"
+            log_warn "Run 'sudo mount -a' and re-run bootstrap"
             return 0
         fi
         
@@ -607,30 +794,56 @@ main() {
         fi
     fi
 
+    CURRENT_PHASE="pre-flight checks"
     check_prerequisites
+
+    CURRENT_PHASE="installing yay (AUR helper)"
     install_yay
+
+    CURRENT_PHASE="installing pacman packages"
     install_pacman_packages
+
+    CURRENT_PHASE="installing AUR packages"
     install_aur_packages
+
+    CURRENT_PHASE="enabling systemd services"
     enable_services
     
     # Configure system settings
+    CURRENT_PHASE="configuring PAM for gnome-keyring"
     configure_pam_keyring
+
+    CURRENT_PHASE="configuring PAM for fingerprint auth"
     configure_pam_fingerprint
+
+    CURRENT_PHASE="configuring PAM for DMS lock screen"
     configure_pam_dms
+
+    CURRENT_PHASE="configuring XDG portals"
     configure_portals
+
+    CURRENT_PHASE="configuring polkit"
     configure_polkit
+
+    CURRENT_PHASE="configuring SDDM autologin"
     configure_sddm_autologin
+
+    CURRENT_PHASE="configuring snapper (Btrfs snapshots)"
     configure_snapper
     
     # User-level setup (skip if running as root)
     if [[ $EUID -ne 0 ]]; then
+        CURRENT_PHASE="enabling user systemd services"
         enable_user_services
+
+        CURRENT_PHASE="setting default shell to zsh"
         set_default_shell
     else
         log_warn "Running as root - skipping user service setup and shell change"
         log_warn "Run as regular user to enable: pipewire, wireplumber, portal services"
     fi
 
+    CURRENT_PHASE="complete"
     log_info "Bootstrap complete!"
     log_info ""
     log_info "Next steps:"
