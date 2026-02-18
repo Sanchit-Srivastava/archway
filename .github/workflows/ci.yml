@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Install shfmt
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/mvdan/sh/master/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run shellcheck
+        run: shellcheck infra/*.sh
+
+      - name: Check shell formatting
+        run: shfmt -d infra/*.sh
+
+  validate-packages:
+    name: Validate Package Lists
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for duplicate packages
+        run: |
+          dup_pacman=$(grep -v '^#' infra/pkgs.pacman.txt | grep -v '^$' | sort | uniq -d)
+          dup_aur=$(grep -v '^#' infra/pkgs.aur.txt | grep -v '^$' | sort | uniq -d)
+          
+          if [[ -n "$dup_pacman" ]]; then
+            echo "Duplicate packages in pkgs.pacman.txt: $dup_pacman"
+            exit 1
+          fi
+          if [[ -n "$dup_aur" ]]; then
+            echo "Duplicate packages in pkgs.aur.txt: $dup_aur"
+            exit 1
+          fi
+          echo "No duplicate packages found"
+
+      - name: Check for overlapping packages
+        run: |
+          pacman_pkgs=$(grep -v '^#' infra/pkgs.pacman.txt | grep -v '^$' | sort)
+          aur_pkgs=$(grep -v '^#' infra/pkgs.aur.txt | grep -v '^$' | sort)
+          overlap=$(comm -12 <(echo "$pacman_pkgs") <(echo "$aur_pkgs"))
+          
+          if [[ -n "$overlap" ]]; then
+            echo "Packages in both pacman and AUR lists: $overlap"
+            exit 1
+          fi
+          echo "No overlapping packages"
+
+      - name: Verify pacman packages exist
+        run: |
+          packages=$(grep -v '^#' infra/pkgs.pacman.txt | grep -v '^$')
+          missing=""
+          
+          for pkg in $packages; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://archlinux.org/packages/search/json/?name=${pkg}")
+            if [[ "$response" != "200" ]]; then
+              missing="$missing $pkg"
+            fi
+          done
+          
+          if [[ -n "$missing" ]]; then
+            echo "Packages not found in official repos:$missing"
+            exit 1
+          fi
+          echo "All pacman packages verified"
+
+      - name: Verify AUR packages exist
+        run: |
+          packages=$(grep -v '^#' infra/pkgs.aur.txt | grep -v '^$')
+          missing=""
+          
+          for pkg in $packages; do
+            response=$(curl -s "https://aur.archlinux.org/rpc/?v=5&type=info&arg=${pkg}" | jq -r '.resultcount')
+            if [[ "$response" == "0" ]]; then
+              missing="$missing $pkg"
+            fi
+          done
+          
+          if [[ -n "$missing" ]]; then
+            echo "Packages not found in AUR:$missing"
+            exit 1
+          fi
+          echo "All AUR packages verified"
+
+  validate-services:
+    name: Validate Service List
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check service list format
+        run: |
+          while IFS= read -r line; do
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+            if [[ ! "$line" =~ \.(service|socket|target|timer)$ ]] && [[ ! "$line" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+              echo "Invalid service name: $line"
+              exit 1
+            fi
+          done < infra/services.system.txt
+          echo "Service list format valid"
+
+      - name: Check for duplicate services
+        run: |
+          services=$(grep -v '^#' infra/services.system.txt | grep -v '^$' | sort)
+          dup=$(echo "$services" | uniq -d)
+          if [[ -n "$dup" ]]; then
+            echo "Duplicate services: $dup"
+            exit 1
+          fi
+          echo "No duplicate services"
