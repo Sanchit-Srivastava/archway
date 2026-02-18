@@ -1,0 +1,58 @@
+# SSH client configuration
+# managed by archway
+#
+# SSH Agent: Bitwarden Desktop App
+# --------------------------------
+# SSH keys are stored in Bitwarden and served via its SSH agent.
+# Socket: ~/.bitwarden-ssh-agent.sock (set in .zshenv)
+#
+# Setup:
+#   1. Open Bitwarden Desktop > Settings > SSH Agent > Enable
+#   2. Add SSH keys to Bitwarden vault (type: SSH Key)
+#   3. Unlock Bitwarden when you need SSH access
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+
+Host *
+    # Hash known hosts for privacy
+    HashKnownHosts yes
+    
+    # Compression for slow connections
+    Compression yes
+    
+    # Connection sharing (faster subsequent connections)
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 10m
+    
+    # Keep connections alive
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    
+    # Security
+    PasswordAuthentication no
+    PubkeyAuthentication yes
+
+# =============================================================================
+# COMMON HOSTS
+# =============================================================================
+
+Host github.com
+    HostName github.com
+    User git
+
+Host gitlab.com
+    HostName gitlab.com
+    User git
+
+# =============================================================================
+# ADD YOUR HOSTS BELOW
+# =============================================================================
+# Example:
+#
+# Host myserver
+#     HostName 192.168.1.100
+#     User admin
+#     Port 22

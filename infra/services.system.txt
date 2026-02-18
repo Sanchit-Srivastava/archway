@@ -1,0 +1,81 @@
+# systemd units to enable (one per line)
+# These will be enabled system-wide (sudo systemctl enable)
+# Keep services grouped by section; keep entries alphabetized within a section
+
+# =============================================================================
+# CORE SYSTEM SERVICES
+# =============================================================================
+
+# Authentication framework (required for polkit prompts)
+polkit
+
+# User account service (DMS uses org.freedesktop.Accounts for user info/avatar)
+# Package accountsservice is installed by DMS, but service must be enabled
+accounts-daemon
+
+# =============================================================================
+# BTRFS SNAPSHOTS (Enabled automatically by bootstrap.sh if on Btrfs)
+# =============================================================================
+# Note: These are managed by bootstrap.sh configure_snapper() function
+# Do not uncomment manually - bootstrap.sh handles conditional enablement
+
+# Automatic timeline snapshots (hourly)
+# snapper-timeline.timer
+
+# Automatic snapshot cleanup (keeps N snapshots per policy)
+# snapper-cleanup.timer
+
+# Regenerate GRUB menu when snapshots change
+# grub-btrfsd
+
+# =============================================================================
+# HARDWARE / PERIPHERALS
+# =============================================================================
+
+# Bluetooth stack
+bluetooth
+
+# Removable media mounting (USB drives, MTP, etc.)
+udisks2
+
+# =============================================================================
+# POWER MANAGEMENT
+# =============================================================================
+
+# Power profiles (balanced, power-saver, performance)
+power-profiles-daemon
+
+# =============================================================================
+# NETWORKING
+# =============================================================================
+
+# Network management
+NetworkManager
+
+# Tailscale mesh VPN
+tailscaled
+
+# =============================================================================
+# PRINTING (Optional - uncomment if you use printers)
+# =============================================================================
+
+# Main printing service
+# cups
+
+# Printer discovery via mDNS/DNS-SD (requires cups)
+# cups-browsed
+
+# mDNS/DNS-SD responder (required for .local hostname resolution and printer discovery)
+# avahi-daemon
+
+# =============================================================================
+# DISPLAY MANAGER
+# =============================================================================
+# SDDM provides graphical login screen (enabled by default)
+# Disable if you prefer TTY login: comment out and run bootstrap.sh
+sddm
+
+# =============================================================================
+# FIREWALL (Optional)
+# =============================================================================
+# ufw

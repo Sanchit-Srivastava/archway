@@ -1,0 +1,40 @@
+# Git configuration
+# Edit user.name and user.email before first use!
+
+[user]
+    name = Your Name
+    email = your@email.com
+
+[init]
+    defaultBranch = main
+
+[push]
+    default = current
+    autoSetupRemote = true
+
+[pull]
+    rebase = true
+
+[core]
+    editor = nvim
+    autocrlf = input
+
+[color]
+    ui = true
+
+[diff]
+    algorithm = histogram
+    colorMoved = default
+
+[rebase]
+    autoStash = true
+    autoSquash = true
+
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    ci = commit
+    lg = log --oneline --graph --decorate --all
+    unstage = reset HEAD --
+    last = log -1 HEAD
