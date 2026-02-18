@@ -15,6 +15,8 @@ archway uses a two-layer model:
 
 A third optional layer (**DankMaterialShell**) provides the desktop shell experience.
 
+**New to archway?** See the **[Complete Setup Guide](docs/SETUP.md)** for step-by-step instructions starting from a fresh Arch installation.
+
 ## Quick Start
 
 ```bash
@@ -73,6 +75,7 @@ archway/
 │       └── 50-archway.conf
 │
 ├── docs/                     # Documentation
+│   ├── SETUP.md              # Complete setup guide (start here!)
 │   └── ARCHITECTURE.md       # Design decisions
 │
 ├── Justfile                  # Task runner commands
