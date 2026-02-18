@@ -1,0 +1,33 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# Editor/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+
+# Install scripts (one-time wrappers)
+# install-dms.sh  # Keep in repo for target laptop
+
+# Environment
+.env
+.env.local
+*.pem
+*.key
+
+# Reference repos (for development only)
+reference/

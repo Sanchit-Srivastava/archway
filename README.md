@@ -67,8 +67,10 @@ archway/
 │   │   └── .gitconfig
 │   ├── ssh/                  # SSH client configuration
 │   │   └── config
-│   └── fastfetch/            # System info display
-│       └── config.jsonc
+│   ├── fastfetch/            # System info display
+│   │   └── config.jsonc
+│   └── environment.d/        # systemd user session environment
+│       └── 50-archway.conf
 │
 ├── docs/                     # Documentation
 │   └── ARCHITECTURE.md       # Design decisions
@@ -81,7 +83,7 @@ archway/
 
 ### System Packages (via pacman/AUR)
 
-- **Desktop**: Hyprland, foot terminal, Nautilus file manager
+- **Desktop**: niri compositor (via DMS), foot terminal, Nautilus file manager
 - **Audio**: PipeWire stack (pipewire, wireplumber, pipewire-pulse)
 - **Networking**: NetworkManager, Tailscale, iwd
 - **Bluetooth**: bluez, bluetui
@@ -89,7 +91,7 @@ archway/
 - **CLI tools**: bat, eza, fd, ripgrep, fzf, zoxide, lazygit, yazi
 - **Editor**: Neovim with LSPs (lua, bash, typescript, nix)
 - **Fonts**: Noto fonts, Nerd Fonts (JetBrains Mono, Cascadia)
-- **Fallback**: KDE Plasma (emergency session if Hyprland breaks)
+- **Fallback**: KDE Plasma (emergency session if niri/DMS breaks)
 
 ### User Configuration (via dotfiles)
 
@@ -170,7 +172,7 @@ just doctor     # Run validation checks
 |-------|-----|
 | No audio | `systemctl --user enable --now pipewire wireplumber` |
 | Screen share broken | Check portal: `./infra/doctor.sh --only xdg-portal` |
-| Polkit prompts missing | Ensure polkit agent in Hyprland autostart |
+| Polkit prompts missing | DMS provides polkit agent; ensure DMS is running |
 | SSH keys not found | Unlock Bitwarden Desktop, check `SSH_AUTH_SOCK` |
 
 ## Rollback (Btrfs)
