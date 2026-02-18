@@ -383,7 +383,7 @@ auth        required      pam_deny.so
 account     required      pam_unix.so
 
 # Session: minimal (user already has a session)
-	session     required      pam_unix.so
+session     required      pam_unix.so
 EOF
 	sudo chmod 644 "$pam_file"
 
