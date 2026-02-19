@@ -61,10 +61,10 @@ setopt HIST_IGNORE_SPACE
 # TOOL INTEGRATIONS
 # =============================================================================
 
-# Starship prompt
-if command -v starship &>/dev/null; then
-    eval "$(starship init zsh)"
-fi
+# Starship prompt (disabled - using default zsh prompt)
+# if command -v starship &>/dev/null; then
+#     eval "$(starship init zsh)"
+# fi
 
 # Zoxide (smart cd)
 if command -v zoxide &>/dev/null; then
