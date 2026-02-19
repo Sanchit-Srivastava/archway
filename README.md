@@ -1,11 +1,14 @@
 # archway
+Configuration-as-code for a reproducible Arch Linux setup.
 
-Configuration-as-code for a reproducible Arch Linux laptop setup.
+Since this a personal setup, it is intentionally and heavily opinionated. 
 
-This is a personal setup and is intentionally opinionated. Use it as-is or fork and customize.
+This repo has bot been developed or tailored with a general user in mind. Use it as-is or fork and customize.
 
 Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop workstation.
-Design: layered system baseline + user dotfiles, with an optional desktop shell layer.
+Design: layered system baseline + user configs, with an optional desktop shell layer.
+
+### Automated installation:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/install.sh | bash
@@ -17,7 +20,6 @@ The installer runs in two stages with one reboot. If it doesn't resume automatic
 ~/archway/install.sh resume
 ```
 
-**Philosophy**: Boring, reliable, idempotent. No hidden state.
 
 ## Overview
 
@@ -207,13 +209,3 @@ sudo snapper rollback <snapshot-number>
 reboot
 ```
 
-## Philosophy
-
-1. **No hidden state**: Every requirement is encoded in a repo file
-2. **Idempotent**: Scripts are safe to re-run
-3. **Boring**: Standard tools, minimal magic
-4. **Reproducible**: Clone and run to recreate the environment
-
-## License
-
-MIT
