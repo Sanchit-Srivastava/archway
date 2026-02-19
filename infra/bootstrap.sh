@@ -50,9 +50,9 @@ on_error() {
 	local cmd="$2"
 	local code="$3"
 	echo "" >&2
-	printf "${RED}${BOLD}╔══════════════════════════════════════════════════════════════════╗${NC}\n" >&2
-	printf "${RED}${BOLD}║                      BOOTSTRAP FAILED                            ║${NC}\n" >&2
-	printf "${RED}${BOLD}╚══════════════════════════════════════════════════════════════════╝${NC}\n" >&2
+	printf "%s╔══════════════════════════════════════════════════════════════════╗%s\n" "${RED}${BOLD}" "${NC}" >&2
+	printf "%s║                      BOOTSTRAP FAILED                            ║%s\n" "${RED}${BOLD}" "${NC}" >&2
+	printf "%s╚══════════════════════════════════════════════════════════════════╝%s\n" "${RED}${BOLD}" "${NC}" >&2
 	echo "" >&2
 	log_fatal "Phase: ${CURRENT_PHASE}"
 	log_fatal "Exit code: ${code}"
@@ -373,6 +373,7 @@ configure_pam_dms() {
 	# - pam_deny.so: deny if all auth methods fail
 	# Note: pam_unix must come first - if fprintd runs first it blocks waiting
 	# for fingerprint and the password input has nowhere to go
+	sudo install -m 0644 /dev/null "$pam_file"
 	sudo tee "$pam_file" >/dev/null <<'EOF'
 # PAM configuration for DankMaterialShell lock screen
 # Supports password and fingerprint unlock
@@ -673,7 +674,7 @@ configure_snapper() {
 	sudo systemctl enable --now snapper-timeline.timer
 	sudo systemctl enable --now snapper-cleanup.timer
 
-	if [[ -f /boot/grub/grub.cfg ]] && ([[ -f /usr/lib/systemd/system/grub-btrfsd.service ]] || [[ -f /etc/systemd/system/grub-btrfsd.service ]]); then
+	if [[ -f /boot/grub/grub.cfg ]] && { [[ -f /usr/lib/systemd/system/grub-btrfsd.service ]] || [[ -f /etc/systemd/system/grub-btrfsd.service ]]; }; then
 		log_info "GRUB detected; enabling grub-btrfs daemon..."
 		sudo systemctl enable --now grub-btrfsd
 	fi
@@ -705,19 +706,36 @@ configure_polkit() {
 # =============================================================================
 
 configure_sddm_autologin() {
+	if [[ "${ARCHWAY_SKIP_SDDM_AUTOLOGIN:-}" == "1" ]]; then
+		log_info "Skipping SDDM autologin (ARCHWAY_SKIP_SDDM_AUTOLOGIN=1)"
+		return 0
+	fi
+
 	log_info "Configuring SDDM autologin..."
 
 	local autologin_conf="/etc/sddm.conf.d/autologin.conf"
 	local autologin_user="${SUDO_USER:-$USER}"
-	local autologin_session="niri"
+	local autologin_session=""
+	if [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
+		autologin_session="niri"
+	elif [[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
+		autologin_session="plasma"
+	elif [[ -f "/usr/share/wayland-sessions/plasmawayland.desktop" ]]; then
+		autologin_session="plasmawayland"
+	fi
+
+	if [[ -z "$autologin_session" ]]; then
+		log_warn "No known SDDM session found (niri/plasma). Skipping autologin configuration"
+		return 0
+	fi
 
 	# Skip if running as root without SUDO_USER (can't determine target user)
 	if [[ -z "$autologin_user" || "$autologin_user" == "root" ]]; then
 		log_warn "Cannot determine autologin user - skipping autologin configuration"
 		log_warn "To enable autologin manually, create $autologin_conf with:"
 		log_warn "  [Autologin]"
-		log_warn "  User=yourusername"
-		log_warn "  Session=niri"
+	log_warn "  User=yourusername"
+	log_warn "  Session=niri"
 		return 0
 	fi
 

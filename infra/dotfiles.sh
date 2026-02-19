@@ -133,12 +133,25 @@ EOF
         log_info "GitHub CLI config already exists"
     fi
 
-    # ==========================================================================
-    # ENVIRONMENT.D (systemd user session environment)
-    # ==========================================================================
-    log_info "--- Environment.d ---"
-    mkdir -p "${HOME}/.config/environment.d"
-    link_dotfile "${DOTS_DIR}/environment.d/50-archway.conf" "${HOME}/.config/environment.d/50-archway.conf"
+	# ==========================================================================
+	# ENVIRONMENT.D (systemd user session environment)
+	# ==========================================================================
+	log_info "--- Environment.d ---"
+	mkdir -p "${HOME}/.config/environment.d"
+	link_dotfile "${DOTS_DIR}/environment.d/50-archway.conf" "${HOME}/.config/environment.d/50-archway.conf"
+
+	# ==========================================================================
+	# LOCAL BIN
+	# ==========================================================================
+	log_info "--- Local bin ---"
+	mkdir -p "${HOME}/.local/bin"
+	if [[ -f "${REPO_ROOT}/bin/archway-install" ]]; then
+		chmod +x "${REPO_ROOT}/bin/archway-install"
+		ln -sf "${REPO_ROOT}/bin/archway-install" "${HOME}/.local/bin/archway-install"
+		log_info "Linked: ${HOME}/.local/bin/archway-install"
+	else
+		log_warn "archway-install wrapper not found, skipping"
+	fi
 
     log_info ""
     log_info "=========================================="
