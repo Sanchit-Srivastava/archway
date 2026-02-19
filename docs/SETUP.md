@@ -2,6 +2,21 @@
 
 Complete walkthrough for setting up Arch Linux with archway and DankMaterialShell.
 
+This is a personal setup and is intentionally opinionated. Use it as-is or fork and customize.
+
+Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop workstation.
+Design: layered system baseline + user dotfiles, with an optional desktop shell layer.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/install.sh | bash
+```
+
+The installer runs in two stages with one reboot. If it doesn't resume automatically, run:
+
+```bash
+~/archway/install.sh resume
+```
+
 **Time estimate**: 45-90 minutes (depending on internet speed and familiarity)
 
 **End result**: A fully configured Arch Linux laptop with:
@@ -120,7 +135,7 @@ If you didn't chroot, reboot and log in as your user.
 
 ---
 
-## Part 2: Clone archway Repository
+## Part 2: Clone archway Repository (Manual)
 
 After booting into your new Arch installation:
 
@@ -145,7 +160,7 @@ sudo pacman -S --needed git
 
 # Clone archway to your home directory
 cd ~
-git clone https://github.com/yourusername/archway.git
+git clone https://github.com/Sanchit-Srivastava/archway.git
 cd archway
 ```
 
@@ -200,7 +215,7 @@ reboot
 
 The system will boot into SDDM (graphical login). With autologin configured, you'll be logged in automatically.
 
-**Note**: At this point, you'll see a basic desktop (likely a black screen or minimal session) because niri/DMS isn't installed yet. This is expected.
+At this point, you'll see a basic desktop (likely a black screen or minimal session) because niri/DMS isn't installed yet. This is expected.
 
 If autologin didn't work, log in with your username and password.
 
@@ -330,6 +345,15 @@ cd ~/archway
 ./infra/doctor.sh
 ```
 
+### 6.4 Post-DMS Customization
+
+If you installed DMS manually, apply archway's DMS customizations after DMS has started once:
+
+```bash
+cd ~/archway
+./infra/post-dms-install.sh
+```
+
 **Expected output**: Most checks should pass. Some may fail if:
 - Not in a graphical session (run from terminal in DMS)
 - Some services haven't started yet (try after a few minutes)
@@ -378,6 +402,13 @@ If you use Bitwarden for SSH keys:
 5. Add your SSH keys to Bitwarden vault (type: SSH Key)
 
 The archway dotfiles already configure `SSH_AUTH_SOCK` to use Bitwarden's socket.
+
+If you authenticated GitHub over HTTPS during install, switch to SSH after enabling the agent:
+
+```bash
+ssh -T git@github.com
+gh config set git_protocol ssh
+```
 
 ### 7.3 Configure Tailscale (Optional)
 
@@ -593,20 +624,20 @@ If niri/DMS completely breaks:
 
 ## Summary: Complete Installation Checklist
 
-- [ ] Boot Arch ISO
-- [ ] Run `archinstall` with settings from Part 1
-- [ ] Reboot into new system
-- [ ] Connect to network
-- [ ] Clone archway repo
-- [ ] Run `./infra/bootstrap.sh`
-- [ ] Reboot
-- [ ] Run `./infra/dotfiles.sh`
-- [ ] Edit git config with your name/email
-- [ ] Run `./install-dms.sh` (choose niri + your terminal)
-- [ ] Reboot
-- [ ] Run `./infra/doctor.sh` to validate
-- [ ] (Optional) Enroll fingerprints
-- [ ] (Optional) Configure Bitwarden SSH agent
-- [ ] (Optional) Configure Tailscale
-- [ ] (Optional) Enable printing services
-- [ ] (Optional) Enable firewall
+- Boot Arch ISO
+- Run `archinstall` with settings from Part 1
+- Reboot into new system
+- Connect to network
+- Clone archway repo
+- Run `./infra/bootstrap.sh`
+- Reboot
+- Run `./infra/dotfiles.sh`
+- Edit git config with your name/email
+- Run `./install-dms.sh` (choose niri + your terminal)
+- Reboot
+- Run `./infra/doctor.sh` to validate
+- Optional: Enroll fingerprints
+- Optional: Configure Bitwarden SSH agent
+- Optional: Configure Tailscale
+- Optional: Enable printing services
+- Optional: Enable firewall

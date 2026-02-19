@@ -2,6 +2,21 @@
 
 Configuration-as-code for a reproducible Arch Linux laptop setup.
 
+This is a personal setup and is intentionally opinionated. Use it as-is or fork and customize.
+
+Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop workstation.
+Design: layered system baseline + user dotfiles, with an optional desktop shell layer.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/install.sh | bash
+```
+
+The installer runs in two stages with one reboot. If it doesn't resume automatically, run:
+
+```bash
+~/archway/install.sh resume
+```
+
 **Philosophy**: Boring, reliable, idempotent. No hidden state.
 
 ## Overview
@@ -15,13 +30,13 @@ archway uses a two-layer model:
 
 A third optional layer (**DankMaterialShell**) provides the desktop shell experience.
 
-**New to archway?** See the **[Complete Setup Guide](docs/SETUP.md)** for step-by-step instructions starting from a fresh Arch installation.
+See the **[Complete Setup Guide](docs/SETUP.md)** for step-by-step instructions starting from a fresh Arch installation.
 
-## Quick Start
+## Quick Start (Manual)
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourusername/archway.git
+git clone https://github.com/Sanchit-Srivastava/archway.git
 cd archway
 
 # 2. (Optional) Create a safety snapshot if on Btrfs
