@@ -189,6 +189,18 @@ lua-language-server
 shellcheck
 shfmt
 stylua
+#-------Latex stuff-------------
+#tectonic
+texlive-core
+texlive-latex
+texlive-bibtexextra
+texlive-binextra
+texlive-fontsextra
+texlive-bibtexextra
+biber
+zathura
+zathura-pdf-mupdf
+python-pynvim
 
 # =============================================================================
 # DEVELOPMENT
@@ -201,3 +213,10 @@ opencode
 cups-pk-helper
 cava
 khal
+
+
+# =============================================================================
+# MESSAGING
+# =============================================================================
+discord
+telegram-desktop
