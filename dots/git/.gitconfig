@@ -2,8 +2,8 @@
 # Edit user.name and user.email before first use!
 
 [user]
-    name = snek
-    email = mail2sanchit972gmail.com
+    name = Your Name
+    email = your@email.com
 
 [init]
     defaultBranch = main

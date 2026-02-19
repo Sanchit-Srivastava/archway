@@ -81,18 +81,6 @@ main() {
 		log_warn "wallpaper.png not found in dots/Wallpaper/, skipping"
 	fi
 
-	# ==========================================================================
-	# PROFILE PICTURE
-	# ==========================================================================
-	log_info "--- Profile Picture ---"
-	local profile_src="${DOTS_DIR}/Assets/profile.jpeg"
-	if [[ -f "$profile_src" ]]; then
-		dms ipc call profile setImage "$profile_src"
-		log_info "Set profile picture: $profile_src"
-	else
-		log_warn "profile.jpeg not found in dots/Assets/, skipping"
-	fi
-
 	log_info ""
 	log_info "=========================================="
 	log_info "DMS customizations applied!"
