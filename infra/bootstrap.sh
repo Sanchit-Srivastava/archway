@@ -796,6 +796,11 @@ main() {
 	log_info "Starting archway bootstrap..."
 	log_info "Repository: $REPO_ROOT"
 
+	local state_dir
+	local state_file
+	state_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
+	state_file="${state_dir}/bootstrap.complete"
+
 	# Safety reminder about pre-bootstrap snapshot (only if Btrfs detected)
 	local root_fstype
 	root_fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
@@ -881,6 +886,14 @@ main() {
 
 	CURRENT_PHASE="complete"
 	log_info "Bootstrap complete!"
+
+	mkdir -p "$state_dir"
+	cat >"$state_file" <<EOF
+BOOTSTRAP_VERSION="${SCRIPT_VERSION}"
+BOOTSTRAP_COMPLETED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+REPO_ROOT="${REPO_ROOT}"
+EOF
+	log_info "Wrote bootstrap marker: $state_file"
 	log_info ""
 	log_info "Next steps:"
 	log_info "  1. Reboot to start SDDM (graphical login screen)"

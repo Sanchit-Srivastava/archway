@@ -22,10 +22,22 @@ main() {
     fi
 
     # Check system baseline is installed (bootstrap provides D-Bus services DMS needs)
-    if ! systemctl is-active --quiet NetworkManager; then
-        log_error "System baseline not installed"
-        log_error "Run ./infra/bootstrap.sh first"
-        exit 1
+    local state_file
+    state_file="${XDG_CONFIG_HOME:-${HOME}/.config}/archway/bootstrap.complete"
+    if [[ ! -f "$state_file" ]]; then
+        log_warn "Bootstrap completion marker not found"
+        log_warn "Expected: $state_file"
+        if [[ -t 0 ]]; then
+            read -r -p "Continue anyway? [y/N] " response
+        else
+            response="n"
+            log_warn "Non-interactive shell detected; defaulting to 'no'"
+        fi
+        if [[ ! "${response:-}" =~ ^[Yy]$ ]]; then
+            log_error "System baseline not ready"
+            log_error "Run ./infra/bootstrap.sh first"
+            exit 1
+        fi
     fi
 
     log_info "Installing DankMaterialShell..."
@@ -34,8 +46,13 @@ main() {
     log_warn "Your existing compositor config may be modified"
     log_info ""
     
-    read -r -p "Continue? [y/N] " response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    if [[ -t 0 ]]; then
+        read -r -p "Continue? [y/N] " response
+    else
+        response="n"
+        log_warn "Non-interactive shell detected; defaulting to 'no'"
+    fi
+    if [[ ! "${response:-}" =~ ^[Yy]$ ]]; then
         log_info "Cancelled"
         exit 0
     fi
