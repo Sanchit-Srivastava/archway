@@ -237,7 +237,7 @@ remove_autostart_resume() {
 }
 
 stage1() {
-	if [[ "${ARCHWAY_STAGE}" == "stage2" && "$FORCE" == "0" ]]; then
+	if [[ "${ARCHWAY_STAGE:-}" == "stage2" && "$FORCE" == "0" ]]; then
 		log_info "Stage 1 already completed. Use --force to re-run."
 		return 0
 	fi
@@ -283,7 +283,7 @@ post_install_guidance() {
 }
 
 stage2() {
-	if [[ "${ARCHWAY_STAGE}" != "stage2" && "$FORCE" == "0" ]]; then
+	if [[ "${ARCHWAY_STAGE:-}" != "stage2" && "$FORCE" == "0" ]]; then
 		log_info "Stage 2 not ready yet. Run Stage 1 first."
 		return 0
 	fi
