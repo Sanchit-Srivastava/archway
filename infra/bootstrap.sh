@@ -802,13 +802,30 @@ main() {
 	if [[ "$root_fstype" == "btrfs" ]] && command -v snapper >/dev/null 2>&1; then
 		if ! sudo snapper -c root list 2>/dev/null | grep -q "pre-bootstrap"; then
 			log_warn "No pre-bootstrap snapshot found!"
-			log_warn "For safety, consider creating one first:"
-			log_warn "  sudo ./infra/pre-bootstrap.sh create"
+			log_warn "For safety, consider creating one first."
 			echo ""
-			read -r -p "Continue anyway? [y/N] " response
-			if [[ ! "$response" =~ ^[Yy]$ ]]; then
-				log_info "Cancelled. Run: sudo ./infra/pre-bootstrap.sh create"
-				exit 0
+			if [[ -t 0 ]]; then
+				read -r -p "Create pre-bootstrap snapshot now? [y/N] " response
+			else
+				response="n"
+				log_warn "Non-interactive shell detected; defaulting to 'no'"
+			fi
+			if [[ "${response:-}" =~ ^[Yy]$ ]]; then
+				log_info "Creating pre-bootstrap snapshot..."
+				sudo "${REPO_ROOT}/infra/pre-bootstrap.sh" create
+			else
+				log_warn "Skipping snapshot creation."
+				echo ""
+				if [[ -t 0 ]]; then
+					read -r -p "Continue anyway? [y/N] " response
+				else
+					response="n"
+					log_warn "Non-interactive shell detected; defaulting to 'no'"
+				fi
+				if [[ ! "${response:-}" =~ ^[Yy]$ ]]; then
+					log_info "Cancelled. Run: sudo ./infra/pre-bootstrap.sh create"
+					exit 0
+				fi
 			fi
 		fi
 	fi
