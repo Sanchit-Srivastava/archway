@@ -193,6 +193,7 @@ stylua
 #tectonic
 texlive-core
 texlive-latex
+texlive-revtex
 texlive-bibtexextra
 texlive-binextra
 texlive-fontsextra
