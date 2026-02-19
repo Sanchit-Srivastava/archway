@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Single-entry installer with staged reboot + resume flow
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
 
 SCRIPT_VERSION="2026-02-19-1"

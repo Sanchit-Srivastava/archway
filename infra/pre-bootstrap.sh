@@ -4,7 +4,8 @@ set -euo pipefail
 # Pre-bootstrap snapshot creator for Btrfs systems
 # Creates a snapshot before running bootstrap.sh for easy rollback
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

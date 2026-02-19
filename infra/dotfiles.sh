@@ -4,7 +4,8 @@ set -euo pipefail
 # Dotfiles installer: symlinks user dotfiles from dots/ to ~
 # Safe to re-run (idempotent)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOTS_DIR="${REPO_ROOT}/dots"
 

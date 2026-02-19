@@ -4,7 +4,8 @@ set -euo pipefail
 # Doctor script: runtime validation of laptop-critical functionality
 # Outputs structured results for automated checking
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
 # Colors for human-readable output
 RED='\033[0;31m'
