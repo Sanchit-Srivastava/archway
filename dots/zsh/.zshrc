@@ -73,9 +73,15 @@ fi
 
 # FZF
 if command -v fzf &>/dev/null; then
-    # Try to source fzf keybindings
-    [[ -f /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
-    [[ -f /usr/share/fzf/completion.zsh ]] && source /usr/share/fzf/completion.zsh
+    # Source fzf keybindings (path differs by platform)
+    if [[ "$(uname)" == "Darwin" ]]; then
+        local brew_prefix="${HOMEBREW_PREFIX:-/opt/homebrew}"
+        [[ -f "${brew_prefix}/opt/fzf/shell/key-bindings.zsh" ]] && source "${brew_prefix}/opt/fzf/shell/key-bindings.zsh"
+        [[ -f "${brew_prefix}/opt/fzf/shell/completion.zsh" ]] && source "${brew_prefix}/opt/fzf/shell/completion.zsh"
+    else
+        [[ -f /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
+        [[ -f /usr/share/fzf/completion.zsh ]] && source /usr/share/fzf/completion.zsh
+    fi
     
     export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border"
     export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
@@ -149,20 +155,30 @@ alias ....='cd ../../..'
 # =============================================================================
 # ALIASES - System
 # =============================================================================
-alias update='sudo pacman -Syu'
+if [[ "$(uname)" == "Darwin" ]]; then
+    alias update='brew update && brew upgrade'
+else
+    alias update='sudo pacman -Syu'
+fi
 alias please='sudo'
 alias df='df -h'
 
 # Quick config edits
 alias zshconfig='${EDITOR:-nvim} ~/.zshrc'
-alias hyprconfig='${EDITOR:-nvim} ~/.config/hypr/hyprland.conf'
+if [[ "$(uname)" != "Darwin" ]]; then
+    alias hyprconfig='${EDITOR:-nvim} ~/.config/hypr/hyprland.conf'
+fi
 
 # =============================================================================
 # ALIASES - Archway helpers
 # =============================================================================
-alias archway-sync='cd ~/archway && ./infra/bootstrap.sh && ./infra/dotfiles.sh && ./infra/doctor.sh'
-alias archway-doctor='~/archway/infra/doctor.sh'
-alias archway-audit='~/archway/infra/doctor.sh --audit-packages'
+if [[ "$(uname)" == "Darwin" ]]; then
+    alias archway-sync='cd ~/archway && ./infra/bootstrap-mac.sh && ./infra/dotfiles.sh'
+else
+    alias archway-sync='cd ~/archway && ./infra/bootstrap.sh && ./infra/dotfiles.sh && ./infra/doctor.sh'
+    alias archway-doctor='~/archway/infra/doctor.sh'
+    alias archway-audit='~/archway/infra/doctor.sh --audit-packages'
+fi
 
 # =============================================================================
 # COMPLETION
