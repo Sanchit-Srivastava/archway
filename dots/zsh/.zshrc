@@ -2,6 +2,16 @@
 # Self-bootstrapping zsh configuration
 
 # =============================================================================
+# HOMEBREW (macOS)
+# =============================================================================
+# Ensure Homebrew is in PATH before anything else
+if [[ "$(uname)" == "Darwin" ]]; then
+    if [[ -f /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+fi
+
+# =============================================================================
 # OH-MY-ZSH SETUP (auto-install if missing)
 # =============================================================================
 export ZSH="${HOME}/.oh-my-zsh"
@@ -61,16 +71,6 @@ setopt HIST_IGNORE_SPACE
 # TOOL INTEGRATIONS
 # =============================================================================
 
-# Starship prompt (disabled - using default zsh prompt)
-# if command -v starship &>/dev/null; then
-#     eval "$(starship init zsh)"
-# fi
-
-# Zoxide (smart cd)
-if command -v zoxide &>/dev/null; then
-    eval "$(zoxide init zsh)"
-fi
-
 # FZF
 if command -v fzf &>/dev/null; then
     # Source fzf keybindings (path differs by platform)
@@ -87,6 +87,17 @@ if command -v fzf &>/dev/null; then
     export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 fi
+
+# Zoxide (smart cd)
+# Initialized AFTER fzf to ensure interactive mode (zi) picks up fzf config
+if command -v zoxide &>/dev/null; then
+    eval "$(zoxide init zsh)"
+fi
+
+# Starship prompt (disabled - using default zsh prompt)
+# if command -v starship &>/dev/null; then
+#     eval "$(starship init zsh)"
+# fi
 
 # Yazi (terminal file browser) - change cwd on exit
 if command -v yazi &>/dev/null; then

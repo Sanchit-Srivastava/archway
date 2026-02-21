@@ -15,12 +15,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # =============================================================================
 # PLATFORM-SPECIFIC
 # =============================================================================
-if [[ "$(uname)" == "Darwin" ]]; then
-    # Homebrew environment (Apple Silicon default path)
-    if [[ -f /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    fi
-else
+if [[ "$(uname)" != "Darwin" ]]; then
     # Wayland (Linux only)
     export MOZ_ENABLE_WAYLAND=1
     export QT_QPA_PLATFORM=wayland
