@@ -45,11 +45,15 @@ plugins=(
     zsh-syntax-highlighting
 )
 
-# Theme (overridden by starship)
-ZSH_THEME="robbyrussell"
+# Theme (custom minimal prompt)
+ZSH_THEME="afowler" # set by `omz`
 
 # Load oh-my-zsh
 source "$ZSH/oh-my-zsh.sh"
+
+# # Custom prompt - minimal with user@host
+# # %F{117} = pastel cyan, %F{green} = green path, %F{red} = red error
+# PROMPT='%F{117}%n@%m%f %F{green}%~%f $(git_prompt_info)%(?,%F{red}✗%f ,)'
 
 # =============================================================================
 # HISTORY
