@@ -1,0 +1,37 @@
+# zathura configuration
+# See: man zathurarc
+
+# ---------------------------------------------------------------------------
+# SyncTeX inverse search (PDF -> Neovim)
+# ---------------------------------------------------------------------------
+# VimTeX passes -x automatically when it launches zathura, but this config
+# ensures inverse search works even when zathura is opened standalone.
+# Ctrl+click in the PDF jumps to the corresponding line in Neovim.
+#
+# Interpolation variables (zathura-specific):
+#   %{line}   - line number
+#   %{column} - column number
+#   %{input}  - source file path
+set synctex-editor-command "nvim --headless -c \"VimtexInverseSearch %{line}:%{column} '%{input}'\""
+
+# ---------------------------------------------------------------------------
+# Appearance
+# ---------------------------------------------------------------------------
+set font "monospace normal 12"
+
+# Recolor (dark mode)
+set recolor true
+set recolor-darkcolor  "#d4be98"
+set recolor-lightcolor "#282828"
+
+# Window
+set window-title-basename true
+set statusbar-h-padding 0
+set statusbar-v-padding 0
+set page-padding 1
+
+# ---------------------------------------------------------------------------
+# Keybindings
+# ---------------------------------------------------------------------------
+# Use clipboard for selections
+set selection-clipboard clipboard
