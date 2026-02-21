@@ -152,12 +152,12 @@ install_brew_casks() {
 install_zathura() {
 	log_info "Setting up zathura..."
 
-	# Tap the homebrew-zathura repository
-	if ! brew tap | grep -q "^zathura-macos/zathura$"; then
-		log_info "Tapping zathura-macos/zathura..."
-		brew tap zathura-macos/zathura
+	# Tap the homebrew-zathura repository (maintained by zegervdv)
+	if ! brew tap | grep -q "^zegervdv/zathura$"; then
+		log_info "Tapping zegervdv/zathura..."
+		brew tap zegervdv/zathura
 	else
-		log_info "zathura-macos/zathura tap already present"
+		log_info "zegervdv/zathura tap already present"
 	fi
 
 	# Install zathura and the MuPDF plugin
@@ -231,11 +231,6 @@ main() {
 
 	CURRENT_PHASE="installing Homebrew"
 	install_homebrew
-
-	# Tap cask-fonts for Nerd Fonts
-	CURRENT_PHASE="tapping homebrew-cask-fonts"
-	log_info "Ensuring Homebrew font tap..."
-	brew tap homebrew/cask-fonts 2>/dev/null || true
 
 	CURRENT_PHASE="installing Homebrew formulae"
 	install_brew_formulae
