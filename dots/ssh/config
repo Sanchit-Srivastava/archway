@@ -4,12 +4,30 @@
 # SSH Agent: Bitwarden Desktop App
 # --------------------------------
 # SSH keys are stored in Bitwarden and served via its SSH agent.
-# Socket: ~/.bitwarden-ssh-agent.sock (set in .zshenv)
+# SSH_AUTH_SOCK is set in .zshenv with runtime detection:
+#   Linux:                    ~/.bitwarden-ssh-agent.sock
+#   macOS (.dmg / Homebrew):  ~/.bitwarden-ssh-agent.sock
+#   macOS (App Store):        ~/Library/Containers/com.bitwarden.desktop/Data/...
 #
 # Setup:
 #   1. Open Bitwarden Desktop > Settings > SSH Agent > Enable
 #   2. Add SSH keys to Bitwarden vault (type: SSH Key)
 #   3. Unlock Bitwarden when you need SSH access
+#
+# Local overrides
+# ---------------
+# Machine-specific host entries go in ~/.ssh/config.local (not committed).
+# Use it for private hostnames, ForwardAgent, ProxyJump, etc.
+#
+# Example ~/.ssh/config.local:
+#
+#   Host my-server
+#       HostName 192.168.1.100
+#       User admin
+#       ForwardAgent yes
+
+# Include local overrides (must come before Host/Match blocks)
+Include config.local
 
 # =============================================================================
 # GLOBAL SETTINGS
@@ -46,13 +64,3 @@ Host github.com
 Host gitlab.com
     HostName gitlab.com
     User git
-
-# =============================================================================
-# ADD YOUR HOSTS BELOW
-# =============================================================================
-# Example:
-#
-# Host my-server
-#     HostName 192.168.1.100
-#     User admin
-#     Port 22
