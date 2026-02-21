@@ -72,3 +72,15 @@ lint:
 # Format shell scripts
 fmt:
     shfmt -w infra/*.sh
+
+# =============================================================================
+# macOS
+# =============================================================================
+
+# Run macOS bootstrap (Homebrew packages + shell config)
+bootstrap-mac:
+    ./infra/bootstrap-mac.sh
+
+# Full macOS setup: bootstrap + dotfiles
+setup-mac: bootstrap-mac dotfiles
+    @echo "macOS setup complete!"

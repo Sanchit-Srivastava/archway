@@ -1,0 +1,19 @@
+# Homebrew casks (one per line)
+# GUI apps and fonts that require `brew install --cask`
+# Keep packages grouped by section; keep entries alphabetized within a section
+
+# =============================================================================
+# FONTS (Nerd Fonts for terminal/editor icons)
+# =============================================================================
+font-cascadia-mono-nerd-font
+font-jetbrains-mono-nerd-font
+
+# =============================================================================
+# LATEX
+# =============================================================================
+mactex
+
+# =============================================================================
+# PDF VIEWER (fallback — zathura is preferred, installed via bootstrap-mac.sh)
+# =============================================================================
+skim

@@ -1,0 +1,46 @@
+# Homebrew formulae (one per line)
+# macOS equivalent of pkgs.pacman.txt — CLI tools and editor layer only
+# Keep packages grouped by section; keep entries alphabetized within a section
+
+# =============================================================================
+# SHELL & CLI TOOLS
+# =============================================================================
+bat
+btop
+dust
+eza
+fastfetch
+fd
+fzf
+gh
+imagemagick
+jq
+lazygit
+less
+neovim
+ripgrep
+starship
+tmux
+yazi
+zoxide
+zsh
+
+# =============================================================================
+# DEVELOPMENT
+# =============================================================================
+node
+shellcheck
+shfmt
+
+# =============================================================================
+# NEOVIM LSPs & FORMATTERS
+# =============================================================================
+bash-language-server
+lua-language-server
+stylua
+
+# =============================================================================
+# FONTS (Nerd Fonts for terminal/editor icons)
+# =============================================================================
+# Installed via homebrew casks (brew install --cask font-...)
+# See pkgs.brew-cask.txt
