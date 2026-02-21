@@ -27,7 +27,7 @@ lists rather than application code.
 | Task Runner       | [just](https://github.com/casey/just)|
 | Shell             | Zsh with oh-my-zsh                   |
 | Editor            | Neovim with LazyVim                  |
-| Package Managers  | pacman (official), yay (AUR)         |
+| Package Managers  | pacman (official), yay (AUR), Homebrew (macOS) |
 
 ## Build/Lint/Test Commands
 
@@ -40,6 +40,10 @@ just                    # Show all available commands
 just bootstrap          # Run full system bootstrap (packages, services, config)
 just dotfiles           # Install user dotfiles
 just setup              # Full setup: bootstrap + dotfiles
+
+# macOS Installation
+just bootstrap-mac      # Run macOS bootstrap (Homebrew packages + shell)
+just setup-mac          # Full macOS setup: bootstrap-mac + dotfiles
 
 # Validation (this is "testing" for this repo)
 just doctor             # Run ALL system checks
@@ -81,16 +85,20 @@ shfmt -d infra/*.sh     # Show diff without writing (for CI)
 ```
 archway/
 ├── infra/                    # System baseline scripts
-│   ├── bootstrap.sh          # Main system installer
-│   ├── dotfiles.sh           # User dotfile symlinker
+│   ├── bootstrap.sh          # Main system installer (Arch Linux)
+│   ├── bootstrap-mac.sh      # macOS bootstrap (Homebrew + shell)
+│   ├── dotfiles.sh           # User dotfile symlinker (cross-platform)
 │   ├── doctor.sh             # System validation/health checks
 │   ├── pre-bootstrap.sh      # Btrfs snapshot creator
-│   ├── pkgs.pacman.txt       # Official repo packages
-│   ├── pkgs.aur.txt          # AUR packages
+│   ├── pkgs.pacman.txt       # Official repo packages (Arch)
+│   ├── pkgs.aur.txt          # AUR packages (Arch)
+│   ├── pkgs.brew.txt         # Homebrew formulae (macOS)
+│   ├── pkgs.brew-cask.txt    # Homebrew casks (macOS)
 │   └── services.system.txt   # systemd services to enable
 ├── dots/                     # User dotfiles (symlinked to ~)
 │   ├── zsh/                  # .zshrc, .zshenv
 │   ├── nvim/                 # LazyVim configuration
+│   ├── zathura/              # Zathura PDF viewer config (synctex)
 │   └── ...
 ├── docs/                     # Documentation
 │   └── ARCHITECTURE.md       # Design decisions (READ THIS)
@@ -165,7 +173,7 @@ sed -i 's/foo/bar/' /etc/config
 
 ### Package List Format
 
-Files: `infra/pkgs.pacman.txt`, `infra/pkgs.aur.txt`
+Files: `infra/pkgs.pacman.txt`, `infra/pkgs.aur.txt`, `infra/pkgs.brew.txt`, `infra/pkgs.brew-cask.txt`
 
 - One package per line
 - Comments start with `#`
@@ -201,10 +209,13 @@ File: `infra/services.system.txt`
 | File                          | Purpose                              |
 | ----------------------------- | ------------------------------------ |
 | `docs/ARCHITECTURE.md`        | Design decisions (READ FIRST)        |
-| `infra/bootstrap.sh`          | Main system setup script             |
+| `infra/bootstrap.sh`          | Main system setup script (Arch)      |
+| `infra/bootstrap-mac.sh`     | macOS bootstrap (Homebrew)           |
 | `infra/doctor.sh`             | System validation                    |
-| `infra/pkgs.pacman.txt`       | Official package list                |
-| `infra/pkgs.aur.txt`          | AUR package list                     |
+| `infra/pkgs.pacman.txt`       | Official package list (Arch)         |
+| `infra/pkgs.aur.txt`          | AUR package list (Arch)              |
+| `infra/pkgs.brew.txt`         | Homebrew formulae (macOS)            |
+| `infra/pkgs.brew-cask.txt`   | Homebrew casks (macOS)               |
 | `infra/services.system.txt`   | systemd services                     |
 | `Justfile`                    | Available commands                   |
 
