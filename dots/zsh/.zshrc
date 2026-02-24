@@ -36,6 +36,12 @@ if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]]; then
         "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 fi
 
+if [[ ! -d "$ZSH_CUSTOM/plugins/fzf-tab" ]]; then
+    echo "Installing fzf-tab..."
+    git clone --depth=1 https://github.com/Aloxaf/fzf-tab \
+        "$ZSH_CUSTOM/plugins/fzf-tab"
+fi
+
 # Oh-my-zsh configuration
 plugins=(
     git
@@ -43,6 +49,7 @@ plugins=(
     command-not-found
     zsh-autosuggestions
     zsh-syntax-highlighting
+    fzf-tab
 )
 
 # Theme (custom minimal prompt)
@@ -90,6 +97,11 @@ if command -v fzf &>/dev/null; then
     export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border"
     export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    
+    zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse --border
+    zstyle ':fzf-tab:*' switch-group ',' '.'
+    zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+    zstyle ':fzf-tab:complete:z:*' fzf-preview 'eza -1 --color=always $realpath'
 fi
 
 # Zoxide (smart cd)
