@@ -20,7 +20,7 @@ set synctex-editor-command "nvim --headless -c \"VimtexInverseSearch %{line}:%{c
 set font "monospace normal 12"
 
 # Recolor (dark mode)
-set recolor true
+set recolor false
 set recolor-darkcolor  "#d4be98"
 set recolor-lightcolor "#282828"
 
