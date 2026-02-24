@@ -1,0 +1,150 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #1a1a1a;
+  --fg: #cdd6f4;
+  --accent: #89b4fa;
+  --dim: #6c7086;
+  --link: #89dceb;
+}
+
+html, body {
+  height: 100%;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 16px;
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  padding: 2rem;
+}
+
+.leftNav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mainImg {
+  max-width: 300px;
+  max-height: 300px;
+  border-radius: 8px;
+}
+
+.rightNav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 4rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+}
+
+.iden {
+  color: var(--accent);
+}
+
+#date {
+  font-size: 1.2rem;
+  color: var(--dim);
+  margin-bottom: 2rem;
+}
+
+.search {
+  margin-bottom: 3rem;
+}
+
+.search form {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search label {
+  color: var(--accent);
+  margin-right: 0.75rem;
+  font-weight: bold;
+}
+
+.search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+}
+
+.search input::placeholder {
+  color: var(--dim);
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem;
+}
+
+.category h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  margin-bottom: 1rem;
+}
+
+.category ul {
+  list-style: none;
+}
+
+.category li {
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .leftNav {
+    display: none;
+  }
+
+  .rightNav {
+    padding-left: 0;
+  }
+
+  nav {
+    flex-direction: column;
+    gap: 2rem;
+  }
+}

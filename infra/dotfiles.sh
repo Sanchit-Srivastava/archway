@@ -142,6 +142,19 @@ EOF
 	fi
 
 	# ==========================================================================
+	# ZEN BROWSER (startpage + config files for manual import)
+	# ==========================================================================
+	log_info "--- Zen Browser ---"
+
+	# Startpage: symlink to a stable path for the homepage URL
+	link_dotfile "${DOTS_DIR}/startpage" "${HOME}/.config/zen/startpage"
+
+	# Zen Mods export: placed where the user can find it for manual import
+	if [[ -f "${DOTS_DIR}/zen/zen-mods.json" ]]; then
+		link_dotfile "${DOTS_DIR}/zen/zen-mods.json" "${HOME}/.config/zen/zen-mods.json"
+	fi
+
+	# ==========================================================================
 	# LINUX-ONLY SECTIONS
 	# ==========================================================================
 	if [[ "$(uname)" != "Darwin" ]]; then
@@ -176,6 +189,10 @@ EOF
 	log_info "  - Oh-my-zsh and plugins will auto-install on first shell start"
 	log_info "  - Edit dots/git/.gitconfig to set your name and email"
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
+	log_info "  - Zen Browser manual steps after first launch:"
+	log_info "      1. Sign into Mozilla Sync (syncs extensions, bookmarks, prefs)"
+	log_info "      2. Set homepage to: file://${HOME}/.config/zen/startpage/index.html"
+	log_info "      3. Import Zen Mods from: ~/.config/zen/zen-mods.json"
 }
 
 main "$@"
