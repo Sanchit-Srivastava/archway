@@ -3,12 +3,13 @@ Configuration-as-code for a reproducible Arch Linux setup.
 
 Since this a personal setup, it is intentionally and heavily opinionated. 
 
-This repo has bot been developed or tailored with a general user in mind. Use it as-is or fork and customize.
+This repo has not been developed or maintained with a general user in mind. Use it as-is or fork and customize.
 
 Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop workstation.
 Design: layered system baseline + user configs, with an optional desktop shell layer.
 
 ### Automated installation:
+(WIP. Current curl based implementation does not handle interactive installation well.)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/install.sh | bash
