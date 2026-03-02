@@ -87,6 +87,7 @@ nautilus
 nautilus-python
 udisks2
 thunar
+dolphin
 
 # =============================================================================
 # FIREWALL
