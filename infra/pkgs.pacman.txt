@@ -1,6 +1,5 @@
-# pacman packages (one per line)
+#pacman packages (one per line)
 # Keep packages grouped by section; keep entries alphabetized within a section
-
 # =============================================================================
 # BASE SYSTEM
 # =============================================================================
@@ -117,7 +116,6 @@ tailscale
 # PORTAL SUPPORT (Screen sharing, file dialogs)
 # =============================================================================
 # Note: DMS installs xdg-desktop-portal-gtk
-# xdg-desktop-portal-gnome may be needed for niri screen sharing
 xdg-desktop-portal
 xdg-desktop-portal-gnome
 
@@ -152,7 +150,7 @@ grim
 pamixer
 slurp
 wl-clipboard
-
+imv
 # =============================================================================
 # SHELL & CLI TOOLS 
 # =============================================================================
