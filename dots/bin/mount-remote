@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Mount a remote server's filesystem locally via SSHFS
+# Usage: mount-remote <host>
+
+if [[ $# -ne 1 ]]; then
+	echo "Usage: mount-remote <host>" >&2
+	exit 1
+fi
+
+HOST="$1"
+TARGET="$HOME/servers/$HOST"
+
+mkdir -p "$TARGET"
+sshfs "$HOST":/ "$TARGET" -o reconnect,ServerAliveInterval=15,ServerAliveCountMax=3
+
+echo "Mounted $HOST at $TARGET"
