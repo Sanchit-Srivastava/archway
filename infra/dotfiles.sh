@@ -155,6 +155,18 @@ EOF
 	fi
 
 	# ==========================================================================
+	# USER SCRIPTS (~/bin)
+	# ==========================================================================
+	log_info "--- User scripts ---"
+	mkdir -p "${HOME}/bin"
+	for script in "${DOTS_DIR}"/bin/*; do
+		[[ -f "$script" ]] || continue
+		chmod +x "$script"
+		script_name="$(basename "$script")"
+		link_dotfile "$script" "${HOME}/bin/${script_name}"
+	done
+
+	# ==========================================================================
 	# LINUX-ONLY SECTIONS
 	# ==========================================================================
 	if [[ "$(uname)" != "Darwin" ]]; then
