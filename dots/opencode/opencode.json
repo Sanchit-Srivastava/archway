@@ -1,0 +1,69 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "arxiv": {
+      "type": "local",
+      "command": ["npx", "-y", "@fre4x/arxiv"],
+      "enabled": true
+    },
+    "brave-search": {
+      "type": "local",
+      "command": ["npx", "-y", "@brave/brave-search-mcp-server"],
+      "enabled": true,
+      "environment": {
+        "BRAVE_API_KEY": "{env:BRAVE_API_KEY}"
+      }
+    },
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "enabled": true
+    },
+    "fetch": {
+      "type": "local",
+      "command": ["uvx", "mcp-server-fetch"],
+      "enabled": true
+    },
+    "git": {
+      "type": "local",
+      "command": ["uvx", "mcp-server-git"],
+      "enabled": true
+    },
+    "memory": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
+      "enabled": true
+    },
+    "semantic-scholar": {
+      "type": "local",
+      "command": ["npx", "-y", "@xbghc/semanticscholar-mcp"],
+      "enabled": true,
+      "environment": {
+        "SEMANTIC_SCHOLAR_API_KEY": "{env:SEMANTIC_SCHOLAR_API_KEY}"
+      }
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
+    },
+    "time": {
+      "type": "local",
+      "command": ["uvx", "mcp-server-time"],
+      "enabled": true
+    },
+    "wolfram-alpha": {
+      "type": "local",
+      "command": ["npx", "-y", "wolfram-mcp"],
+      "enabled": true,
+      "environment": {
+        "WOLFRAM_APP_ID": "{env:WOLFRAM_APP_ID}"
+      }
+    },
+    "zotero": {
+      "type": "remote",
+      "url": "http://127.0.0.1:23120/mcp",
+      "enabled": true
+    }
+  }
+}
