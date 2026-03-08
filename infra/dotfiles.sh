@@ -142,6 +142,38 @@ EOF
 	fi
 
 	# ==========================================================================
+	# OPENCODE (AI coding agent config)
+	# ==========================================================================
+	log_info "--- OpenCode ---"
+	link_dotfile "${DOTS_DIR}/opencode/opencode.json" "${HOME}/.config/opencode/opencode.json"
+
+	# Create API key env file template if it doesn't exist yet.
+	# The file is never committed (listed in .gitignore) — this just ensures
+	# a fresh install has a ready-to-fill template rather than silently missing keys.
+	local opencode_env="${HOME}/.config/opencode/.env"
+	if [[ ! -f "$opencode_env" ]]; then
+		cat >"$opencode_env" <<'EOF'
+# OpenCode MCP server API keys
+# Fill in the values below, then open a new shell (or: source this file).
+# This file is NOT tracked by git — keep your keys here, not in the repo.
+#
+# Get keys at:
+#   Brave Search:      https://brave.com/search/api
+#   Wolfram Alpha:     https://developer.wolframalpha.com
+#   Semantic Scholar:  https://www.semanticscholar.org/product/api (optional)
+
+export BRAVE_API_KEY=
+export WOLFRAM_APP_ID=
+export SEMANTIC_SCHOLAR_API_KEY=
+EOF
+		chmod 600 "$opencode_env"
+		log_info "Created API key template: $opencode_env"
+		log_warn "ACTION REQUIRED: Fill in API keys in $opencode_env"
+	else
+		log_info "OpenCode env file already exists: $opencode_env"
+	fi
+
+	# ==========================================================================
 	# ZEN BROWSER (startpage + config files for manual import)
 	# ==========================================================================
 	log_info "--- Zen Browser ---"
@@ -201,6 +233,7 @@ EOF
 	log_info "  - Oh-my-zsh and plugins will auto-install on first shell start"
 	log_info "  - Edit dots/git/.gitconfig to set your name and email"
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
+	log_info "  - Fill in API keys: ~/.config/opencode/.env"
 	log_info "  - Zen Browser manual steps after first launch:"
 	log_info "      1. Sign into Mozilla Sync (syncs extensions, bookmarks, prefs)"
 	log_info "      2. Set homepage to: file://${HOME}/.config/zen/startpage/index.html"
