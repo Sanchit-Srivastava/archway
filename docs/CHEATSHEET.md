@@ -86,12 +86,10 @@ Prefix: `C-Space`
 | Binding | Action |
 |---------|--------|
 | `prefix + f` | Sessionizer — fzf project picker, create or attach |
-| `prefix + P` | Switch to previous session |
-| `prefix + N` | Switch to next session |
-| `M-Up` | Switch to previous session (no prefix) |
-| `M-Down` | Switch to next session (no prefix) |
+| `prefix + j` | Previous session |
+| `prefix + k` | Next session |
 | `prefix + R` | Rename current session |
-| `prefix + K` | Kill current session |
+| `prefix + Q` | Kill current session |
 
 ### Windows
 
@@ -99,10 +97,9 @@ Prefix: `C-Space`
 |---------|--------|
 | `prefix + c` | New window (opens at current path) |
 | `M-1` … `M-9` | Jump to window by number (no prefix) |
-| `M-Left` | Previous window (no prefix) |
-| `M-Right` | Next window (no prefix) |
-| `M-S-Left` | Move window left (no prefix) |
-| `M-S-Right` | Move window right (no prefix) |
+| `M-h` | Previous window (no prefix) |
+| `M-l` | Next window (no prefix) |
+| `M-p` / `M-n` | Previous / next window aliases (no prefix) |
 | `prefix + r` | Rename current window |
 | `prefix + X` | Kill current window |
 
@@ -112,8 +109,9 @@ Prefix: `C-Space`
 |---------|--------|
 | `prefix + \|` | Split horizontal (opens at current path) |
 | `prefix + -` | Split vertical (opens at current path) |
-| `prefix + h/j/k/l` | Navigate panes (vim-style) |
-| `M-h/j/k/l` | Navigate panes without prefix |
+| `M-S-h/j/k/l` | Navigate panes (Shift+Alt+hjkl, no prefix) |
+| `M-Arrow` | Swap pane in direction (Alt+Arrow, no prefix) |
+| `prefix + H/J/K/L` | Resize pane (Shift+hjkl, 5 cells) |
 | `prefix + x` | Kill current pane |
 
 ### Copy Mode
