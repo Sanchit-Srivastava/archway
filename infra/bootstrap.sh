@@ -168,8 +168,16 @@ install_pacman_packages() {
 		return 0
 	fi
 
+	# Upgrade existing packages first, separately from installing new ones.
+	# Combining -Syu with a package list causes pacman to refuse non-interactively
+	# when an installed package conflicts with a newly-requested one (e.g. nodejs
+	# vs nodejs-lts-jod). Splitting into two steps lets pacman resolve conflicts
+	# cleanly at install time without hardcoding workarounds.
+	log_info "Upgrading existing packages..."
+	sudo pacman -Syu --noconfirm
+
 	log_info "Installing ${#packages[@]} pacman packages..."
-	sudo pacman -Syu --needed --noconfirm "${packages[@]}"
+	sudo pacman -S --needed --noconfirm "${packages[@]}"
 }
 
 install_aur_packages() {
@@ -735,8 +743,8 @@ configure_sddm_autologin() {
 		log_warn "Cannot determine autologin user - skipping autologin configuration"
 		log_warn "To enable autologin manually, create $autologin_conf with:"
 		log_warn "  [Autologin]"
-	log_warn "  User=yourusername"
-	log_warn "  Session=niri"
+		log_warn "  User=yourusername"
+		log_warn "  Session=niri"
 		return 0
 	fi
 
