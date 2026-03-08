@@ -159,6 +159,13 @@ if command -v dust &>/dev/null; then
 fi
 
 # =============================================================================
+# ALIASES - Lazygit
+# =============================================================================
+if command -v lazygit &>/dev/null; then
+    alias lg='lazygit'
+fi
+
+# =============================================================================
 # ALIASES - Git shortcuts
 # =============================================================================
 alias g='git'
@@ -178,6 +185,64 @@ alias glog='git log --oneline --graph --decorate'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
+
+# =============================================================================
+# TMUX - Session management
+# =============================================================================
+if command -v tmux &>/dev/null; then
+    # x [dir] - sessionizer: create or attach to a tmux session for a project dir.
+    # With no arg, opens an fzf picker (also used as the completion backend).
+    # Set SESSIONIZER_DIRS (colon-separated) to control which dirs are searched.
+    #   export SESSIONIZER_DIRS="$HOME/projects:$HOME/work"
+    x() {
+        ~/bin/tmux-sessionizer "${1:-}"
+    }
+
+    # xa [session] - attach to an existing session (fzf picker if no arg)
+    xa() {
+        if [[ -n "${1:-}" ]]; then
+            tmux attach-session -t "$1"
+        else
+            local session
+            session=$(tmux list-sessions -F '#S' 2>/dev/null | fzf --prompt='attach: ' --height=40% --layout=reverse --border) \
+                && tmux attach-session -t "$session"
+        fi
+    }
+
+    # xn [name] - new session named after arg or current directory
+    xn() {
+        local name="${1:-$(basename "$PWD")}"
+        tmux new-session -s "${name//\./_}"
+    }
+
+    # xl - list sessions
+    alias xl='tmux ls'
+
+    # ── Completions ────────────────────────────────────────────────────────────
+
+    # x: complete with project directories from SESSIONIZER_DIRS
+    _x_complete() {
+        local search_dirs="${SESSIONIZER_DIRS:-$HOME/projects:$HOME/work}"
+        local -a dirs
+        local d
+        for d in ${(s[:])search_dirs}; do
+            [[ -d "$d" ]] && dirs+=( "$d"/*(N/) )
+        done
+        _wanted directories expl 'project directory' compadd -a dirs
+    }
+    compdef _x_complete x
+
+    # xa: complete with existing tmux session names
+    _xa_complete() {
+        local -a sessions
+        sessions=( ${(f)"$(tmux list-sessions -F '#S' 2>/dev/null)"} )
+        _wanted sessions expl 'tmux session' compadd -a sessions
+    }
+    compdef _xa_complete xa
+
+    # fzf-tab preview for x: show dir contents
+    zstyle ':fzf-tab:complete:x:*' fzf-preview 'eza -1 --color=always $realpath 2>/dev/null'
+fi
 
 # =============================================================================
 # ALIASES - System

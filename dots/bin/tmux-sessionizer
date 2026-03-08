@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# tmux-sessionizer - fuzzy-jump to a project session
+# Usage: tmux-sessionizer [directory]
+#
+# If a directory is passed, use it directly (e.g. from zsh completion).
+# Otherwise open an fzf picker over SESSIONIZER_DIRS.
+#
+# SESSIONIZER_DIRS: colon-separated list of parent dirs to search.
+# Set this in ~/.zshenv or ~/.zshrc.local to override the default.
+# Example: export SESSIONIZER_DIRS="$HOME/projects:$HOME/work:$HOME/src"
+set -euo pipefail
+
+# ── resolve target directory ──────────────────────────────────────────────────
+if [[ -n "${1:-}" ]]; then
+    selected="$1"
+else
+    search_dirs="${SESSIONIZER_DIRS:-$HOME/projects:$HOME/work}"
+    dirs=()
+    IFS=':' read -ra dir_list <<< "$search_dirs"
+    for d in "${dir_list[@]}"; do
+        [[ -d "$d" ]] || continue
+        while IFS= read -r subdir; do
+            dirs+=("$subdir")
+        done < <(find "$d" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+    done
+
+    if [[ ${#dirs[@]} -eq 0 ]]; then
+        echo "tmux-sessionizer: no directories found in SESSIONIZER_DIRS (${search_dirs})" >&2
+        exit 1
+    fi
+
+    selected=$(printf '%s\n' "${dirs[@]}" | fzf --prompt='session: ' --height=40% --layout=reverse --border)
+fi
+
+[[ -z "${selected:-}" ]] && exit 0
+[[ -d "$selected" ]] || { echo "tmux-sessionizer: not a directory: $selected" >&2; exit 1; }
+
+session_name=$(basename "$selected" | tr '.' '_')
+
+if ! tmux has-session -t="$session_name" 2>/dev/null; then
+    tmux new-session -ds "$session_name" -c "$selected"
+fi
+
+# Switch if already inside tmux, otherwise attach
+if [[ -n "${TMUX:-}" ]]; then
+    tmux switch-client -t "$session_name"
+else
+    tmux attach-session -t "$session_name"
+fi
