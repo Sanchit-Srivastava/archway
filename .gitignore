@@ -28,6 +28,7 @@ ehthumbs.db
 .env.local
 *.pem
 *.key
+dots/opencode/.env
 
 # Reference repos (for development only)
 reference/
