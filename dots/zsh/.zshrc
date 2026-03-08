@@ -220,14 +220,12 @@ if command -v tmux &>/dev/null; then
 
     # ── Completions ────────────────────────────────────────────────────────────
 
-    # x: complete with project directories from SESSIONIZER_DIRS
+    # x: complete with zoxide history (same source as `zi`)
     _x_complete() {
-        local search_dirs="${SESSIONIZER_DIRS:-$HOME/projects:$HOME/work}"
         local -a dirs
-        local d
-        for d in ${(s[:])search_dirs}; do
-            [[ -d "$d" ]] && dirs+=( "$d"/*(N/) )
-        done
+        if command -v zoxide &>/dev/null; then
+            dirs=( ${(f)"$(zoxide query --list 2>/dev/null)"} )
+        fi
         _wanted directories expl 'project directory' compadd -a dirs
     }
     compdef _x_complete x

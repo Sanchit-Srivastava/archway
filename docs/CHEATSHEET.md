@@ -38,8 +38,7 @@ Quick reference for shell aliases and tmux keybindings.
 
 ### Tmux Session Management
 
-`SESSIONIZER_DIRS` (colon-separated) controls which directories `x` searches.
-Default: `~/projects:~/work`. Override in `~/.zshrc.local` or `~/.zshenv`.
+Candidates for `x` come from your zoxide history (frecency-ranked), the same list as `zi`.
 
 | Command | Description |
 |---------|-------------|
