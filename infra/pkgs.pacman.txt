@@ -31,6 +31,7 @@ wireplumber
 # AUTHENTICATION & SECURITY
 # =============================================================================
 bitwarden
+bitwarden-cli
 fprintd
 gnome-keyring
 libfprint
@@ -169,11 +170,12 @@ jq
 lazygit
 less
 neovim
-nodejs
+nodejs-lts-jod
 npm
 playerctl
 plocate
 python
+python-uv
 ripgrep
 starship
 tmux
