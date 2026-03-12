@@ -7,14 +7,13 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
 
-SCRIPT_VERSION="2026-02-19-1"
+SCRIPT_VERSION="2026-03-12-1"
 
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
 STATE_FILE="${STATE_DIR}/install.state"
 AUTOSTART_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/autostart"
 AUTOSTART_FILE="${AUTOSTART_DIR}/archway-resume.desktop"
 
-DEFAULT_REPO_URL="https://github.com/Sanchit-Srivastava/archway.git"
 DEFAULT_REPO_DIR="${HOME}/archway"
 if [[ -d "${REPO_ROOT}/.git" ]]; then
 	DEFAULT_REPO_DIR="${REPO_ROOT}"
@@ -42,11 +41,13 @@ Usage:
   ./install.sh [options]
   ./install.sh resume [options]
 
+For remote installation, use remote-install.sh:
+  bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
+
 Options:
-  --repo <url>         Git URL to clone (default: ${DEFAULT_REPO_URL})
-  --dir <path>         Install directory (default: ${DEFAULT_REPO_DIR})
+  --dir <path>         Repo directory (default: ${DEFAULT_REPO_DIR})
   --force              Re-run completed stages
-  --skip-doctor         Skip infra/doctor.sh in stage 2
+  --skip-doctor        Skip infra/doctor.sh in stage 2
   -h, --help           Show this help
 EOF
 }
@@ -109,31 +110,14 @@ prompt_yes_no() {
 	return 1
 }
 
-ensure_repo() {
-	local repo_url="$1"
-	local repo_dir="$2"
+ensure_repo_dir() {
+	local repo_dir="$1"
 
-	if [[ "$repo_dir" == "$REPO_ROOT" && -d "$REPO_ROOT/.git" ]]; then
-		log_info "Using local repo at $repo_dir"
-		return 0
+	if [[ ! -d "$repo_dir/.git" ]]; then
+		die "Not a git repo: $repo_dir. Use remote-install.sh for fresh installs."
 	fi
 
-	if [[ -d "$repo_dir/.git" ]]; then
-		log_info "Repo already exists at $repo_dir"
-		if prompt_yes_no "Pull latest changes?" "y"; then
-			git -C "$repo_dir" pull --ff-only
-		else
-			log_info "Reusing existing repo"
-		fi
-		return 0
-	fi
-
-	if [[ -e "$repo_dir" ]]; then
-		die "Path exists but is not a git repo: $repo_dir"
-	fi
-
-	log_info "Cloning archway..."
-	git clone "$repo_url" "$repo_dir"
+	log_info "Using repo at $repo_dir"
 }
 
 install_dms() {
@@ -243,7 +227,7 @@ stage1() {
 	fi
 
 	log_info "Starting Stage 1 (TTY)"
-	ensure_repo "$REPO_URL" "$ARCHWAY_REPO_DIR"
+	ensure_repo_dir "$ARCHWAY_REPO_DIR"
 
 	log_info "Running bootstrap..."
 	ARCHWAY_SKIP_SDDM_AUTOLOGIN=1 "$ARCHWAY_REPO_DIR/infra/bootstrap.sh"
@@ -324,38 +308,44 @@ main() {
 
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			--repo)
-				REPO_URL="$2"
-				shift 2
-				;;
-			--dir)
-				ARCHWAY_REPO_DIR="$2"
-				shift 2
-				;;
-			--force)
-				FORCE="1"
-				shift
-				;;
-			--skip-doctor)
-				SKIP_DOCTOR="1"
-				shift
-				;;
-			-h|--help)
-				usage
-				exit 0
-				;;
-			*)
-				log_error "Unknown option: $1"
-				usage
-				exit 1
-				;;
+		--dir)
+			ARCHWAY_REPO_DIR="$2"
+			shift 2
+			;;
+		--force)
+			FORCE="1"
+			shift
+			;;
+		--skip-doctor)
+			SKIP_DOCTOR="1"
+			shift
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		*)
+			log_error "Unknown option: $1"
+			usage
+			exit 1
+			;;
 		esac
 	done
 
-	REPO_URL="${REPO_URL:-$DEFAULT_REPO_URL}"
 	ARCHWAY_REPO_DIR="${ARCHWAY_REPO_DIR:-$DEFAULT_REPO_DIR}"
 	FORCE="${FORCE:-0}"
 	SKIP_DOCTOR="${SKIP_DOCTOR:-0}"
+
+	# Ensure stdin is a terminal for interactive prompts.
+	# If not (e.g. piped from curl), reconnect from /dev/tty.
+	if [[ ! -t 0 ]]; then
+		if [[ -c /dev/tty ]]; then
+			log_warn "stdin is not a terminal - redirecting from /dev/tty"
+			exec </dev/tty
+		else
+			die "stdin is not a terminal and /dev/tty is unavailable. Cannot run interactively."
+		fi
+	fi
 
 	if [[ "$mode" == "resume" ]]; then
 		stage2

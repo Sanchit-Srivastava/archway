@@ -8,7 +8,7 @@ Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop wor
 Design: layered system baseline + user dotfiles, with an optional desktop shell layer.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/install.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
 ```
 
 The installer runs in two stages with one reboot. If it doesn't resume automatically, run:
