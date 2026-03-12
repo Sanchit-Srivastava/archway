@@ -1,0 +1,20 @@
+// DMS Window Rules - Managed by DankMaterialShell
+// Do not edit manually - changes may be overwritten
+
+// @id=wr_1771493762109778571 @name=zen
+window-rule {
+    match app-id="^zen$"
+    open-maximized true
+}
+
+// @id=wr_1772506667540162201 @name=Alacritty
+window-rule {
+    match app-id="^Alacritty$"
+    open-floating true
+}
+
+// @id=wr_1772506734402026430 @name=Alacritty
+window-rule {
+    match app-id="^Alacritty$"
+    opacity 0.80
+}

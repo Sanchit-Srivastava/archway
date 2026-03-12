@@ -125,6 +125,7 @@ binds {
     Ctrl+XF86Launch1 { screenshot-screen; }
     Print { screenshot; }
     Super+Shift+S { screenshot; }
+    Super+Shift+A { spawn "annotate-screenshot"; }
     Mod+Shift+E { quit; }
     Mod+Return hotkey-overlay-title="Open Terminal" { spawn "ghostty"; }
     Mod+D repeat=false { toggle-overview; }

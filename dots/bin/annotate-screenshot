@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# annotate-screenshot - open the last screenshot (from clipboard) in satty
+# Usage: annotate-screenshot
+#
+# Take a screenshot with niri's native action (Super+Shift+S), then run this
+# script (Super+Shift+A) to annotate the clipboard image with satty.
+set -euo pipefail
+
+for cmd in wl-paste satty; do
+	if ! command -v "$cmd" &>/dev/null; then
+		notify-send -u critical "annotate-screenshot" "$cmd is not installed"
+		exit 1
+	fi
+done
+
+# Ensure the screenshots directory exists
+SCREENSHOT_DIR="${HOME}/Pictures/Screenshots"
+mkdir -p "$SCREENSHOT_DIR"
+
+wl-paste | satty \
+	--filename - \
+	--copy-command wl-copy \
+	--output-filename "${SCREENSHOT_DIR}/$(date +%Y%m%d-%H%M%S)-annotated.png"

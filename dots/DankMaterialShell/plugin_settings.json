@@ -1,0 +1,69 @@
+{
+  "dankRssWidget": {
+    "enabled": false
+  },
+  "dankKDEConnect": {
+    "enabled": true,
+    "selectedDeviceId": ""
+  },
+  "dankBatteryAlerts": {
+    "enabled": true
+  },
+  "tailscale": {
+    "enabled": false
+  },
+  "webSearch": {
+    "enabled": true,
+    "searchEngines": [],
+    "disabledEngines": [
+      "google"
+    ]
+  },
+  "githubHeatmap": {
+    "enabled": false,
+    "username": "",
+    "refreshInterval": 300
+  },
+  "dankGifSearch": {
+    "enabled": true
+  },
+  "dankStickerSearch": {
+    "enabled": true
+  },
+  "sshConnections": {
+    "enabled": true,
+    "server_list": [],
+    "terminal": "ghostty"
+  },
+  "dmsSessionizer": {
+    "enabled": true,
+    "projectsDir": "~/Projects",
+    "trigger": "x",
+    "terminal": "ghostty"
+  },
+  "sshMonitor": {
+    "enabled": true
+  },
+  "commandRunner": {
+    "enabled": true,
+    "terminal": "alacritty",
+    "history": []
+  },
+  "dankPomodoroTimer": {
+    "enabled": true,
+    "autoSetDND": true
+  },
+  "qcalCalendar": {
+    "enabled": false
+  },
+  "niriWindows": {
+    "enabled": true,
+    "noTrigger": true,
+    "trigger": ""
+  },
+  "timeUntil": {
+    "enabled": true,
+    "targetTimestamp": "",
+    "label": ""
+  }
+}

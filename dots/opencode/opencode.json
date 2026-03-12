@@ -64,6 +64,14 @@
       "type": "remote",
       "url": "http://127.0.0.1:23120/mcp",
       "enabled": true
+    },
+    "latex": {
+      "type": "local",
+      "command": [
+        "/home/snek/mcp-latex-server/.venv/bin/python",
+        "/home/snek/mcp-latex-server/latex_server.py"
+      ],
+      "enabled": true
     }
   }
 }

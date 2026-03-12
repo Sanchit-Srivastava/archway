@@ -5,7 +5,7 @@ set -euo pipefail
 # Run this AFTER dankinstall completes
 # Safe to re-run (idempotent)
 
-SCRIPT_VERSION="2026-02-18-1"
+SCRIPT_VERSION="2026-03-12-1"
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
@@ -29,6 +29,43 @@ on_error() {
 }
 trap 'on_error "$LINENO" "$BASH_COMMAND" "$?"' ERR
 
+# DMS plugins to install (plugin IDs from the DMS plugin registry)
+DMS_PLUGINS=(
+	commandRunner
+	dankBatteryAlerts
+	dankGifSearch
+	dankKDEConnect
+	dankPomodoroTimer
+	dankStickerSearch
+	dmsSessionizer
+	niriWindows
+	qcalCalendar
+	sshConnections
+	timeUntil
+	webSearch
+)
+
+install_plugins() {
+	log_info "--- DMS Plugins ---"
+	local installed_count=0
+	local skipped_count=0
+
+	for plugin in "${DMS_PLUGINS[@]}"; do
+		if [[ -d "${HOME}/.config/DankMaterialShell/plugins/${plugin}" ]]; then
+			skipped_count=$((skipped_count + 1))
+		else
+			log_info "Installing plugin: ${plugin}"
+			if dms plugins install "$plugin"; then
+				installed_count=$((installed_count + 1))
+			else
+				log_warn "Failed to install plugin: ${plugin} (continuing)"
+			fi
+		fi
+	done
+
+	log_info "Plugins: ${installed_count} installed, ${skipped_count} already present"
+}
+
 main() {
 	log_info "Applying DMS customizations (v${SCRIPT_VERSION})"
 	log_info ""
@@ -47,26 +84,59 @@ main() {
 	fi
 
 	# ==========================================================================
-	# SETTINGS (theme: auto/neutral, bar auto-hide, etc.)
+	# NIRI CONFIG (window rules, animations, input, layout, etc.)
+	# ==========================================================================
+	log_info "--- Niri Config ---"
+	if [[ -f "${DOTS_DIR}/niri/config.kdl" ]]; then
+		mkdir -p "${HOME}/.config/niri"
+		cp "${DOTS_DIR}/niri/config.kdl" "${HOME}/.config/niri/config.kdl"
+		log_info "Copied config.kdl (window rules, animations, input, layout)"
+	else
+		log_warn "config.kdl not found in dots/niri/, skipping"
+	fi
+
+	# ==========================================================================
+	# DMS-MANAGED NIRI FILES (keybinds, window rules)
+	# ==========================================================================
+	log_info "--- DMS Niri Files ---"
+	mkdir -p "${HOME}/.config/niri/dms"
+
+	if [[ -f "${DOTS_DIR}/niri/dms/binds.kdl" ]]; then
+		cp "${DOTS_DIR}/niri/dms/binds.kdl" "${HOME}/.config/niri/dms/binds.kdl"
+		log_info "Copied binds.kdl (keybindings)"
+	else
+		log_warn "binds.kdl not found in dots/, skipping"
+	fi
+
+	if [[ -f "${DOTS_DIR}/niri/dms/windowrules.kdl" ]]; then
+		cp "${DOTS_DIR}/niri/dms/windowrules.kdl" "${HOME}/.config/niri/dms/windowrules.kdl"
+		log_info "Copied windowrules.kdl (Alacritty floating+opacity, Zen maximized)"
+	else
+		log_warn "windowrules.kdl not found in dots/, skipping"
+	fi
+
+	# ==========================================================================
+	# SETTINGS (theme, bar layout, matugen templates, power, lock screen, etc.)
 	# ==========================================================================
 	log_info "--- DMS Settings ---"
 	if [[ -f "${DOTS_DIR}/DankMaterialShell/settings.json" ]]; then
 		cp "${DOTS_DIR}/DankMaterialShell/settings.json" "${HOME}/.config/DankMaterialShell/settings.json"
-		log_info "Copied settings.json (theme: scheme-neutral, bar auto-hide: enabled)"
+		log_info "Copied settings.json (theme: purple, bar: auto-hide, animations: instant)"
 	else
 		log_warn "settings.json not found in dots/, skipping"
 	fi
 
 	# ==========================================================================
-	# KEYBINDS (Mod+Return for terminal)
+	# PLUGINS (install from registry, then apply settings)
 	# ==========================================================================
-	log_info "--- Keybinds ---"
-	if [[ -f "${DOTS_DIR}/niri/dms/binds.kdl" ]]; then
-		mkdir -p "${HOME}/.config/niri/dms"
-		cp "${DOTS_DIR}/niri/dms/binds.kdl" "${HOME}/.config/niri/dms/binds.kdl"
-		log_info "Copied binds.kdl (terminal: Mod+Return)"
+	install_plugins
+
+	log_info "--- Plugin Settings ---"
+	if [[ -f "${DOTS_DIR}/DankMaterialShell/plugin_settings.json" ]]; then
+		cp "${DOTS_DIR}/DankMaterialShell/plugin_settings.json" "${HOME}/.config/DankMaterialShell/plugin_settings.json"
+		log_info "Copied plugin_settings.json (triggers, terminals, enabled states)"
 	else
-		log_warn "binds.kdl not found in dots/, skipping"
+		log_warn "plugin_settings.json not found in dots/, skipping"
 	fi
 
 	# ==========================================================================
