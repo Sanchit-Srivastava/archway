@@ -230,6 +230,53 @@ EOF
 		link_dotfile "${DOTS_DIR}/environment.d/50-archway.conf" "${HOME}/.config/environment.d/50-archway.conf"
 
 		# ==========================================================================
+		# VDIRSYNCER (CalDAV/CardDAV sync — Google Calendar)
+		# ==========================================================================
+		log_info "--- Vdirsyncer ---"
+		link_dotfile "${DOTS_DIR}/vdirsyncer/config" "${HOME}/.config/vdirsyncer/config"
+
+		# Create secrets file template (never committed — holds OAuth credentials)
+		local vdirsyncer_secrets="${HOME}/.config/vdirsyncer/secrets"
+		if [[ ! -f "$vdirsyncer_secrets" ]]; then
+			cat >"$vdirsyncer_secrets" <<'EOF'
+# vdirsyncer Google OAuth2 credentials
+# Fill in the values below after creating a Google Cloud project:
+#   1. Go to https://console.developers.google.com
+#   2. Create a project, enable the "CalDAV API"
+#   3. Create OAuth 2.0 credentials (Desktop application type)
+#   4. Paste client_id and client_secret here
+#
+# Then run:  vdirsyncer discover google_calendar
+#            vdirsyncer sync
+
+VDIRSYNCER_GOOGLE_CLIENT_ID=
+VDIRSYNCER_GOOGLE_CLIENT_SECRET=
+EOF
+			chmod 600 "$vdirsyncer_secrets"
+			log_info "Created vdirsyncer secrets template: $vdirsyncer_secrets"
+			log_warn "ACTION REQUIRED: Fill in Google OAuth credentials in $vdirsyncer_secrets"
+		else
+			log_info "Vdirsyncer secrets file already exists: $vdirsyncer_secrets"
+		fi
+
+		# ==========================================================================
+		# KHAL (terminal calendar UI)
+		# ==========================================================================
+		log_info "--- Khal ---"
+		link_dotfile "${DOTS_DIR}/khal/config" "${HOME}/.config/khal/config"
+
+		# ==========================================================================
+		# SYSTEMD USER UNITS
+		# ==========================================================================
+		log_info "--- Systemd user units ---"
+		mkdir -p "${HOME}/.config/systemd/user"
+		for unit in "${DOTS_DIR}"/systemd-user/*; do
+			[[ -f "$unit" ]] || continue
+			unit_name="$(basename "$unit")"
+			link_dotfile "$unit" "${HOME}/.config/systemd/user/${unit_name}"
+		done
+
+		# ==========================================================================
 		# LOCAL BIN
 		# ==========================================================================
 		log_info "--- Local bin ---"
@@ -254,6 +301,9 @@ EOF
 	log_info "  - Edit dots/git/.gitconfig to set your name and email"
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
 	log_info "  - Fill in API keys: ~/.config/opencode/.env"
+	log_info "  - Calendar setup: fill in ~/.config/vdirsyncer/secrets, then run:"
+	log_info "      vdirsyncer discover google_calendar && vdirsyncer sync"
+	log_info "      systemctl --user enable --now vdirsyncer.timer"
 	log_info "  - Zen Browser manual steps after first launch:"
 	log_info "      1. Sign into Mozilla Sync (syncs extensions, bookmarks, prefs)"
 	log_info "      2. Set homepage to: file://${HOME}/.config/zen/startpage/index.html"

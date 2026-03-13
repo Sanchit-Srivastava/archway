@@ -250,6 +250,7 @@ enable_user_services() {
 		"pipewire-pulse"
 		"wireplumber"
 		"xdg-desktop-portal"
+		"vdirsyncer.timer"
 	)
 
 	for service in "${user_services[@]}"; do
