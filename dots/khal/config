@@ -1,0 +1,30 @@
+# khal — terminal calendar configuration
+#
+# Reads calendar data synced by vdirsyncer from ~/.local/share/calendars/
+# Use `khal interactive` for the TUI, `khal list` for quick view.
+
+[calendars]
+
+[[google]]
+path = ~/.local/share/calendars/google/*
+type = discover
+color = auto
+
+[locale]
+timeformat = %H:%M
+dateformat = %Y-%m-%d
+longdateformat = %Y-%m-%d
+datetimeformat = %Y-%m-%d %H:%M
+longdatetimeformat = %Y-%m-%d %H:%M
+# Monday = 0, Sunday = 6
+firstweekday = 0
+
+[default]
+highlight_event_days = true
+# Set this to the name of your primary calendar after first sync.
+# Run `khal printcalendars` to see available names.
+# default_calendar = your-calendar-name
+
+[view]
+# Show events from today through the next 7 days in `khal list`
+event_format = {calendar-color}{cancelled}{start-end-time-style} {title}{repeat-symbol}{reset}
