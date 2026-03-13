@@ -106,6 +106,13 @@ main() {
 	chmod 600 "${HOME}/.ssh/config" 2>/dev/null || true
 
 	# ==========================================================================
+	# FUZZEL (Wayland launcher/dmenu)
+	# ==========================================================================
+	log_info "--- Fuzzel ---"
+	mkdir -p "${HOME}/.config/fuzzel"
+	link_dotfile "${DOTS_DIR}/fuzzel/fuzzel.ini" "${HOME}/.config/fuzzel/fuzzel.ini"
+
+	# ==========================================================================
 	# ZATHURA (PDF viewer with SyncTeX support)
 	# ==========================================================================
 	log_info "--- Zathura ---"

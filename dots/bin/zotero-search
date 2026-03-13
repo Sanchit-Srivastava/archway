@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # Search Zotero library via Better BibTeX JSON-RPC, open PDF in Zathura.
+# Uses fuzzel's fuzzy matching to filter results interactively.
 
 ZOTERO_RPC="http://127.0.0.1:23119/better-bibtex/json-rpc"
 
@@ -16,16 +17,38 @@ bbt_rpc() {
 query=$(echo "" | fuzzel --dmenu --prompt="Zotero: " --width=60)
 [[ -z "$query" ]] && exit 0
 
+# Escape query for safe JSON embedding
+json_query=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$query")
+
 # Search via BBT JSON-RPC
-results=$(bbt_rpc "item.search" "[\"$query\"]")
+results=$(bbt_rpc "item.search" "[${json_query}]")
 
 # Parse results into "citekey | title | authors" for fuzzel
 entries=$(echo "$results" | jq -r '.result[] |
     "\(.citekey) | \(.title // "Untitled") | \(.creators // [] | map(.lastName // .name) | join(", "))"' 2>/dev/null)
 
+# If no results, try searching each word individually and merge results
+if [[ -z "$entries" ]]; then
+	read -ra words <<<"$query"
+	if [[ ${#words[@]} -gt 1 ]]; then
+		all_entries=""
+		for word in "${words[@]}"; do
+			word_json=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$word")
+			word_results=$(bbt_rpc "item.search" "[${word_json}]")
+			word_entries=$(echo "$word_results" | jq -r '.result[] |
+				"\(.citekey) | \(.title // "Untitled") | \(.creators // [] | map(.lastName // .name) | join(", "))"' 2>/dev/null)
+			if [[ -n "$word_entries" ]]; then
+				all_entries+="${word_entries}"$'\n'
+			fi
+		done
+		# Deduplicate by citekey (first field)
+		entries=$(echo "$all_entries" | awk -F' \\| ' '!seen[$1]++' | sed '/^$/d')
+	fi
+fi
+
 [[ -z "$entries" ]] && notify-send "Zotero" "No results for: $query" -t 3000 && exit 0
 
-# Let user pick
+# Let user pick - fuzzel does fuzzy matching on the displayed entries
 selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines=15)
 [[ -z "$selected" ]] && exit 0
 
@@ -33,12 +56,14 @@ selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines
 citekey=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
 
 # Get PDF path via attachments
-pdf_path=$(bbt_rpc "item.attachments" "[\"$citekey\"]" | jq -r '.result[0].path // empty' 2>/dev/null)
+json_citekey=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$citekey")
+pdf_path=$(bbt_rpc "item.attachments" "[${json_citekey}]" | jq -r '.result[0].path // empty' 2>/dev/null)
 
 if [[ -n "$pdf_path" ]] && [[ -f "$pdf_path" ]]; then
 	zathura "$pdf_path" &
 else
 	# Fallback: open in browser
 	notify-send "Zotero" "No local PDF, opening in browser" -t 2000
-	xdg-open "https://scholar.google.com/scholar?q=${query// /+}"
+	encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote_plus(sys.argv[1]))" "$query")
+	xdg-open "https://scholar.google.com/scholar?q=${encoded}"
 fi
