@@ -18,6 +18,15 @@
 [core]
     editor = nvim
     autocrlf = input
+    pager = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    side-by-side = true
+    line-numbers = true
 
 [color]
     ui = true
@@ -25,6 +34,9 @@
 [diff]
     algorithm = histogram
     colorMoved = default
+
+[merge]
+    conflictstyle = zdiff3
 
 [rebase]
     autoStash = true
@@ -38,6 +50,8 @@
     lg = log --oneline --graph --decorate --all
     unstage = reset HEAD --
     last = log -1 HEAD
+    dft = "!f() { GIT_EXTERNAL_DIFF=difft git diff \"$@\"; }; f"
+    dftl = "!f() { GIT_EXTERNAL_DIFF=difft git log -p --ext-diff \"$@\"; }; f"
 [credential "https://github.com"]
 	helper = 
 	helper = !/usr/bin/env gh auth git-credential
