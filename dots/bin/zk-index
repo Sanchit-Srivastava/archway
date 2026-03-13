@@ -232,11 +232,11 @@ readme_output="${BANNER}
 "
 
 if [[ -n "$recent_output" ]]; then
-	readme_output+="${recent_output}"
+	readme_output+="${recent_output}"$'\n'
 fi
 
 if [[ -n "$tag_output" ]]; then
-	readme_output+="${tag_output}"
+	readme_output+="${tag_output}"$'\n'
 fi
 
 # --- Build index.md (Neovim entry point -- same content, with frontmatter) ---
@@ -254,11 +254,11 @@ tags: [index]
 "
 
 if [[ -n "$recent_output" ]]; then
-	index_output+="${recent_output}"
+	index_output+="${recent_output}"$'\n'
 fi
 
 if [[ -n "$tag_output" ]]; then
-	index_output+="${tag_output}"
+	index_output+="${tag_output}"$'\n'
 fi
 
 # --- Write or print ---
