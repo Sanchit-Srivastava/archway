@@ -294,7 +294,7 @@ A flat-file markdown wiki for research notes, synced across machines via git.
 
 - Plain `.md` files with YAML frontmatter -- no proprietary format, future-proof
 - CLI tool: `zk new`, `zk list`, `zk edit` -- composable with scripts and launchers
-- Neovim LSP via `zk-nvim`: `[[link]]` completion, goto-definition, backlinks
+- Neovim LSP via `zk-nvim`: link completion, goto-definition, backlinks
 - Templates for different note types
 - Already in pacman: `sudo pacman -S zk`
 
@@ -362,12 +362,11 @@ pager = "less -FRX"
 fzf-preview = "bat -p --color always {-1}"
 
 [format.markdown]
-link-format = "wiki"
+link-format = "markdown"
 hashtags = true
 colon-tags = true
 
 [lsp]
-diagnostics.wiki-title = "hint"
 diagnostics.dead-link = "error"
 
 [lsp.completion]

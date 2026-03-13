@@ -3,15 +3,15 @@ set -euo pipefail
 
 # Regenerate ~/notes/README.md and ~/notes/index.md from note frontmatter.
 #
-# README.md  -- standard markdown links (clickable on GitHub)
-# index.md   -- wiki-links (navigable in Neovim via zk-nvim)
+# Standard markdown links are used everywhere -- clickable on GitHub and
+# navigable in Neovim via zk-nvim LSP (gf / <CR>).
 #
-# All notes live in entries/ (flat). Grouping is by frontmatter tags:
-#   tags: [paper]   -> Papers section
-#   tags: [journal] -> Journal section
-#   tags: [meeting] -> Meetings section
-#   tags: [idea]    -> Ideas section
-#   (anything else) -> Other section
+# README.md  -- landing page: recent notes + tag-based sections
+# index.md   -- Neovim entry point (same content, with YAML frontmatter)
+#
+# Tags are discovered dynamically from frontmatter. Any tag used in any note
+# gets its own heading. Notes with multiple tags appear under each one.
+# Notes with no tags appear under "Uncategorized".
 #
 # Usage:
 #   zk-index              # rebuild README.md and index.md
@@ -19,8 +19,6 @@ set -euo pipefail
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
 ENTRIES_DIR="${NOTES_DIR}/entries"
-README="${NOTES_DIR}/README.md"
-INDEX="${NOTES_DIR}/index.md"
 DRY_RUN=false
 RECENT_LIMIT=20
 
@@ -38,6 +36,17 @@ if [[ ! -d "${ENTRIES_DIR}" ]]; then
 	exit 1
 fi
 
+BANNER='```
+███╗   ██╗ ██████╗ ████████╗███████╗███████╗
+████╗  ██║██╔═══██╗╚══██╔══╝██╔════╝██╔════╝
+██╔██╗ ██║██║   ██║   ██║   █████╗  ███████╗
+██║╚██╗██║██║   ██║   ██║   ██╔══╝  ╚════██║
+██║ ╚████║╚██████╔╝   ██║   ███████╗███████║
+╚═╝  ╚═══╝ ╚═════╝    ╚═╝   ╚══════╝╚══════╝
+```'
+
+# --- Helpers ---
+
 # Extract title from YAML frontmatter, fall back to filename
 get_title() {
 	local file="$1"
@@ -47,13 +56,11 @@ get_title() {
 		title=$(sed -n '/^---$/,/^---$/{ s/^title:[[:space:]]*//p; }' "$file" | head -1)
 	fi
 
-	# Strip surrounding quotes
 	title="${title#\"}"
 	title="${title%\"}"
 	title="${title#\'}"
 	title="${title%\'}"
 
-	# Fall back to filename without extension
 	if [[ -z "$title" ]]; then
 		local base
 		base=$(basename "$file" .md)
@@ -81,9 +88,9 @@ get_date() {
 	printf '%s' "$date"
 }
 
-# Get the first known tag from frontmatter (paper, journal, meeting, idea)
-# Returns empty string if no known tag is found.
-get_category() {
+# Get all tags from frontmatter as newline-separated list.
+# Returns nothing if no tags found.
+get_tags() {
 	local file="$1"
 	local tags_line=""
 
@@ -91,90 +98,86 @@ get_category() {
 		tags_line=$(sed -n '/^---$/,/^---$/{ s/^tags:[[:space:]]*//p; }' "$file" | head -1)
 	fi
 
-	# Check for known categories in the tags list
-	for cat in paper journal meeting idea; do
-		if printf '%s' "$tags_line" | grep -qw "$cat"; then
-			printf '%s' "$cat"
-			return
-		fi
-	done
+	# Strip brackets: [paper, journal] -> paper, journal
+	tags_line="${tags_line#\[}"
+	tags_line="${tags_line%\]}"
+
+	# Split on comma, trim whitespace, output one per line
+	if [[ -n "$tags_line" ]]; then
+		printf '%s' "$tags_line" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$'
+	fi
 }
 
-# Format a single note entry as a markdown or wiki link
-# Args: file link_format ("markdown" or "wiki")
+# Title-case a tag name (paper -> Paper, follow-up -> Follow-Up)
+titlecase() {
+	printf '%s' "$1" | sed 's/\b\(.\)/\u\1/g'
+}
+
+# Format a single note entry as a standard markdown link
 format_entry() {
 	local file="$1"
-	local link_format="$2"
 	local rel_path title date
 
 	rel_path="${file#"${NOTES_DIR}/"}"
 	title=$(get_title "$file")
 	date=$(get_date "$file")
 
-	if [[ "$link_format" == "wiki" ]]; then
-		local target="${rel_path%.md}"
-		if [[ -n "$date" ]]; then
-			printf -- '- [[%s|%s]] _(%s)_' "$target" "$title" "$date"
-		else
-			printf -- '- [[%s|%s]]' "$target" "$title"
-		fi
+	if [[ -n "$date" ]]; then
+		printf -- '- [%s](%s) _(%s)_' "$title" "$rel_path" "$date"
 	else
-		if [[ -n "$date" ]]; then
-			printf -- '- [%s](%s) _(%s)_' "$title" "$rel_path" "$date"
-		else
-			printf -- '- [%s](%s)' "$title" "$rel_path"
-		fi
+		printf -- '- [%s](%s)' "$title" "$rel_path"
 	fi
 }
 
-# --- Categorize all notes ---
+# --- Scan all notes, discover tags, build per-tag file lists ---
 
-# Associative arrays to hold entries per category
-declare -a paper_files=()
-declare -a journal_files=()
-declare -a meeting_files=()
-declare -a idea_files=()
-declare -a other_files=()
+# tag -> newline-separated list of file paths
+declare -A tag_files=()
+# Ordered list of discovered tags (preserves first-seen order)
+declare -a tag_order=()
+# Files with no tags at all
+declare -a untagged_files=()
 
 while IFS= read -r -d '' file; do
-	cat=$(get_category "$file")
-	case "$cat" in
-	paper) paper_files+=("$file") ;;
-	journal) journal_files+=("$file") ;;
-	meeting) meeting_files+=("$file") ;;
-	idea) idea_files+=("$file") ;;
-	*) other_files+=("$file") ;;
-	esac
+	has_tag=false
+
+	while IFS= read -r tag; do
+		has_tag=true
+
+		# Skip the "index" meta-tag (used by index.md itself)
+		if [[ "$tag" == "index" ]]; then
+			continue
+		fi
+
+		# Track tag order (first seen)
+		if [[ -z "${tag_files[$tag]+x}" ]]; then
+			tag_order+=("$tag")
+			tag_files[$tag]=""
+		fi
+
+		# Append file to this tag's list (newline-separated)
+		if [[ -n "${tag_files[$tag]}" ]]; then
+			tag_files[$tag]+=$'\n'
+		fi
+		tag_files[$tag]+="$file"
+	done < <(get_tags "$file")
+
+	if [[ "$has_tag" == false ]]; then
+		untagged_files+=("$file")
+	fi
 done < <(find "${ENTRIES_DIR}" -maxdepth 1 -name '*.md' -type f -print0 | sort -z)
 
-# Build a section from a file array
-# Args: heading link_format files...
-build_section() {
-	local heading="$1"
-	local link_format="$2"
-	shift 2
+# Sort tags alphabetically
+IFS=$'\n' read -r -d '' -a tag_order < <(printf '%s\n' "${tag_order[@]}" | sort && printf '\0') || true
 
-	if [[ $# -eq 0 ]]; then
-		return
-	fi
+# --- Build recent notes section ---
 
-	printf '## %s\n\n' "$heading"
-	for file in "$@"; do
-		format_entry "$file" "$link_format"
-		printf '\n'
-	done
-	printf '\n'
-}
-
-# Build recent notes section (by mtime, across all entries)
-# Args: link_format
 build_recent_section() {
-	local link_format="$1"
 	local -a entries=()
 	local count=0
 
 	while IFS= read -r file; do
-		entries+=("$(format_entry "$file" "$link_format")")
+		entries+=("$(format_entry "$file")")
 		count=$((count + 1))
 		if [[ $count -ge $RECENT_LIMIT ]]; then
 			break
@@ -191,37 +194,52 @@ build_recent_section() {
 	printf '\n'
 }
 
-# --- Build README.md (standard markdown links for GitHub) ---
+# --- Build tag sections ---
 
-readme_output="\`\`\`
-███╗   ██╗ ██████╗ ████████╗███████╗███████╗
-████╗  ██║██╔═══██╗╚══██╔══╝██╔════╝██╔════╝
-██╔██╗ ██║██║   ██║   ██║   █████╗  ███████╗
-██║╚██╗██║██║   ██║   ██║   ██╔══╝  ╚════██║
-██║ ╚████║╚██████╔╝   ██║   ███████╗███████║
-╚═╝  ╚═══╝ ╚═════╝    ╚═╝   ╚══════╝╚══════╝
-\`\`\`
+build_tag_sections() {
+	for tag in "${tag_order[@]}"; do
+		local heading
+		heading=$(titlecase "$tag")
+		printf '## %s\n\n' "$heading"
+
+		while IFS= read -r file; do
+			format_entry "$file"
+			printf '\n'
+		done <<<"${tag_files[$tag]}"
+		printf '\n'
+	done
+
+	# Uncategorized section (notes with no tags at all)
+	if [[ ${#untagged_files[@]} -gt 0 ]]; then
+		printf '## Uncategorized\n\n'
+		for file in "${untagged_files[@]}"; do
+			format_entry "$file"
+			printf '\n'
+		done
+		printf '\n'
+	fi
+}
+
+# --- Build README.md ---
+
+recent_output=$(build_recent_section)
+tag_output=$(build_tag_sections)
+
+readme_output="${BANNER}
 
 > Auto-generated by \`zk-index\`. Do not edit manually.
 
 "
 
-for category_args in \
-	"Papers:markdown:paper_files" \
-	"Journal:markdown:journal_files" \
-	"Ideas:markdown:idea_files" \
-	"Meetings:markdown:meeting_files" \
-	"Other:markdown:other_files"; do
+if [[ -n "$recent_output" ]]; then
+	readme_output+="${recent_output}"
+fi
 
-	IFS=: read -r heading fmt arr_name <<<"$category_args"
-	declare -n arr="$arr_name"
-	if [[ ${#arr[@]} -gt 0 ]]; then
-		section=$(build_section "$heading" "$fmt" "${arr[@]}")
-		readme_output+="${section}"
-	fi
-done
+if [[ -n "$tag_output" ]]; then
+	readme_output+="${tag_output}"
+fi
 
-# --- Build index.md (wiki-links for Neovim navigation) ---
+# --- Build index.md (Neovim entry point -- same content, with frontmatter) ---
 
 index_output="---
 title: Index
@@ -231,30 +249,17 @@ tags: [index]
 # Research Notes
 
 > Auto-generated by \`zk-index\`. Do not edit manually.
-> Navigate with \`gf\` or \`<CR>\` on any wiki-link.
+> Navigate with \`gf\` or \`<CR>\` on any link.
 
 "
 
-# Recent notes first (most useful for daily work)
-recent_output=$(build_recent_section "wiki")
 if [[ -n "$recent_output" ]]; then
 	index_output+="${recent_output}"
 fi
 
-for category_args in \
-	"Papers:wiki:paper_files" \
-	"Journal:wiki:journal_files" \
-	"Ideas:wiki:idea_files" \
-	"Meetings:wiki:meeting_files" \
-	"Other:wiki:other_files"; do
-
-	IFS=: read -r heading fmt arr_name <<<"$category_args"
-	declare -n arr="$arr_name"
-	if [[ ${#arr[@]} -gt 0 ]]; then
-		section=$(build_section "$heading" "$fmt" "${arr[@]}")
-		index_output+="${section}"
-	fi
-done
+if [[ -n "$tag_output" ]]; then
+	index_output+="${tag_output}"
+fi
 
 # --- Write or print ---
 
@@ -264,8 +269,8 @@ if [[ "$DRY_RUN" == true ]]; then
 	printf '\n=== index.md ===\n\n'
 	printf '%s' "$index_output"
 else
-	printf '%s' "$readme_output" >"$README"
-	printf 'Updated %s (%d lines)\n' "$README" "$(wc -l <"$README")"
-	printf '%s' "$index_output" >"$INDEX"
-	printf 'Updated %s (%d lines)\n' "$INDEX" "$(wc -l <"$INDEX")"
+	printf '%s' "$readme_output" >"${NOTES_DIR}/README.md"
+	printf 'Updated %s/README.md (%d lines)\n' "${NOTES_DIR}" "$(wc -l <"${NOTES_DIR}/README.md")"
+	printf '%s' "$index_output" >"${NOTES_DIR}/index.md"
+	printf 'Updated %s/index.md (%d lines)\n' "${NOTES_DIR}" "$(wc -l <"${NOTES_DIR}/index.md")"
 fi

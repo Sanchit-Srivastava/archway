@@ -13,7 +13,7 @@ set -euo pipefail
 #   ├── .zk/config.toml + templates/   (zk config)
 #   ├── entries/                        (all notes, flat)
 #   ├── references/                     (Zotero BibTeX)
-#   ├── index.md                        (wiki-links for Neovim)
+#   ├── index.md                        (entry point for Neovim)
 #   └── README.md                       (standard links for GitHub)
 
 NOTES_DIR="$HOME/notes"
@@ -70,12 +70,11 @@ pager = "less -FRX"
 fzf-preview = "bat -p --color always {-1}"
 
 [format.markdown]
-link-format = "wiki"
+link-format = "markdown"
 hashtags = true
 colon-tags = true
 
 [lsp]
-diagnostics.wiki-title = "hint"
 diagnostics.dead-link = "error"
 
 [lsp.completion]
@@ -173,7 +172,7 @@ tags: []
 
 TMPL
 
-# Create index.md (placeholder -- zk-index will regenerate with real wiki-links)
+# Create index.md (placeholder -- zk-index will regenerate with links)
 write_if_missing "${NOTES_DIR}/index.md" <<'EOF'
 ---
 title: Index
@@ -182,7 +181,7 @@ tags: [index]
 
 # Research Notes
 
-> Run `zk-index` to populate this file with wiki-links to all notes.
+> Run `zk-index` to populate this file with links to all notes.
 
 ## Recent Notes
 
@@ -217,6 +216,25 @@ if [[ ! -d "${NOTES_DIR}/.git" ]]; then
 	log_info "Initialized git repo"
 fi
 
+# Install pre-commit hook to auto-regenerate index on every commit
+HOOK_PATH="${NOTES_DIR}/.git/hooks/pre-commit"
+if [[ ! -f "$HOOK_PATH" ]] || ! grep -q 'zk-index' "$HOOK_PATH" 2>/dev/null; then
+	cat >"$HOOK_PATH" <<'HOOK'
+#!/usr/bin/env bash
+# Auto-regenerate README.md and index.md before each commit.
+# Installed by zk-init -- safe to customize.
+
+if command -v zk-index &>/dev/null; then
+    zk-index
+    git add README.md index.md
+fi
+HOOK
+	chmod +x "$HOOK_PATH"
+	log_info "Installed pre-commit hook (auto-runs zk-index)"
+else
+	log_info "Pre-commit hook already installed"
+fi
+
 # Stage and commit any new files (covers both fresh and cloned-empty cases)
 if [[ -n "$(git -C "${NOTES_DIR}" status --porcelain)" ]]; then
 	git -C "${NOTES_DIR}" add -A
@@ -234,4 +252,4 @@ log_info "Next steps:"
 log_info "  1. Add a git remote: cd ~/notes && git remote add origin <url>"
 log_info "  2. Set up Zotero Better BibTeX auto-export to ~/notes/references/library.bib"
 log_info "  3. Try: zk new --dir entries --title 'My first note'"
-log_info "  4. Run: zk-index          (regenerate README.md and index.md)"
+log_info "  4. Commit as usual -- the pre-commit hook runs zk-index automatically"

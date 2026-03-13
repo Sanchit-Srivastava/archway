@@ -40,8 +40,8 @@ This creates:
 ├── .git/                  # git repo for cross-machine sync
 ├── entries/               # all notes (flat, categorized by frontmatter tags)
 ├── references/            # Zotero BibTeX auto-export target
-├── index.md               # entry point (wiki-links, for Neovim navigation)
-└── README.md              # GitHub-friendly index with clickable links
+├── index.md               # entry point (Neovim navigation, with frontmatter)
+└── README.md              # auto-generated index (recent notes + tag sections)
 ```
 
 ### Second machine
@@ -95,7 +95,7 @@ template, which sets the appropriate frontmatter tags.
 ### Neovim integration (zk-nvim)
 
 The zk LSP auto-attaches to any markdown file inside `~/notes/`. Provides
-`[[wiki-link]]` completion, goto-definition, backlinks, and dead-link diagnostics.
+link completion, goto-definition, backlinks, and dead-link diagnostics.
 
 | Keybind | Action |
 |---------|--------|
