@@ -38,10 +38,7 @@ This creates:
 │   ├── config.toml        # zk configuration
 │   └── templates/         # note templates (daily, paper, meeting, research)
 ├── .git/                  # git repo for cross-machine sync
-├── journal/               # daily notes
-├── papers/                # paper summaries
-├── ideas/                 # research ideas
-├── meetings/              # meeting notes
+├── entries/               # all notes (flat, categorized by frontmatter tags)
 ├── references/            # Zotero BibTeX auto-export target
 ├── index.md               # entry point (wiki-links, for Neovim navigation)
 └── README.md              # GitHub-friendly index with clickable links
@@ -56,7 +53,7 @@ git clone git@github.com:you/notes.git ~/notes
 ```
 
 `zk-init` detects a cloned repo (has a remote **and** a fully configured
-`.zk/config.toml` with group definitions) and exits without touching anything.
+`.zk/config.toml` with alias definitions) and exits without touching anything.
 If the repo is empty (freshly created on GitHub), `zk-init` will populate it
 with the config, templates, and directory structure.
 
@@ -70,9 +67,9 @@ zk-index              # regenerate README.md
 zk-index --dry-run    # preview without writing
 ```
 
-The generated README groups notes by section (papers, journal, ideas, meetings)
-and extracts titles from YAML frontmatter. It is designed to be regenerated, not
-hand-edited.
+The generated README groups notes by frontmatter tags (papers, journal, ideas,
+meetings) and extracts titles from YAML frontmatter. It is designed to be
+regenerated, not hand-edited.
 
 Workflow:
 
@@ -84,13 +81,16 @@ cd ~/notes && git add -A && git commit -m "sync" && git push
 
 ### Note types
 
+All notes live in `entries/` (flat directory). Note type is determined by the
+template, which sets the appropriate frontmatter tags.
+
 | Command | Template | Filename pattern |
 |---------|----------|-----------------|
 | `zk journal` | daily.md | `YYYY-MM-DD` |
 | `zk paper "title"` | paper-summary.md | `slug-title` |
 | `zk meeting "title"` | meeting-notes.md | `YYYY-MM-DD-slug-title` |
 | `zk idea "title"` | research-note.md | `slug-title` |
-| `zk new --title "title"` | research-note.md | `slug-title` |
+| `zk new --dir entries --title "title"` | research-note.md | `slug-title` |
 
 ### Neovim integration (zk-nvim)
 
@@ -216,7 +216,8 @@ Create a new zk note from a fuzzel menu:
 
 1. Pick note type (journal / paper / idea / meeting / note)
 2. Enter title (journal skips this step)
-3. Opens in Neovim in a new Ghostty window
+3. Note is created in `entries/` with the appropriate template
+4. Opens in Neovim in a new Ghostty window
 
 ### today-schedule (`Mod+Alt+C`)
 
@@ -263,7 +264,7 @@ See the [zk-nvim keybinds](#neovim-integration-zk-nvim) table above.
 | `dots/bin/today-schedule` | Calendar popup script |
 | `dots/bin/translate-clip` | Translation script |
 | `dots/bin/zk-init` | One-time notebook initializer |
-| `dots/bin/zk-index` | Regenerate README.md with clickable note links |
+| `dots/bin/zk-index` | Regenerate README.md and index.md (groups by frontmatter tags) |
 
 ## Packages added
 

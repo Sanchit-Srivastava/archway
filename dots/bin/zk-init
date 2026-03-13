@@ -6,9 +6,18 @@ set -euo pipefail
 #
 # NOTE: This is `zk-init` (with a hyphen), NOT `zk init`.
 # `zk init` is zk's built-in command that creates a minimal config without
-# groups or templates. Always use `zk-init` instead.
+# templates or aliases. Always use `zk-init` instead.
+#
+# Layout:
+#   ~/notes/
+#   ├── .zk/config.toml + templates/   (zk config)
+#   ├── entries/                        (all notes, flat)
+#   ├── references/                     (Zotero BibTeX)
+#   ├── index.md                        (wiki-links for Neovim)
+#   └── README.md                       (standard links for GitHub)
 
 NOTES_DIR="$HOME/notes"
+ENTRIES_DIR="${NOTES_DIR}/entries"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -17,11 +26,11 @@ NC='\033[0m'
 log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
 log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
 
-# If the notebook was cloned AND has our full config (with groups), nothing to do.
-# A repo with only a bare `zk init` config will NOT match (missing groups).
+# If the notebook was cloned AND has our config (with aliases), nothing to do.
+# A repo with only a bare `zk init` config will NOT match (missing aliases).
 if [[ -d "${NOTES_DIR}/.git" ]] &&
 	git -C "${NOTES_DIR}" remote get-url origin &>/dev/null &&
-	grep -q '\[group\.journal\]' "${NOTES_DIR}/.zk/config.toml" 2>/dev/null; then
+	grep -q '\[alias\]' "${NOTES_DIR}/.zk/config.toml" 2>/dev/null; then
 	log_info "Notebook already cloned and fully configured, nothing to initialize"
 	log_info "  Remote: $(git -C "${NOTES_DIR}" remote get-url origin)"
 	exit 0
@@ -39,45 +48,21 @@ write_if_missing() {
 }
 
 # Create directory structure
-mkdir -p "${NOTES_DIR}"
-for dir in journal papers ideas meetings references .zk/templates; do
-	mkdir -p "${NOTES_DIR}/${dir}"
+for dir in "${ENTRIES_DIR}" "${NOTES_DIR}/references" "${NOTES_DIR}/.zk/templates"; do
+	mkdir -p "$dir"
 done
 log_info "Directory structure ready"
 
-# Write zk config
+# Write zk config (flat structure, no groups -- templates select note type)
 write_if_missing "${NOTES_DIR}/.zk/config.toml" <<'EOF'
 [note]
 filename = "{{slug title}}"
 extension = "md"
 template = "research-note.md"
+default-title = "Untitled"
 id-charset = "alphanum"
 id-length = 4
 id-case = "lower"
-
-[group.journal]
-paths = ["journal"]
-[group.journal.note]
-filename = "{{format-date now '%Y-%m-%d'}}"
-template = "daily.md"
-
-[group.papers]
-paths = ["papers"]
-[group.papers.note]
-filename = "{{slug title}}"
-template = "paper-summary.md"
-
-[group.meetings]
-paths = ["meetings"]
-[group.meetings.note]
-filename = "{{format-date now '%Y-%m-%d'}}-{{slug title}}"
-template = "meeting-notes.md"
-
-[group.ideas]
-paths = ["ideas"]
-[group.ideas.note]
-filename = "{{slug title}}"
-template = "research-note.md"
 
 [tool]
 editor = "nvim"
@@ -99,10 +84,10 @@ note-filter-text = "{{title}} {{path}}"
 note-detail = "{{filename}}"
 
 [alias]
-journal = 'zk new --group journal "$@"'
-paper = 'zk new --group papers --title "$@"'
-meeting = 'zk new --group meetings --title "$@"'
-idea = 'zk new --group ideas --title "$@"'
+journal = 'zk new --dir entries --template daily.md --title "$(date +%Y-%m-%d)" "$@"'
+paper = 'zk new --dir entries --template paper-summary.md --title "$@"'
+meeting = 'zk new --dir entries --template meeting-notes.md --title "$(date +%Y-%m-%d)-$1"'
+idea = 'zk new --dir entries --template research-note.md --title "$@"'
 recent = 'zk list --sort modified --limit 20'
 EOF
 
@@ -216,10 +201,8 @@ else
 
 ## Directories
 
-- [papers/](papers/) -- Paper summaries
-- [journal/](journal/) -- Daily journal entries
-- [ideas/](ideas/) -- Research ideas
-- [meetings/](meetings/) -- Meeting notes
+- [entries/](entries/) -- All notes
+- [references/](references/) -- Zotero BibTeX export
 EOF
 fi
 
@@ -245,9 +228,10 @@ fi
 
 log_info ""
 log_info "zk notebook ready at ${NOTES_DIR}"
+log_info "  Notes directory: ${ENTRIES_DIR}"
 log_info ""
 log_info "Next steps:"
 log_info "  1. Add a git remote: cd ~/notes && git remote add origin <url>"
 log_info "  2. Set up Zotero Better BibTeX auto-export to ~/notes/references/library.bib"
-log_info "  3. Try: zk new --title 'My first note'"
-log_info "  4. Run: zk-index          (regenerate README.md with clickable links)"
+log_info "  3. Try: zk new --dir entries --title 'My first note'"
+log_info "  4. Run: zk-index          (regenerate README.md and index.md)"

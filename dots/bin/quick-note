@@ -1,25 +1,52 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Create a new zk note from a fuzzel prompt. Picks a note group, asks for title,
+# Create a new zk note from a fuzzel prompt. Picks a note type, asks for title,
 # opens in Neovim in a new terminal window.
+#
+# All notes are created in entries/ (flat). Note type determines the template
+# and filename pattern via --template.
 
 NOTES_DIR="$HOME/notes"
 
 # Pick note type
-group=$(printf "journal\npaper\nidea\nmeeting\nnote" |
+note_type=$(printf "journal\npaper\nidea\nmeeting\nnote" |
 	fuzzel --dmenu --prompt="Type: " --width=30)
-[[ -z "$group" ]] && exit 0
+[[ -z "$note_type" ]] && exit 0
 
-if [[ "$group" == "journal" ]]; then
-	# Journal notes don't need a title
-	ghostty -e zk new --working-dir "$NOTES_DIR" --group journal &
-elif [[ "$group" == "note" ]]; then
+case "$note_type" in
+journal)
+	# Journal notes use date as title, no prompt needed
+	ghostty -e zk new --working-dir "$NOTES_DIR" \
+		--dir entries --template daily.md \
+		--title "$(date +%Y-%m-%d)" &
+	;;
+paper)
+	title=$(echo "" | fuzzel --dmenu --prompt="Paper: " --width=50)
+	[[ -z "$title" ]] && exit 0
+	ghostty -e zk new --working-dir "$NOTES_DIR" \
+		--dir entries --template paper-summary.md \
+		--title "$title" &
+	;;
+meeting)
+	title=$(echo "" | fuzzel --dmenu --prompt="Meeting: " --width=50)
+	[[ -z "$title" ]] && exit 0
+	ghostty -e zk new --working-dir "$NOTES_DIR" \
+		--dir entries --template meeting-notes.md \
+		--title "$(date +%Y-%m-%d)-${title}" &
+	;;
+idea)
+	title=$(echo "" | fuzzel --dmenu --prompt="Idea: " --width=50)
+	[[ -z "$title" ]] && exit 0
+	ghostty -e zk new --working-dir "$NOTES_DIR" \
+		--dir entries --template research-note.md \
+		--title "$title" &
+	;;
+note)
 	title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
 	[[ -z "$title" ]] && exit 0
-	ghostty -e zk new --working-dir "$NOTES_DIR" --title "$title" &
-else
-	title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
-	[[ -z "$title" ]] && exit 0
-	ghostty -e zk new --working-dir "$NOTES_DIR" --group "$group" --title "$title" &
-fi
+	ghostty -e zk new --working-dir "$NOTES_DIR" \
+		--dir entries \
+		--title "$title" &
+	;;
+esac

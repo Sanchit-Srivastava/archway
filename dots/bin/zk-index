@@ -6,14 +6,19 @@ set -euo pipefail
 # README.md  -- standard markdown links (clickable on GitHub)
 # index.md   -- wiki-links (navigable in Neovim via zk-nvim)
 #
-# Reads YAML frontmatter "title:" and "date:" from each .md file.
-# Safe to re-run (overwrites both files each time).
+# All notes live in entries/ (flat). Grouping is by frontmatter tags:
+#   tags: [paper]   -> Papers section
+#   tags: [journal] -> Journal section
+#   tags: [meeting] -> Meetings section
+#   tags: [idea]    -> Ideas section
+#   (anything else) -> Other section
 #
 # Usage:
 #   zk-index              # rebuild README.md and index.md
 #   zk-index --dry-run    # print to stdout without writing
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
+ENTRIES_DIR="${NOTES_DIR}/entries"
 README="${NOTES_DIR}/README.md"
 INDEX="${NOTES_DIR}/index.md"
 DRY_RUN=false
@@ -28,17 +33,21 @@ if [[ ! -d "${NOTES_DIR}/.zk" ]]; then
 	exit 1
 fi
 
+if [[ ! -d "${ENTRIES_DIR}" ]]; then
+	printf "Error: %s does not exist\n" "${ENTRIES_DIR}" >&2
+	exit 1
+fi
+
 # Extract title from YAML frontmatter, fall back to filename
 get_title() {
 	local file="$1"
 	local title=""
 
-	# Try to read title from frontmatter (first "title: ..." after opening ---)
 	if head -20 "$file" | grep -q '^---'; then
 		title=$(sed -n '/^---$/,/^---$/{ s/^title:[[:space:]]*//p; }' "$file" | head -1)
 	fi
 
-	# Strip surrounding quotes if present
+	# Strip surrounding quotes
 	title="${title#\"}"
 	title="${title%\"}"
 	title="${title#\'}"
@@ -48,7 +57,6 @@ get_title() {
 	if [[ -z "$title" ]]; then
 		local base
 		base=$(basename "$file" .md)
-		# Convert slugs to readable titles: some-note-title -> Some note title
 		title="${base//-/ }"
 		title="$(printf '%s' "$title" | sed 's/\b\(.\)/\u\1/')"
 	fi
@@ -65,7 +73,6 @@ get_date() {
 		date=$(sed -n '/^---$/,/^---$/{ s/^date:[[:space:]]*//p; }' "$file" | head -1)
 	fi
 
-	# Strip surrounding quotes
 	date="${date#\"}"
 	date="${date%\"}"
 	date="${date#\'}"
@@ -74,147 +81,105 @@ get_date() {
 	printf '%s' "$date"
 }
 
-# Convert a file path to a wiki-link: papers/my-note.md -> [[papers/my-note]]
-# Uses the piped display format: [[path|Title]]
-make_wiki_link() {
-	local rel_path="$1"
-	local title="$2"
-	# Strip .md extension for wiki-link target
-	local target="${rel_path%.md}"
-	printf '[[%s|%s]]' "$target" "$title"
-}
+# Get the first known tag from frontmatter (paper, journal, meeting, idea)
+# Returns empty string if no known tag is found.
+get_category() {
+	local file="$1"
+	local tags_line=""
 
-# Build a section listing notes from a directory.
-# Args: directory_path link_format
-#   link_format: "markdown" for README.md, "wiki" for index.md
-build_section() {
-	local dir="$1"
-	local link_format="$2"
-	local dir_name
-	dir_name=$(basename "$dir")
-
-	local -a entries=()
-
-	# Find all .md files in this directory (non-recursive)
-	while IFS= read -r -d '' file; do
-		local rel_path title date entry
-		rel_path="${file#"${NOTES_DIR}/"}"
-		title=$(get_title "$file")
-		date=$(get_date "$file")
-
-		if [[ "$link_format" == "wiki" ]]; then
-			local wikilink
-			wikilink=$(make_wiki_link "$rel_path" "$title")
-			if [[ -n "$date" ]]; then
-				entry="- ${wikilink} _(${date})_"
-			else
-				entry="- ${wikilink}"
-			fi
-		else
-			if [[ -n "$date" ]]; then
-				entry="- [${title}](${rel_path}) _(${date})_"
-			else
-				entry="- [${title}](${rel_path})"
-			fi
-		fi
-		entries+=("$entry")
-	done < <(find "$dir" -maxdepth 1 -name '*.md' -type f -print0 | sort -z)
-
-	if [[ ${#entries[@]} -eq 0 ]]; then
-		return
+	if head -20 "$file" | grep -q '^---'; then
+		tags_line=$(sed -n '/^---$/,/^---$/{ s/^tags:[[:space:]]*//p; }' "$file" | head -1)
 	fi
 
-	# Capitalize section name
-	local heading
-	heading="$(printf '%s' "$dir_name" | sed 's/\b\(.\)/\u\1/')"
+	# Check for known categories in the tags list
+	for cat in paper journal meeting idea; do
+		if printf '%s' "$tags_line" | grep -qw "$cat"; then
+			printf '%s' "$cat"
+			return
+		fi
+	done
+}
+
+# Format a single note entry as a markdown or wiki link
+# Args: file link_format ("markdown" or "wiki")
+format_entry() {
+	local file="$1"
+	local link_format="$2"
+	local rel_path title date
+
+	rel_path="${file#"${NOTES_DIR}/"}"
+	title=$(get_title "$file")
+	date=$(get_date "$file")
+
+	if [[ "$link_format" == "wiki" ]]; then
+		local target="${rel_path%.md}"
+		if [[ -n "$date" ]]; then
+			printf -- '- [[%s|%s]] _(%s)_' "$target" "$title" "$date"
+		else
+			printf -- '- [[%s|%s]]' "$target" "$title"
+		fi
+	else
+		if [[ -n "$date" ]]; then
+			printf -- '- [%s](%s) _(%s)_' "$title" "$rel_path" "$date"
+		else
+			printf -- '- [%s](%s)' "$title" "$rel_path"
+		fi
+	fi
+}
+
+# --- Categorize all notes ---
+
+# Associative arrays to hold entries per category
+declare -a paper_files=()
+declare -a journal_files=()
+declare -a meeting_files=()
+declare -a idea_files=()
+declare -a other_files=()
+
+while IFS= read -r -d '' file; do
+	cat=$(get_category "$file")
+	case "$cat" in
+	paper) paper_files+=("$file") ;;
+	journal) journal_files+=("$file") ;;
+	meeting) meeting_files+=("$file") ;;
+	idea) idea_files+=("$file") ;;
+	*) other_files+=("$file") ;;
+	esac
+done < <(find "${ENTRIES_DIR}" -maxdepth 1 -name '*.md' -type f -print0 | sort -z)
+
+# Build a section from a file array
+# Args: heading link_format files...
+build_section() {
+	local heading="$1"
+	local link_format="$2"
+	shift 2
+
+	if [[ $# -eq 0 ]]; then
+		return
+	fi
 
 	printf '## %s\n\n' "$heading"
-	printf '%s\n' "${entries[@]}"
+	for file in "$@"; do
+		format_entry "$file" "$link_format"
+		printf '\n'
+	done
 	printf '\n'
 }
 
-# Build root-level notes section (excluding README.md and index.md)
-# Args: link_format ("markdown" or "wiki")
-build_root_section() {
-	local link_format="$1"
-	local -a entries=()
-
-	while IFS= read -r -d '' file; do
-		local base rel_path title date entry
-		base=$(basename "$file")
-		if [[ "$base" == "README.md" || "$base" == "index.md" ]]; then
-			continue
-		fi
-		rel_path="${file#"${NOTES_DIR}/"}"
-		title=$(get_title "$file")
-		date=$(get_date "$file")
-
-		if [[ "$link_format" == "wiki" ]]; then
-			local wikilink
-			wikilink=$(make_wiki_link "$rel_path" "$title")
-			if [[ -n "$date" ]]; then
-				entry="- ${wikilink} _(${date})_"
-			else
-				entry="- ${wikilink}"
-			fi
-		else
-			if [[ -n "$date" ]]; then
-				entry="- [${title}](${rel_path}) _(${date})_"
-			else
-				entry="- [${title}](${rel_path})"
-			fi
-		fi
-		entries+=("$entry")
-	done < <(find "${NOTES_DIR}" -maxdepth 1 -name '*.md' -type f -print0 | sort -z)
-
-	if [[ ${#entries[@]} -eq 0 ]]; then
-		return
-	fi
-
-	printf '## Other Notes\n\n'
-	printf '%s\n' "${entries[@]}"
-	printf '\n'
-}
-
-# Build "Recent Notes" section from most recently modified .md files
-# Args: link_format ("markdown" or "wiki")
+# Build recent notes section (by mtime, across all entries)
+# Args: link_format
 build_recent_section() {
 	local link_format="$1"
 	local -a entries=()
+	local count=0
 
-	# Find all .md files, sort by modification time (newest first), take top N
-	# Exclude README.md, index.md, and anything under .zk/
 	while IFS= read -r file; do
-		local base rel_path title date entry
-		base=$(basename "$file")
-		if [[ "$base" == "README.md" || "$base" == "index.md" ]]; then
-			continue
-		fi
-		rel_path="${file#"${NOTES_DIR}/"}"
-		title=$(get_title "$file")
-		date=$(get_date "$file")
-
-		if [[ "$link_format" == "wiki" ]]; then
-			local wikilink
-			wikilink=$(make_wiki_link "$rel_path" "$title")
-			if [[ -n "$date" ]]; then
-				entry="- ${wikilink} _(${date})_"
-			else
-				entry="- ${wikilink}"
-			fi
-		else
-			if [[ -n "$date" ]]; then
-				entry="- [${title}](${rel_path}) _(${date})_"
-			else
-				entry="- [${title}](${rel_path})"
-			fi
-		fi
-		entries+=("$entry")
-
-		if [[ ${#entries[@]} -ge $RECENT_LIMIT ]]; then
+		entries+=("$(format_entry "$file" "$link_format")")
+		count=$((count + 1))
+		if [[ $count -ge $RECENT_LIMIT ]]; then
 			break
 		fi
-	done < <(find "${NOTES_DIR}" -name '*.md' -type f -not -path '*/.zk/*' \
+	done < <(find "${ENTRIES_DIR}" -maxdepth 1 -name '*.md' -type f \
 		-printf '%T@ %p\n' | sort -rn | cut -d' ' -f2-)
 
 	if [[ ${#entries[@]} -eq 0 ]]; then
@@ -226,32 +191,37 @@ build_recent_section() {
 	printf '\n'
 }
 
-# --- Build the README (standard markdown links for GitHub) ---
+# --- Build README.md (standard markdown links for GitHub) ---
 
-readme_output="# Research Notes
+readme_output="\`\`\`
+███╗   ██╗ ██████╗ ████████╗███████╗███████╗
+████╗  ██║██╔═══██╗╚══██╔══╝██╔════╝██╔════╝
+██╔██╗ ██║██║   ██║   ██║   █████╗  ███████╗
+██║╚██╗██║██║   ██║   ██║   ██╔══╝  ╚════██║
+██║ ╚████║╚██████╔╝   ██║   ███████╗███████║
+╚═╝  ╚═══╝ ╚═════╝    ╚═╝   ╚══════╝╚══════╝
+\`\`\`
 
 > Auto-generated by \`zk-index\`. Do not edit manually.
 
 "
 
-sections=(papers journal ideas meetings)
+for category_args in \
+	"Papers:markdown:paper_files" \
+	"Journal:markdown:journal_files" \
+	"Ideas:markdown:idea_files" \
+	"Meetings:markdown:meeting_files" \
+	"Other:markdown:other_files"; do
 
-for section in "${sections[@]}"; do
-	dir="${NOTES_DIR}/${section}"
-	if [[ -d "$dir" ]]; then
-		section_output=$(build_section "$dir" "markdown")
-		if [[ -n "$section_output" ]]; then
-			readme_output+="${section_output}"
-		fi
+	IFS=: read -r heading fmt arr_name <<<"$category_args"
+	declare -n arr="$arr_name"
+	if [[ ${#arr[@]} -gt 0 ]]; then
+		section=$(build_section "$heading" "$fmt" "${arr[@]}")
+		readme_output+="${section}"
 	fi
 done
 
-root_output=$(build_root_section "markdown")
-if [[ -n "$root_output" ]]; then
-	readme_output+="${root_output}"
-fi
-
-# --- Build the index.md (wiki-links for Neovim navigation) ---
+# --- Build index.md (wiki-links for Neovim navigation) ---
 
 index_output="---
 title: Index
@@ -265,26 +235,26 @@ tags: [index]
 
 "
 
-# Recent notes section first (most useful for daily work)
+# Recent notes first (most useful for daily work)
 recent_output=$(build_recent_section "wiki")
 if [[ -n "$recent_output" ]]; then
 	index_output+="${recent_output}"
 fi
 
-for section in "${sections[@]}"; do
-	dir="${NOTES_DIR}/${section}"
-	if [[ -d "$dir" ]]; then
-		section_output=$(build_section "$dir" "wiki")
-		if [[ -n "$section_output" ]]; then
-			index_output+="${section_output}"
-		fi
+for category_args in \
+	"Papers:wiki:paper_files" \
+	"Journal:wiki:journal_files" \
+	"Ideas:wiki:idea_files" \
+	"Meetings:wiki:meeting_files" \
+	"Other:wiki:other_files"; do
+
+	IFS=: read -r heading fmt arr_name <<<"$category_args"
+	declare -n arr="$arr_name"
+	if [[ ${#arr[@]} -gt 0 ]]; then
+		section=$(build_section "$heading" "$fmt" "${arr[@]}")
+		index_output+="${section}"
 	fi
 done
-
-root_output=$(build_root_section "wiki")
-if [[ -n "$root_output" ]]; then
-	index_output+="${root_output}"
-fi
 
 # --- Write or print ---
 
