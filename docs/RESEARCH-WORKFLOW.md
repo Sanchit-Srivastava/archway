@@ -139,10 +139,10 @@ title, author, or journal with a live preview.
 | insert | `@` | Inline citekey completion (markdown) |
 | insert | `\cite{` | Inline citekey completion (LaTeX) |
 | insert | `<C-a>m` | Open citation picker (markdown `@key`) |
-| normal | `<leader>am` | Open citation picker (markdown `@key`) |
+| normal | `<leader>zc` | Open citation picker (markdown `@key`) |
 | insert | `<C-a>l` | Open citation picker (LaTeX `\cite{key}`) |
-| normal | `<leader>al` | Open citation picker (LaTeX `\cite{key}`) |
-| normal | `<leader>ar` | Replace citekey under cursor |
+| normal | `<leader>zC` | Open citation picker (LaTeX `\cite{key}`) |
+| normal | `<leader>zr` | Replace citekey under cursor |
 
 ### Cross-machine sync
 

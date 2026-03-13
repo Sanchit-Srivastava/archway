@@ -50,6 +50,11 @@ return {
         backend = "fzf",
         bib_files = { "~/notes/references/library.bib" },
         filetypes = { "markdown", "tex", "latex" },
+        keymaps = {
+          cite_markdown_n = "<leader>zc",
+          cite_latex_n = "<leader>zC",
+          cite_replace_n = "<leader>zr",
+        },
       })
     end,
   },
