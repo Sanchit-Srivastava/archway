@@ -188,7 +188,7 @@ tags: []
 
 TMPL
 
-# Create index.md (for zk wiki-links inside Neovim)
+# Create index.md (placeholder -- zk-index will regenerate with real wiki-links)
 write_if_missing "${NOTES_DIR}/index.md" <<'EOF'
 ---
 title: Index
@@ -197,22 +197,17 @@ tags: [index]
 
 # Research Notes
 
-## Quick Links
-
-- [[journal/]] -- Daily journal
-- [[papers/]] -- Paper summaries
-- [[ideas/]] -- Research ideas
-- [[meetings/]] -- Meeting notes
+> Run `zk-index` to populate this file with wiki-links to all notes.
 
 ## Recent Notes
 
-Use `zk list --sort modified --limit 20` or `<leader>zf` in Neovim.
+_(empty -- run `zk-index` after creating some notes)_
 EOF
 
-# Generate README.md with GitHub-clickable links
+# Generate README.md and index.md with links to all notes
 if command -v zk-index &>/dev/null; then
 	zk-index
-	log_info "Generated README.md via zk-index"
+	log_info "Generated README.md and index.md via zk-index"
 else
 	write_if_missing "${NOTES_DIR}/README.md" <<'EOF'
 # Research Notes

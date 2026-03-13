@@ -20,23 +20,23 @@ return {
 
       -- Create notes
       vim.keymap.set("n", "<leader>zn", "<Cmd>ZkNew { title = vim.fn.input('Title: ') }<CR>", opts)
-      vim.keymap.set("n", "<leader>zj", "<Cmd>ZkNew { group = 'journal' }<CR>", opts)
+      vim.keymap.set("n", "<leader>zj", "<Cmd>ZkNew { group = 'journal', dir = 'journal' }<CR>", opts)
       vim.keymap.set(
         "n",
         "<leader>zp",
-        "<Cmd>ZkNew { group = 'papers', title = vim.fn.input('Paper: ') }<CR>",
+        "<Cmd>ZkNew { group = 'papers', dir = 'papers', title = vim.fn.input('Paper: ') }<CR>",
         opts
       )
       vim.keymap.set(
         "n",
         "<leader>zm",
-        "<Cmd>ZkNew { group = 'meetings', title = vim.fn.input('Meeting: ') }<CR>",
+        "<Cmd>ZkNew { group = 'meetings', dir = 'meetings', title = vim.fn.input('Meeting: ') }<CR>",
         opts
       )
       vim.keymap.set(
         "n",
         "<leader>zi",
-        "<Cmd>ZkNew { group = 'ideas', title = vim.fn.input('Idea: ') }<CR>",
+        "<Cmd>ZkNew { group = 'ideas', dir = 'ideas', title = vim.fn.input('Idea: ') }<CR>",
         opts
       )
 
