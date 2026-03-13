@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Unified calendar launcher menu.
+# Presents a fuzzel menu with calendar actions and dispatches to the
+# appropriate command.
+#
+# Keybinding: Mod+C in niri config.
+
+FUZZEL="fuzzel --dmenu --width=45 --lines=6"
+
+choice=$(printf '%s\n' \
+	"Add Event" \
+	"Sync Calendar" \
+	"Today's Events" \
+	"Week's Events" | ${FUZZEL} --prompt="Calendar: ") || exit 0
+
+[[ -z "$choice" ]] && exit 0
+
+case "$choice" in
+"Add Event")
+	exec quick-event
+	;;
+"Sync Calendar")
+	notify-send "Calendar" "Syncing..." -t 2000
+	if systemctl --user start vdirsyncer.service 2>/dev/null; then
+		notify-send "Calendar" "Sync complete" -t 3000
+	else
+		notify-send -u critical "Calendar" "Sync failed" -t 5000
+	fi
+	;;
+"Today's Events")
+	exec today-schedule
+	;;
+"Week's Events")
+	entries=$(khal list today 7d \
+		--format "{start-end-time-style} {title}" 2>/dev/null)
+	if [[ -z "$entries" ]]; then
+		notify-send "Schedule" "Nothing scheduled this week" -t 3000
+	else
+		echo "$entries" | fuzzel --dmenu \
+			--prompt="This Week: " --width=60 --lines=15
+	fi
+	;;
+*)
+	exit 0
+	;;
+esac

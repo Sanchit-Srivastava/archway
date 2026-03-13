@@ -4,7 +4,7 @@ set -euo pipefail
 # Show today's khal schedule in a fuzzel popup.
 
 entries=$(khal list today today \
-	--format "{start-time}-{end-time}  {title}  ({location})" 2>/dev/null)
+	--format "{start-end-time-style} {title}" 2>/dev/null)
 
 if [[ -z "$entries" ]]; then
 	notify-send "Schedule" "Nothing scheduled today" -t 3000
