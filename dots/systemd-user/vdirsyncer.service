@@ -1,0 +1,9 @@
+[Unit]
+Description=Synchronize calendars and contacts (vdirsyncer)
+Documentation=https://vdirsyncer.pimutils.org
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/vdirsyncer sync
+# Timeout generously — first sync or large calendars can be slow
+TimeoutStartSec=120
