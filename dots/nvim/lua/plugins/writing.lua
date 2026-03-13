@@ -39,43 +39,48 @@ return {
     },
   },
 
-  -- Citation completion from .bib files (Zotero auto-export)
-  -- Type @ in markdown to get citekey completion, or use <C-a>m / <leader>am
-  -- to open the fzf picker. In LaTeX, \cite{ triggers completion automatically.
+  -- Zotero integration via zotcite: direct DB access, citation completion,
+  -- annotation extraction, reference info, and PDF attachment opening.
+  -- Type @ in markdown for LSP citekey completion. Use :Zseek for telescope
+  -- fuzzy search. In LaTeX, \cite{ triggers completion via the built-in LSP.
+  --
+  -- Normal mode (cursor on citekey):
+  --   <leader>zo  Open PDF attachment
+  --   <leader>zi  Reference info (author, year, title)
+  --   <leader>za  All reference fields
+  --   <leader>zb  Insert abstract into buffer
+  --   <leader>zv  View compiled document (PDF/HTML)
+  --
+  -- Insert mode:
+  --   <C-X><C-B>  Citation picker (telescope)
+  --
+  -- Commands:
+  --   :Zseek [pattern]          Fuzzy-search references (telescope)
+  --   :Zannotations [key]       Extract Zotero annotations
+  --   :Zselectannotations [key] Selectively import annotations
+  --   :Znote [key]              Extract Zotero notes
+  --   :Zpdfnote [key]           Extract external PDF annotations
   {
-    "urtzienriquez/citeref.nvim",
-    ft = { "markdown", "tex", "latex" },
+    "jalvesaq/zotcite",
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+      "nvim-telescope/telescope.nvim",
+    },
     config = function()
-      require("citeref").setup({
-        backend = "fzf",
-        bib_files = { "~/notes/references/library.bib" },
-        filetypes = { "markdown", "tex", "latex" },
-        keymaps = {
-          cite_markdown_n = "<leader>zc",
-          cite_latex_n = "<leader>zC",
-          cite_replace_n = "<leader>zr",
-        },
+      require("zotcite").setup({
+        -- Use Better BibTeX citation keys (matches existing BBT auto-export)
+        key_type = "better-bibtex",
+        -- Don't override conceallevel (respect buffer/filetype defaults)
+        conceallevel = -1,
       })
     end,
   },
 
-  -- Register citeref as a blink.cmp completion source
+  -- Telescope (required by zotcite for :Zseek and :Zselectannotations)
   {
-    "saghen/blink.cmp",
-    opts = {
-      sources = {
-        providers = {
-          citeref = {
-            name = "citeref",
-            module = "citeref.backends.blink",
-          },
-        },
-        per_filetype = {
-          markdown = { inherit_defaults = true, "citeref" },
-          tex = { inherit_defaults = true, "citeref" },
-          latex = { inherit_defaults = true, "citeref" },
-        },
-      },
-    },
+    "nvim-telescope/telescope.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    lazy = true,
+    cmd = { "Telescope" },
   },
 }

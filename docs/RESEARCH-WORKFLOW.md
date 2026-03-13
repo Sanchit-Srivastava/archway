@@ -103,46 +103,50 @@ The zk LSP auto-attaches to any markdown file inside `~/notes/`. Provides
 | `<leader>zj` | New journal entry (today) |
 | `<leader>zp` | New paper summary |
 | `<leader>zm` | New meeting notes |
-| `<leader>zi` | New idea |
+| `<leader>zI` | New idea |
 | `<leader>zf` | Find notes (sorted by modified) |
 | `<leader>zt` | Browse tags |
 | `<leader>zl` | List outgoing links |
-| `<leader>zb` | List backlinks |
+| `<leader>zB` | List backlinks |
 | `<leader>zs` | Search notes by content |
 | `v` `<leader>zn` | Create note from selection (visual mode) |
 
-### Zotero integration
+### Zotero integration (zotcite)
 
-Set up Better BibTeX auto-export to keep `~/notes/references/library.bib` in sync:
+Zotcite reads Zotero's SQLite database directly -- no `.bib` export step
+required. Changes made in Zotero are immediately available in Neovim. Better
+BibTeX citation keys are used for compatibility with collaborative workflows.
 
-1. In Zotero: Edit > Settings > Better BibTeX > Automatic Export
-2. Add export: collection = "My Library", format = "Better BibTeX",
-   path = `~/notes/references/library.bib`
-3. Set to auto-export on change
+Zotero must be installed and its database accessible at the default path
+(`~/.zotero/zotero/*/zotero.sqlite`). The `sqlite3` CLI tool is required.
 
-Paper summary notes reference the citekey in frontmatter, creating a bridge
-between your notes and your reference manager.
+**Completion** -- type `@` in a markdown file to get citekey suggestions via
+zotcite's built-in LSP. In LaTeX files, `\cite{` triggers completion. Use
+`<C-X><C-B>` in insert mode for a telescope picker.
 
-### Citation completion (citeref.nvim)
-
-Insert citations from your Zotero library directly in Neovim. Works by reading
-the auto-exported `library.bib` file -- Zotero does not need to be running.
-
-**Inline completion** -- type `@` in a markdown file to get citekey suggestions
-via blink.cmp. In LaTeX files, `\cite{` triggers completion automatically.
-
-**Picker** -- use a keybind to open an fzf-lua picker to search by citekey,
-title, author, or journal with a live preview.
+**Reference inspection** -- place cursor on a citekey in normal mode:
 
 | Mode | Keybind | Action |
 |------|---------|--------|
-| insert | `@` | Inline citekey completion (markdown) |
-| insert | `\cite{` | Inline citekey completion (LaTeX) |
-| insert | `<C-a>m` | Open citation picker (markdown `@key`) |
-| normal | `<leader>zc` | Open citation picker (markdown `@key`) |
-| insert | `<C-a>l` | Open citation picker (LaTeX `\cite{key}`) |
-| normal | `<leader>zC` | Open citation picker (LaTeX `\cite{key}`) |
-| normal | `<leader>zr` | Replace citekey under cursor |
+| normal | `<leader>zi` | Reference info (author, year, title) |
+| normal | `<leader>za` | All reference fields |
+| normal | `<leader>zb` | Insert abstract into buffer |
+| normal | `<leader>zo` | Open PDF attachment |
+| normal | `<leader>zv` | View compiled document (PDF/HTML) |
+
+**Annotation extraction** -- pull highlights and notes from Zotero:
+
+| Command | Action |
+|---------|--------|
+| `:Zseek [pattern]` | Fuzzy-search references (telescope) |
+| `:Zannotations [key]` | Extract all Zotero annotations for a reference |
+| `:Zselectannotations [key]` | Selectively import annotations (telescope) |
+| `:Znote [key]` | Extract Zotero notes for a reference |
+| `:Zpdfnote [key]` | Extract annotations from external PDF viewer |
+
+**Auto bib management** -- zotcite automatically writes the bib file listed in
+the document's YAML `bibliography:` field on save. This replaces the need for
+Better BibTeX auto-export for per-document bibliographies.
 
 ### Cross-machine sync
 
@@ -275,7 +279,7 @@ See the [zk-nvim keybinds](#neovim-integration-zk-nvim) table above.
 | File | Purpose |
 |------|---------|
 | `dots/nvim/lua/plugins/zk.lua` | zk-nvim plugin config and keybinds |
-| `dots/nvim/lua/plugins/writing.lua` | ltex-ls-plus LSP config |
+| `dots/nvim/lua/plugins/writing.lua` | zotcite + ltex-ls-plus config |
 | `dots/lazygit/config.yml` | Lazygit delta pager config |
 | `dots/vale/.vale.ini` | Vale prose linter config |
 | `dots/bin/arxiv-search` | arXiv launcher script |

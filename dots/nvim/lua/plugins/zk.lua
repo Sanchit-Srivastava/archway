@@ -56,7 +56,7 @@ return {
         end
       end, opts)
 
-      vim.keymap.set("n", "<leader>zi", function()
+      vim.keymap.set("n", "<leader>zI", function()
         local title = vim.fn.input("Idea: ")
         if title ~= "" then
           vim.cmd("ZkNew { dir = 'entries', title = '" .. title:gsub("'", "\\'") .. "' }")
@@ -67,7 +67,7 @@ return {
       vim.keymap.set("n", "<leader>zf", "<Cmd>ZkNotes { sort = { 'modified' } }<CR>", opts)
       vim.keymap.set("n", "<leader>zt", "<Cmd>ZkTags<CR>", opts)
       vim.keymap.set("n", "<leader>zl", "<Cmd>ZkLinks<CR>", opts)
-      vim.keymap.set("n", "<leader>zb", "<Cmd>ZkBacklinks<CR>", opts)
+      vim.keymap.set("n", "<leader>zB", "<Cmd>ZkBacklinks<CR>", opts)
       vim.keymap.set("v", "<leader>zn", ":'<,'>ZkNewFromTitleSelection<CR>", opts)
 
       -- Search by content (grep)
