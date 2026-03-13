@@ -12,7 +12,7 @@ query=$(echo "" | fuzzel --dmenu --prompt="arXiv: " --width=60)
 encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))" "$query")
 
 # Fetch more results to give fuzzel a bigger pool for fuzzy filtering
-results=$(curl -s "http://export.arxiv.org/api/query?search_query=all:${encoded}&start=0&max_results=30&sortBy=relevance")
+results=$(curl -sL "https://export.arxiv.org/api/query?search_query=all:${encoded}&start=0&max_results=30&sortBy=relevance")
 
 entries=$(echo "$results" | python3 -c "
 import sys, xml.etree.ElementTree as ET

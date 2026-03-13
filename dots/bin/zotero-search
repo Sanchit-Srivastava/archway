@@ -24,8 +24,9 @@ json_query=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$que
 results=$(bbt_rpc "item.search" "[${json_query}]")
 
 # Parse results into "citekey | title | authors" for fuzzel
+# BBT item.search returns CSL-JSON: authors are in .author[] with .family/.given fields
 entries=$(echo "$results" | jq -r '.result[] |
-    "\(.citekey) | \(.title // "Untitled") | \(.creators // [] | map(.lastName // .name) | join(", "))"' 2>/dev/null)
+    "\(.citekey) | \(.title // "Untitled") | \(.author // [] | map(.family // .literal // "?") | join(", "))"' 2>/dev/null)
 
 # If no results, try searching each word individually and merge results
 if [[ -z "$entries" ]]; then
@@ -36,7 +37,7 @@ if [[ -z "$entries" ]]; then
 			word_json=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$word")
 			word_results=$(bbt_rpc "item.search" "[${word_json}]")
 			word_entries=$(echo "$word_results" | jq -r '.result[] |
-				"\(.citekey) | \(.title // "Untitled") | \(.creators // [] | map(.lastName // .name) | join(", "))"' 2>/dev/null)
+				"\(.citekey) | \(.title // "Untitled") | \(.author // [] | map(.family // .literal // "?") | join(", "))"' 2>/dev/null)
 			if [[ -n "$word_entries" ]]; then
 				all_entries+="${word_entries}"$'\n'
 			fi
@@ -55,15 +56,30 @@ selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines
 # Extract citekey
 citekey=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
 
-# Get PDF path via attachments
+# Get attachments via BBT — returns array of {path, open} objects
 json_citekey=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$citekey")
-pdf_path=$(bbt_rpc "item.attachments" "[${json_citekey}]" | jq -r '.result[0].path // empty' 2>/dev/null)
+attachments=$(bbt_rpc "item.attachments" "[${json_citekey}]")
 
-if [[ -n "$pdf_path" ]] && [[ -f "$pdf_path" ]]; then
+# Find first PDF attachment that exists on disk
+pdf_path=$(echo "$attachments" | jq -r '
+    [.result[] | select(.path != null) | select(.path | test("\\.pdf$"; "i"))] |
+    first // empty | .path' 2>/dev/null)
+
+if [[ -n "${pdf_path:-}" ]] && [[ -f "$pdf_path" ]]; then
 	zathura "$pdf_path" &
 else
-	# Fallback: open in browser
-	notify-send "Zotero" "No local PDF, opening in browser" -t 2000
-	encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote_plus(sys.argv[1]))" "$query")
-	xdg-open "https://scholar.google.com/scholar?q=${encoded}"
+	# Try zotero:// open URL for any attachment (opens in Zotero's built-in viewer)
+	zotero_url=$(echo "$attachments" | jq -r '
+	    [.result[] | select(.open != null)] |
+	    first // empty | .open' 2>/dev/null)
+
+	if [[ -n "${zotero_url:-}" ]]; then
+		notify-send "Zotero" "No local PDF, opening in Zotero" -t 2000
+		xdg-open "$zotero_url"
+	else
+		# Last resort: search Google Scholar
+		notify-send "Zotero" "No attachments found, opening in browser" -t 2000
+		encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote_plus(sys.argv[1]))" "$query")
+		xdg-open "https://scholar.google.com/scholar?q=${encoded}"
+	fi
 fi
