@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Search Zotero library via Better BibTeX JSON-RPC, open PDF in Zathura.
+# Search Zotero library via Better BibTeX JSON-RPC, open PDF in viewer of choice.
 # Uses fuzzel's fuzzy matching to filter results interactively.
+# When a local PDF is found, offers a choice between Zathura and Zotero's
+# built-in reader (which preserves annotations/highlights).
 
 ZOTERO_RPC="http://127.0.0.1:23119/better-bibtex/json-rpc"
 
@@ -50,8 +52,10 @@ selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines
 identifier=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
 paper_title=$(echo "$selected" | cut -d'|' -f2 | sed 's/^ *//;s/ *$//')
 
-# Try to open the PDF via item.attachments (requires a citekey, not an @id)
+# Resolve PDF path and zotero:// open URL via item.attachments (requires a citekey)
 pdf_file=""
+zotero_url=""
+attachments=""
 if [[ "$identifier" != @* ]]; then
 	# identifier is a citekey — look up attachments
 	json_citekey=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$identifier")
@@ -74,21 +78,51 @@ if [[ "$identifier" != @* ]]; then
 		fi
 	done <<<"$att_paths"
 	pdf_file="${pdf_file:-$fallback_file}"
+
+	# Extract zotero:// open URL for use with Zotero's built-in reader
+	zotero_url=$(echo "$attachments" | jq -r '.result[]?.open // empty' 2>/dev/null | head -n1 || true)
 fi
 
+# --- Viewer selection and open ---
+
+open_in_zathura() {
+	zathura "$1" &
+}
+
+open_in_zotero() {
+	local url="$1" ident="$2"
+	if [[ -n "$url" ]]; then
+		xdg-open "$url"
+	else
+		# Fallback: use viewer.viewPDF RPC with the Zotero item id
+		local item_id="${ident#@}"
+		local json_id
+		json_id=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$item_id")
+		bbt_rpc "viewer.viewPDF" "[${json_id}, 0]" >/dev/null 2>&1 || true
+	fi
+}
+
 if [[ -n "$pdf_file" ]]; then
-	zathura "$pdf_file" &
+	# Local PDF found — let the user pick a viewer
+	viewer_options="Zathura\nZotero  (with annotations)"
+	viewer=$(printf '%b' "$viewer_options" |
+		fuzzel --dmenu --prompt="Open in: " --width=40 --lines=2)
+	[[ -z "$viewer" ]] && exit 0
+
+	case "$viewer" in
+	Zathura*)
+		open_in_zathura "$pdf_file"
+		;;
+	Zotero*)
+		open_in_zotero "$zotero_url" "$identifier"
+		;;
+	esac
 elif [[ "$identifier" == @* ]]; then
-	# No citekey — use viewer.viewPDF with the Zotero item id
-	item_id="${identifier#@}"
-	json_id=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$item_id")
-	bbt_rpc "viewer.viewPDF" "[${json_id}, 0]" >/dev/null 2>&1 || true
+	# No citekey — open directly in Zotero's reader
+	open_in_zotero "" "$identifier"
 	notify-send "Zotero" "Opening PDF in Zotero (no citekey)" -t 2000
 else
 	# citekey exists but no local PDF found — try zotero:// open URL
-	zotero_url=$(echo "$attachments" | jq -r '.result[]?.open // empty' 2>/dev/null || true)
-	zotero_url=$(echo "$zotero_url" | head -n1)
-
 	if [[ -n "${zotero_url:-}" ]]; then
 		notify-send "Zotero" "No local PDF, opening in Zotero" -t 2000
 		xdg-open "$zotero_url"
