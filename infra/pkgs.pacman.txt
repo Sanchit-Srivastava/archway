@@ -154,7 +154,7 @@ slurp
 wl-clipboard
 imv
 # =============================================================================
-# SHELL & CLI TOOLS 
+# SHELL & CLI TOOLS
 # =============================================================================
 bat
 btop
@@ -163,10 +163,11 @@ duf
 eza
 fastfetch
 fd
+fuzzel
 fzf
 github-cli
+glow
 imagemagick
-imv
 inxi
 jq
 lazygit
@@ -174,18 +175,33 @@ less
 neovim
 nodejs-lts-jod
 npm
+pdfgrep
 playerctl
 plocate
 python
 python-uv
 ripgrep
 starship
+systemctl-tui
 tmux
+translate-shell
 unzip
 yazi
+zk
 zoxide
 zsh
-systemctl-tui
+
+# =============================================================================
+# GIT ENHANCEMENTS
+# =============================================================================
+difftastic
+git-delta
+
+# =============================================================================
+# CALENDAR & TASK SYNC
+# =============================================================================
+python-todoman
+vdirsyncer
 # =============================================================================
 # NEOVIM LSPs & FORMATTERS
 # =============================================================================
