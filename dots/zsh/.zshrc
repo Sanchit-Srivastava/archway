@@ -260,6 +260,16 @@ if [[ "$(uname)" != "Darwin" ]]; then
 fi
 
 # =============================================================================
+# ALIASES - Calendar (khal)
+# =============================================================================
+if command -v khal &>/dev/null; then
+    alias kday='khal list today today'
+    alias kweek='khal list today 7d'
+    alias kmonth='khal calendar'
+    alias kcal='khal interactive'
+fi
+
+# =============================================================================
 # ALIASES - Archway helpers
 # =============================================================================
 if [[ "$(uname)" == "Darwin" ]]; then
