@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Initialize the ~/notes zk notebook with config and templates.
+# Initialize the ~/notes zk notebook with config, templates, and directories.
 # Safe to re-run (idempotent) -- skips files that already exist.
-# On a second machine, just clone the repo; this script is only needed
-# for the very first setup.
+#
+# NOTE: This is `zk-init` (with a hyphen), NOT `zk init`.
+# `zk init` is zk's built-in command that creates a minimal config without
+# groups or templates. Always use `zk-init` instead.
 
 NOTES_DIR="$HOME/notes"
 
@@ -15,12 +17,12 @@ NC='\033[0m'
 log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
 log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
 
-# If the notebook was cloned AND already has the zk config, nothing to do.
-# (An empty repo cloned from GitHub still needs initialization.)
+# If the notebook was cloned AND has our full config (with groups), nothing to do.
+# A repo with only a bare `zk init` config will NOT match (missing groups).
 if [[ -d "${NOTES_DIR}/.git" ]] &&
 	git -C "${NOTES_DIR}" remote get-url origin &>/dev/null &&
-	[[ -f "${NOTES_DIR}/.zk/config.toml" ]]; then
-	log_info "Notebook already cloned and configured, nothing to initialize"
+	grep -q '\[group\.journal\]' "${NOTES_DIR}/.zk/config.toml" 2>/dev/null; then
+	log_info "Notebook already cloned and fully configured, nothing to initialize"
 	log_info "  Remote: $(git -C "${NOTES_DIR}" remote get-url origin)"
 	exit 0
 fi
@@ -32,16 +34,16 @@ write_if_missing() {
 		log_info "Already exists: ${path}"
 		return 0
 	fi
-	# Content comes from stdin
 	cat >"$path"
 	log_info "Created: ${path}"
 }
 
 # Create directory structure
+mkdir -p "${NOTES_DIR}"
 for dir in journal papers ideas meetings references templates .zk; do
 	mkdir -p "${NOTES_DIR}/${dir}"
 done
-log_info "Directory structure ready in ${NOTES_DIR}"
+log_info "Directory structure ready"
 
 # Write zk config
 write_if_missing "${NOTES_DIR}/.zk/config.toml" <<'EOF'
@@ -212,7 +214,6 @@ if command -v zk-index &>/dev/null; then
 	zk-index
 	log_info "Generated README.md via zk-index"
 else
-	# Fallback: create a minimal README if zk-index isn't on PATH yet
 	write_if_missing "${NOTES_DIR}/README.md" <<'EOF'
 # Research Notes
 
@@ -227,7 +228,7 @@ else
 EOF
 fi
 
-# Ensure .gitignore exists (needed whether fresh or cloned)
+# Ensure .gitignore exists
 write_if_missing "${NOTES_DIR}/.gitignore" <<'EOF'
 .zk/zk.db
 EOF

@@ -39,5 +39,6 @@
   "ts-comments.nvim": { "branch": "main", "commit": "123a9fb12e7229342f807ec9e6de478b1102b041" },
   "vimtex": { "branch": "master", "commit": "82d2305ff71dfb3bd91602534cc9bb9a195bcb38" },
   "which-key.nvim": { "branch": "main", "commit": "3aab2147e74890957785941f0c1ad87d0a44c15a" },
-  "yanky.nvim": { "branch": "main", "commit": "9d3caea67cf183639d4e510d34f2d58b6109abdd" }
+  "yanky.nvim": { "branch": "main", "commit": "9d3caea67cf183639d4e510d34f2d58b6109abdd" },
+  "zk-nvim": { "branch": "main", "commit": "303059e4ca7ead23b32ad9df2091885497851a94" }
 }
