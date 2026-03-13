@@ -40,7 +40,7 @@ write_if_missing() {
 
 # Create directory structure
 mkdir -p "${NOTES_DIR}"
-for dir in journal papers ideas meetings references templates .zk; do
+for dir in journal papers ideas meetings references .zk/templates; do
 	mkdir -p "${NOTES_DIR}/${dir}"
 done
 log_info "Directory structure ready"
@@ -106,10 +106,10 @@ idea = 'zk new --group ideas --title "$@"'
 recent = 'zk list --sort modified --limit 20'
 EOF
 
-# Write templates
-write_if_missing "${NOTES_DIR}/templates/daily.md" <<'TMPL'
+# Write templates (zk looks in .zk/templates/ by default)
+write_if_missing "${NOTES_DIR}/.zk/templates/daily.md" <<'TMPL'
 ---
-date: {{format-date now "%Y-%m-%d"}}
+date: "{{format-date now '%Y-%m-%d'}}"
 tags: [journal]
 ---
 
@@ -128,10 +128,10 @@ tags: [journal]
 -
 TMPL
 
-write_if_missing "${NOTES_DIR}/templates/paper-summary.md" <<'TMPL'
+write_if_missing "${NOTES_DIR}/.zk/templates/paper-summary.md" <<'TMPL'
 ---
-title: {{title}}
-date: {{format-date now "%Y-%m-%d"}}
+title: "{{title}}"
+date: "{{format-date now '%Y-%m-%d'}}"
 tags: [paper]
 citekey:
 arxiv:
@@ -157,10 +157,10 @@ authors:
 -
 TMPL
 
-write_if_missing "${NOTES_DIR}/templates/meeting-notes.md" <<'TMPL'
+write_if_missing "${NOTES_DIR}/.zk/templates/meeting-notes.md" <<'TMPL'
 ---
-title: {{title}}
-date: {{format-date now "%Y-%m-%d"}}
+title: "{{title}}"
+date: "{{format-date now '%Y-%m-%d'}}"
 tags: [meeting]
 attendees:
 ---
@@ -176,10 +176,10 @@ attendees:
 - [ ]
 TMPL
 
-write_if_missing "${NOTES_DIR}/templates/research-note.md" <<'TMPL'
+write_if_missing "${NOTES_DIR}/.zk/templates/research-note.md" <<'TMPL'
 ---
-title: {{title}}
-date: {{format-date now "%Y-%m-%d"}}
+title: "{{title}}"
+date: "{{format-date now '%Y-%m-%d'}}"
 tags: []
 ---
 

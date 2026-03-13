@@ -34,9 +34,10 @@ This creates:
 
 ```
 ~/notes/
-├── .zk/config.toml       # zk configuration
+├── .zk/
+│   ├── config.toml        # zk configuration
+│   └── templates/         # note templates (daily, paper, meeting, research)
 ├── .git/                  # git repo for cross-machine sync
-├── templates/             # note templates (daily, paper, meeting, research)
 ├── journal/               # daily notes
 ├── papers/                # paper summaries
 ├── ideas/                 # research ideas
@@ -54,10 +55,10 @@ Just clone the repo. The config and templates are tracked by git:
 git clone git@github.com:you/notes.git ~/notes
 ```
 
-`zk-init` detects a cloned repo (has a remote **and** `.zk/config.toml`) and
-exits without touching anything. If the repo is empty (freshly created on
-GitHub), `zk-init` will populate it with the config, templates, and directory
-structure.
+`zk-init` detects a cloned repo (has a remote **and** a fully configured
+`.zk/config.toml` with group definitions) and exits without touching anything.
+If the repo is empty (freshly created on GitHub), `zk-init` will populate it
+with the config, templates, and directory structure.
 
 ### README index (`zk-index`)
 
