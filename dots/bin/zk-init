@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Initialize the ~/notes zk notebook with config and templates.
+# Safe to re-run (idempotent) -- skips files that already exist.
+# On a second machine, just clone the repo; this script is only needed
+# for the very first setup.
+
+NOTES_DIR="$HOME/notes"
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
+log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
+
+# If the notebook was cloned AND already has the zk config, nothing to do.
+# (An empty repo cloned from GitHub still needs initialization.)
+if [[ -d "${NOTES_DIR}/.git" ]] &&
+	git -C "${NOTES_DIR}" remote get-url origin &>/dev/null &&
+	[[ -f "${NOTES_DIR}/.zk/config.toml" ]]; then
+	log_info "Notebook already cloned and configured, nothing to initialize"
+	log_info "  Remote: $(git -C "${NOTES_DIR}" remote get-url origin)"
+	exit 0
+fi
+
+# Helper: write a file only if it doesn't exist yet
+write_if_missing() {
+	local path="$1"
+	if [[ -f "$path" ]]; then
+		log_info "Already exists: ${path}"
+		return 0
+	fi
+	# Content comes from stdin
+	cat >"$path"
+	log_info "Created: ${path}"
+}
+
+# Create directory structure
+for dir in journal papers ideas meetings references templates .zk; do
+	mkdir -p "${NOTES_DIR}/${dir}"
+done
+log_info "Directory structure ready in ${NOTES_DIR}"
+
+# Write zk config
+write_if_missing "${NOTES_DIR}/.zk/config.toml" <<'EOF'
+[note]
+filename = "{{slug title}}"
+extension = "md"
+template = "research-note.md"
+id-charset = "alphanum"
+id-length = 4
+id-case = "lower"
+
+[group.journal]
+paths = ["journal"]
+[group.journal.note]
+filename = "{{format-date now '%Y-%m-%d'}}"
+template = "daily.md"
+
+[group.papers]
+paths = ["papers"]
+[group.papers.note]
+filename = "{{slug title}}"
+template = "paper-summary.md"
+
+[group.meetings]
+paths = ["meetings"]
+[group.meetings.note]
+filename = "{{format-date now '%Y-%m-%d'}}-{{slug title}}"
+template = "meeting-notes.md"
+
+[group.ideas]
+paths = ["ideas"]
+[group.ideas.note]
+filename = "{{slug title}}"
+template = "research-note.md"
+
+[tool]
+editor = "nvim"
+pager = "less -FRX"
+fzf-preview = "bat -p --color always {-1}"
+
+[format.markdown]
+link-format = "wiki"
+hashtags = true
+colon-tags = true
+
+[lsp]
+diagnostics.wiki-title = "hint"
+diagnostics.dead-link = "error"
+
+[lsp.completion]
+note-label = "{{title}}"
+note-filter-text = "{{title}} {{path}}"
+note-detail = "{{filename}}"
+
+[alias]
+journal = 'zk new --group journal "$@"'
+paper = 'zk new --group papers --title "$@"'
+meeting = 'zk new --group meetings --title "$@"'
+idea = 'zk new --group ideas --title "$@"'
+recent = 'zk list --sort modified --limit 20'
+EOF
+
+# Write templates
+write_if_missing "${NOTES_DIR}/templates/daily.md" <<'TMPL'
+---
+date: {{format-date now "%Y-%m-%d"}}
+tags: [journal]
+---
+
+# {{format-date now "%A, %B %d, %Y"}}
+
+## Plan
+
+-
+
+## Notes
+
+-
+
+## End of day
+
+-
+TMPL
+
+write_if_missing "${NOTES_DIR}/templates/paper-summary.md" <<'TMPL'
+---
+title: {{title}}
+date: {{format-date now "%Y-%m-%d"}}
+tags: [paper]
+citekey:
+arxiv:
+authors:
+---
+
+# {{title}}
+
+## Key Results
+
+-
+
+## Methods
+
+-
+
+## Relevance to My Work
+
+-
+
+## Questions / Follow-ups
+
+-
+TMPL
+
+write_if_missing "${NOTES_DIR}/templates/meeting-notes.md" <<'TMPL'
+---
+title: {{title}}
+date: {{format-date now "%Y-%m-%d"}}
+tags: [meeting]
+attendees:
+---
+
+# {{title}}
+
+## Discussion
+
+-
+
+## Action Items
+
+- [ ]
+TMPL
+
+write_if_missing "${NOTES_DIR}/templates/research-note.md" <<'TMPL'
+---
+title: {{title}}
+date: {{format-date now "%Y-%m-%d"}}
+tags: []
+---
+
+# {{title}}
+
+
+TMPL
+
+# Create index.md (for zk wiki-links inside Neovim)
+write_if_missing "${NOTES_DIR}/index.md" <<'EOF'
+---
+title: Index
+tags: [index]
+---
+
+# Research Notes
+
+## Quick Links
+
+- [[journal/]] -- Daily journal
+- [[papers/]] -- Paper summaries
+- [[ideas/]] -- Research ideas
+- [[meetings/]] -- Meeting notes
+
+## Recent Notes
+
+Use `zk list --sort modified --limit 20` or `<leader>zf` in Neovim.
+EOF
+
+# Generate README.md with GitHub-clickable links
+if command -v zk-index &>/dev/null; then
+	zk-index
+	log_info "Generated README.md via zk-index"
+else
+	# Fallback: create a minimal README if zk-index isn't on PATH yet
+	write_if_missing "${NOTES_DIR}/README.md" <<'EOF'
+# Research Notes
+
+> Run `zk-index` to regenerate this file with links to all notes.
+
+## Directories
+
+- [papers/](papers/) -- Paper summaries
+- [journal/](journal/) -- Daily journal entries
+- [ideas/](ideas/) -- Research ideas
+- [meetings/](meetings/) -- Meeting notes
+EOF
+fi
+
+# Ensure .gitignore exists (needed whether fresh or cloned)
+write_if_missing "${NOTES_DIR}/.gitignore" <<'EOF'
+.zk/zk.db
+EOF
+
+# Initialize git repo if not already one
+if [[ ! -d "${NOTES_DIR}/.git" ]]; then
+	git -C "${NOTES_DIR}" init
+	log_info "Initialized git repo"
+fi
+
+# Stage and commit any new files (covers both fresh and cloned-empty cases)
+if [[ -n "$(git -C "${NOTES_DIR}" status --porcelain)" ]]; then
+	git -C "${NOTES_DIR}" add -A
+	git -C "${NOTES_DIR}" commit -m "Initial zk notebook setup"
+	log_info "Committed initial notebook files"
+else
+	log_info "No new files to commit"
+fi
+
+log_info ""
+log_info "zk notebook ready at ${NOTES_DIR}"
+log_info ""
+log_info "Next steps:"
+log_info "  1. Add a git remote: cd ~/notes && git remote add origin <url>"
+log_info "  2. Set up Zotero Better BibTeX auto-export to ~/notes/references/library.bib"
+log_info "  3. Try: zk new --title 'My first note'"
+log_info "  4. Run: zk-index          (regenerate README.md with clickable links)"

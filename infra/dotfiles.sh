@@ -90,6 +90,13 @@ main() {
 	link_dotfile "${DOTS_DIR}/git/.gitconfig" "${HOME}/.gitconfig"
 
 	# ==========================================================================
+	# LAZYGIT
+	# ==========================================================================
+	log_info "--- Lazygit ---"
+	mkdir -p "${HOME}/.config/lazygit"
+	link_dotfile "${DOTS_DIR}/lazygit/config.yml" "${HOME}/.config/lazygit/config.yml"
+
+	# ==========================================================================
 	# SSH
 	# ==========================================================================
 	log_info "--- SSH ---"
@@ -172,6 +179,12 @@ EOF
 	else
 		log_info "OpenCode env file already exists: $opencode_env"
 	fi
+
+	# ==========================================================================
+	# VALE (prose linter config)
+	# ==========================================================================
+	log_info "--- Vale ---"
+	link_dotfile "${DOTS_DIR}/vale/.vale.ini" "${HOME}/.vale.ini"
 
 	# ==========================================================================
 	# ZEN BROWSER (startpage + config files for manual import)
