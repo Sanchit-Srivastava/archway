@@ -278,6 +278,11 @@ EOF
 		local vdirsyncer_conf="${HOME}/.config/vdirsyncer/config"
 		# shellcheck source=/dev/null
 		source "$vdirsyncer_secrets"
+		# Remove stale symlink so we don't write through it into the repo template
+		if [[ -L "$vdirsyncer_conf" ]]; then
+			rm "$vdirsyncer_conf"
+			log_info "Removed stale symlink at $vdirsyncer_conf"
+		fi
 		if [[ -z "${VDIRSYNCER_GOOGLE_COLLECTIONS:-}" ]]; then
 			log_warn "VDIRSYNCER_GOOGLE_COLLECTIONS is empty in $vdirsyncer_secrets"
 			log_warn "Skipping vdirsyncer config render — fill in calendar IDs first"
@@ -303,6 +308,11 @@ EOF
 		log_info "--- Khal ---"
 		mkdir -p "${HOME}/.config/khal"
 		local khal_conf="${HOME}/.config/khal/config"
+		# Remove stale symlink so we don't write through it into the repo template
+		if [[ -L "$khal_conf" ]]; then
+			rm "$khal_conf"
+			log_info "Removed stale symlink at $khal_conf"
+		fi
 		if [[ -z "${KHAL_DEFAULT_CALENDAR:-}" ]]; then
 			log_warn "KHAL_DEFAULT_CALENDAR is empty in $vdirsyncer_secrets"
 			log_warn "Rendering khal config without a default calendar"
