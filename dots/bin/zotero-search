@@ -17,35 +17,28 @@ bbt_rpc() {
 query=$(echo "" | fuzzel --dmenu --prompt="Zotero: " --width=60)
 [[ -z "$query" ]] && exit 0
 
-# Escape query for safe JSON embedding
-json_query=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$query")
+# Build advanced search: search both creator and title for each word (OR logic).
+# BBT item.search supports tuple arrays: [["joinMode","any"],["creator","contains","x"],...]
+# This is a single RPC call that replaces slow per-word fallback loops.
+search_params=$(python3 -c "
+import sys, json
+words = sys.argv[1].split()
+terms = [['joinMode', 'any']]
+for w in words:
+    terms.append(['creator', 'contains', w])
+    terms.append(['title', 'contains', w])
+print(json.dumps(terms))
+" "$query")
 
-# Search via BBT JSON-RPC
-results=$(bbt_rpc "item.search" "[${json_query}]")
+# Search via BBT JSON-RPC (advanced tuple syntax)
+results=$(bbt_rpc "item.search" "[${search_params}]")
 
-# Parse results into "citekey | title | authors" for fuzzel
-# BBT item.search returns CSL-JSON: authors are in .author[] with .family/.given fields
+# Parse results into "identifier | title | authors" for fuzzel.
+# BBT item.search returns CSL-JSON with added .citekey and .id fields.
+# Use citekey as identifier when available; fall back to Zotero item id (prefixed with @).
+# The @ prefix lets us distinguish citekeys from item ids when opening.
 entries=$(echo "$results" | jq -r '.result[] |
-    "\(.citekey) | \(.title // "Untitled") | \(.author // [] | map(.family // .literal // "?") | join(", "))"' 2>/dev/null)
-
-# If no results, try searching each word individually and merge results
-if [[ -z "$entries" ]]; then
-	read -ra words <<<"$query"
-	if [[ ${#words[@]} -gt 1 ]]; then
-		all_entries=""
-		for word in "${words[@]}"; do
-			word_json=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$word")
-			word_results=$(bbt_rpc "item.search" "[${word_json}]")
-			word_entries=$(echo "$word_results" | jq -r '.result[] |
-				"\(.citekey) | \(.title // "Untitled") | \(.author // [] | map(.family // .literal // "?") | join(", "))"' 2>/dev/null)
-			if [[ -n "$word_entries" ]]; then
-				all_entries+="${word_entries}"$'\n'
-			fi
-		done
-		# Deduplicate by citekey (first field)
-		entries=$(echo "$all_entries" | awk -F' \\| ' '!seen[$1]++' | sed '/^$/d')
-	fi
-fi
+    "\(.citekey // ("@" + .id) ) | \(.title // "Untitled") | \(.author // [] | map(.family // .literal // "?") | join(", "))"' 2>/dev/null || true)
 
 [[ -z "$entries" ]] && notify-send "Zotero" "No results for: $query" -t 3000 && exit 0
 
@@ -53,33 +46,56 @@ fi
 selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines=15)
 [[ -z "$selected" ]] && exit 0
 
-# Extract citekey
-citekey=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
+# Extract identifier and title from selection
+identifier=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
+paper_title=$(echo "$selected" | cut -d'|' -f2 | sed 's/^ *//;s/ *$//')
 
-# Get attachments via BBT — returns array of {path, open} objects
-json_citekey=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$citekey")
-attachments=$(bbt_rpc "item.attachments" "[${json_citekey}]")
+# Try to open the PDF via item.attachments (requires a citekey, not an @id)
+pdf_file=""
+if [[ "$identifier" != @* ]]; then
+	# identifier is a citekey — look up attachments
+	json_citekey=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$identifier")
+	attachments=$(bbt_rpc "item.attachments" "[${json_citekey}, \"*\"]")
 
-# Find first PDF attachment that exists on disk
-pdf_path=$(echo "$attachments" | jq -r '
-    [.result[] | select(.path != null) | select(.path | test("\\.pdf$"; "i"))] |
-    first // empty | .path' 2>/dev/null)
+	att_paths=$(echo "$attachments" | jq -r '.result[]?.path // empty' 2>/dev/null || true)
 
-if [[ -n "${pdf_path:-}" ]] && [[ -f "$pdf_path" ]]; then
-	zathura "$pdf_path" &
+	# Prefer .pdf extension, fall back to mime-type check.
+	# Items often have both HTML snapshots and PDFs — skip non-PDFs.
+	fallback_file=""
+	while IFS= read -r path; do
+		[[ -z "$path" ]] && continue
+		[[ -f "$path" ]] || continue
+		if [[ "${path,,}" == *.pdf ]]; then
+			pdf_file="$path"
+			break
+		elif [[ -z "$fallback_file" ]]; then
+			mime=$(file -b --mime-type "$path" 2>/dev/null || true)
+			[[ "$mime" == "application/pdf" ]] && fallback_file="$path"
+		fi
+	done <<<"$att_paths"
+	pdf_file="${pdf_file:-$fallback_file}"
+fi
+
+if [[ -n "$pdf_file" ]]; then
+	zathura "$pdf_file" &
+elif [[ "$identifier" == @* ]]; then
+	# No citekey — use viewer.viewPDF with the Zotero item id
+	item_id="${identifier#@}"
+	json_id=$(python3 -c "import sys, json; print(json.dumps(sys.argv[1]))" "$item_id")
+	bbt_rpc "viewer.viewPDF" "[${json_id}, 0]" >/dev/null 2>&1 || true
+	notify-send "Zotero" "Opening PDF in Zotero (no citekey)" -t 2000
 else
-	# Try zotero:// open URL for any attachment (opens in Zotero's built-in viewer)
-	zotero_url=$(echo "$attachments" | jq -r '
-	    [.result[] | select(.open != null)] |
-	    first // empty | .open' 2>/dev/null)
+	# citekey exists but no local PDF found — try zotero:// open URL
+	zotero_url=$(echo "$attachments" | jq -r '.result[]?.open // empty' 2>/dev/null || true)
+	zotero_url=$(echo "$zotero_url" | head -n1)
 
 	if [[ -n "${zotero_url:-}" ]]; then
 		notify-send "Zotero" "No local PDF, opening in Zotero" -t 2000
 		xdg-open "$zotero_url"
 	else
-		# Last resort: search Google Scholar
-		notify-send "Zotero" "No attachments found, opening in browser" -t 2000
-		encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote_plus(sys.argv[1]))" "$query")
+		# Last resort: search Google Scholar using the selected paper's title
+		notify-send "Zotero" "No attachments found, searching for paper" -t 2000
+		encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote_plus(sys.argv[1]))" "$paper_title")
 		xdg-open "https://scholar.google.com/scholar?q=${encoded}"
 	fi
 fi
