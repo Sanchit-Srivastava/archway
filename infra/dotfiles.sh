@@ -233,24 +233,36 @@ EOF
 		# VDIRSYNCER (CalDAV/CardDAV sync — Google Calendar)
 		# ==========================================================================
 		log_info "--- Vdirsyncer ---"
-		link_dotfile "${DOTS_DIR}/vdirsyncer/config" "${HOME}/.config/vdirsyncer/config"
 
-		# Create secrets file template (never committed — holds OAuth credentials)
+		# Create secrets file template (never committed — holds OAuth credentials
+		# and personal calendar IDs)
 		local vdirsyncer_secrets="${HOME}/.config/vdirsyncer/secrets"
 		if [[ ! -f "$vdirsyncer_secrets" ]]; then
 			cat >"$vdirsyncer_secrets" <<'EOF'
-# vdirsyncer Google OAuth2 credentials
+# vdirsyncer Google OAuth2 credentials & calendar list
 # Fill in the values below after creating a Google Cloud project:
 #   1. Go to https://console.developers.google.com
 #   2. Create a project, enable the "CalDAV API"
 #   3. Create OAuth 2.0 credentials (Desktop application type)
 #   4. Paste client_id and client_secret here
+#   5. List the calendar IDs you want to sync in COLLECTIONS
 #
 # Then run:  vdirsyncer discover google_calendar
 #            vdirsyncer sync
 
 VDIRSYNCER_GOOGLE_CLIENT_ID=
 VDIRSYNCER_GOOGLE_CLIENT_SECRET=
+
+# Comma-separated list of Google Calendar IDs to sync.
+# Run `vdirsyncer discover google_calendar` first, then pick from the
+# discovered calendars.  Example:
+#   VDIRSYNCER_GOOGLE_COLLECTIONS=user@gmail.com,work@group.calendar.google.com
+VDIRSYNCER_GOOGLE_COLLECTIONS=
+
+# Default calendar for khal (used when adding new events).
+# Must match one of the calendar names from `khal printcalendars`.  Example:
+#   KHAL_DEFAULT_CALENDAR=user@gmail.com
+KHAL_DEFAULT_CALENDAR=
 EOF
 			chmod 600 "$vdirsyncer_secrets"
 			log_info "Created vdirsyncer secrets template: $vdirsyncer_secrets"
@@ -259,11 +271,48 @@ EOF
 			log_info "Vdirsyncer secrets file already exists: $vdirsyncer_secrets"
 		fi
 
+		# Render vdirsyncer config from template + secrets
+		# (The template contains @@COLLECTIONS@@ which is replaced with the
+		# calendar list from the secrets file.)
+		mkdir -p "${HOME}/.config/vdirsyncer"
+		local vdirsyncer_conf="${HOME}/.config/vdirsyncer/config"
+		# shellcheck source=/dev/null
+		source "$vdirsyncer_secrets"
+		if [[ -z "${VDIRSYNCER_GOOGLE_COLLECTIONS:-}" ]]; then
+			log_warn "VDIRSYNCER_GOOGLE_COLLECTIONS is empty in $vdirsyncer_secrets"
+			log_warn "Skipping vdirsyncer config render — fill in calendar IDs first"
+		else
+			# Convert comma-separated IDs to Python list:
+			#   a@b.com,c@d.com  →  ["a@b.com", "c@d.com"]
+			local py_list
+			py_list=$(printf '%s' "$VDIRSYNCER_GOOGLE_COLLECTIONS" |
+				tr ',' '\n' |
+				sed 's/^[[:space:]]*//;s/[[:space:]]*$//' |
+				sed 's/.*/"&"/' |
+				paste -sd ',' - |
+				sed 's/^/[/;s/$/]/')
+			sed "s|@@COLLECTIONS@@|${py_list}|" \
+				"${DOTS_DIR}/vdirsyncer/config" >"$vdirsyncer_conf"
+			chmod 600 "$vdirsyncer_conf"
+			log_info "Rendered vdirsyncer config with $(echo "$VDIRSYNCER_GOOGLE_COLLECTIONS" | tr ',' '\n' | wc -l) calendar(s)"
+		fi
+
 		# ==========================================================================
 		# KHAL (terminal calendar UI)
 		# ==========================================================================
 		log_info "--- Khal ---"
-		link_dotfile "${DOTS_DIR}/khal/config" "${HOME}/.config/khal/config"
+		mkdir -p "${HOME}/.config/khal"
+		local khal_conf="${HOME}/.config/khal/config"
+		if [[ -z "${KHAL_DEFAULT_CALENDAR:-}" ]]; then
+			log_warn "KHAL_DEFAULT_CALENDAR is empty in $vdirsyncer_secrets"
+			log_warn "Rendering khal config without a default calendar"
+			sed '/@@DEFAULT_CALENDAR@@/d' \
+				"${DOTS_DIR}/khal/config" >"$khal_conf"
+		else
+			sed "s|@@DEFAULT_CALENDAR@@|${KHAL_DEFAULT_CALENDAR}|" \
+				"${DOTS_DIR}/khal/config" >"$khal_conf"
+			log_info "Rendered khal config with default calendar: $KHAL_DEFAULT_CALENDAR"
+		fi
 
 		# ==========================================================================
 		# SYSTEMD USER UNITS

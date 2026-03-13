@@ -17,7 +17,7 @@ status_path = "~/.local/share/vdirsyncer/status/"
 [pair google_calendar]
 a = "google_calendar_local"
 b = "google_calendar_remote"
-collections = ["from a", "from b"]
+collections = @@COLLECTIONS@@
 metadata = ["color"]
 # Remote (Google) wins on conflict — phone edits take priority over
 # local edits made between syncs.  Change to "a wins" if you prefer

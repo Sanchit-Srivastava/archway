@@ -21,10 +21,63 @@ firstweekday = 0
 
 [default]
 highlight_event_days = true
-# Set this to the name of your primary calendar after first sync.
-# Run `khal printcalendars` to see available names.
-# default_calendar = your-calendar-name
+# default_calendar is rendered by dotfiles.sh from the secrets file.
+# See @@DEFAULT_CALENDAR@@ placeholder below.
+default_calendar = @@DEFAULT_CALENDAR@@
 
 [view]
+theme = dark
 # Show events from today through the next 7 days in `khal list`
 event_format = {calendar-color}{cancelled}{start-end-time-style} {title}{repeat-symbol}{reset}
+
+# ── DankColors palette ───────────────────────────────────────────────────────
+# Mapped from the base16 DankColors theme used system-wide.
+# Format: foreground, background, mono, foreground_high, background_high
+[palette]
+header      = '', '', '',     '#141218', '#d7c6ff'
+footer      = '', '', '',     '#141218', '#d7c6ff'
+line header = '', '', '',     '#d7c6ff', ''
+alt header  = '', '', '',     '#ded0ff', ''
+bright      = '', '', 'bold', '#faf8ff', ''
+list        = '', '', '',     '#faf8ff', ''
+list focused = '', '', 'bold', '#141218', '#d7c6ff'
+edit        = '', '', '',     '#faf8ff', '#141218'
+edit focus  = '', '', 'bold', '#faf8ff', '#9d99a5'
+button      = '', '', '',     '#faf8ff', '#9d99a5'
+button focused = '', '', 'bold', '#141218', '#d7c6ff'
+today       = '', '', 'bold', '#141218', '#ded0ff'
+today focus = '', '', 'bold', '#141218', '#a5ffb8'
+date header = '', '', '',     '#d7c6ff', ''
+date header focused  = '', '', 'bold', '#141218', '#d7c6ff'
+date header selected = '', '', 'bold', '#141218', '#ded0ff'
+dayname     = '', '', '',     '#9d99a5', ''
+monthname   = '', '', 'bold', '#d7c6ff', ''
+weeknumber_right = '', '', '', '#9d99a5', ''
+alert       = '', '', 'bold', '#ff9fb2', ''
+mark        = '', '', 'bold', '#141218', '#a5ffb8'
+frame       = '', '', '',     '#9d99a5', ''
+frame focus = '', '', '',     '#d7c6ff', ''
+frame focus color = '', '', '', '#e9e0ff', ''
+popupbg     = '', '', '',     '#faf8ff', '#141218'
+caption     = '', '', 'bold', '#d7c6ff', ''
+
+# ── Keybindings (vim-style) ──────────────────────────────────────────────────
+# khal ships with vim defaults; we make them explicit here for clarity.
+[keybindings]
+up    = up, k
+down  = down, j
+left  = left, h, backspace
+right = right, l, space
+view  = enter
+new   = n
+delete = d
+search = /
+today = t
+quit  = q, Q
+save  = meta enter
+export = e
+duplicate = p
+external_edit = meta E
+log   = L
+mark  = v
+other = o
