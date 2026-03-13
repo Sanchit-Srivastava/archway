@@ -18,35 +18,34 @@ case "$note_type" in
 journal)
 	# Journal notes use date as title, no prompt needed
 	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--dir entries --template daily.md \
-		--title "$(date +%Y-%m-%d)" &
+		--template daily.md \
+		--title "$(date +%Y-%m-%d)" entries &
 	;;
 paper)
 	title=$(echo "" | fuzzel --dmenu --prompt="Paper: " --width=50)
 	[[ -z "$title" ]] && exit 0
 	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--dir entries --template paper-summary.md \
-		--title "$title" &
+		--template paper-summary.md \
+		--title "$title" entries &
 	;;
 meeting)
 	title=$(echo "" | fuzzel --dmenu --prompt="Meeting: " --width=50)
 	[[ -z "$title" ]] && exit 0
 	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--dir entries --template meeting-notes.md \
-		--title "$(date +%Y-%m-%d)-${title}" &
+		--template meeting-notes.md \
+		--title "$(date +%Y-%m-%d)-${title}" entries &
 	;;
 idea)
 	title=$(echo "" | fuzzel --dmenu --prompt="Idea: " --width=50)
 	[[ -z "$title" ]] && exit 0
 	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--dir entries --template research-note.md \
-		--title "$title" &
+		--template research-note.md \
+		--title "$title" entries &
 	;;
 note)
 	title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
 	[[ -z "$title" ]] && exit 0
 	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--dir entries \
-		--title "$title" &
+		--title "$title" entries &
 	;;
 esac
