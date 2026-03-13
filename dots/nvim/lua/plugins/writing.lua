@@ -38,4 +38,39 @@ return {
       },
     },
   },
+
+  -- Citation completion from .bib files (Zotero auto-export)
+  -- Type @ in markdown to get citekey completion, or use <C-a>m / <leader>am
+  -- to open the fzf picker. In LaTeX, \cite{ triggers completion automatically.
+  {
+    "urtzienriquez/citeref.nvim",
+    ft = { "markdown", "tex", "latex" },
+    config = function()
+      require("citeref").setup({
+        backend = "fzf",
+        bib_files = { "~/notes/references/library.bib" },
+        filetypes = { "markdown", "tex", "latex" },
+      })
+    end,
+  },
+
+  -- Register citeref as a blink.cmp completion source
+  {
+    "saghen/blink.cmp",
+    opts = {
+      sources = {
+        providers = {
+          citeref = {
+            name = "citeref",
+            module = "citeref.backends.blink",
+          },
+        },
+        per_filetype = {
+          markdown = { inherit_defaults = true, "citeref" },
+          tex = { inherit_defaults = true, "citeref" },
+          latex = { inherit_defaults = true, "citeref" },
+        },
+      },
+    },
+  },
 }

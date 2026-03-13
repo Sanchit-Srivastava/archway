@@ -123,6 +123,27 @@ Set up Better BibTeX auto-export to keep `~/notes/references/library.bib` in syn
 Paper summary notes reference the citekey in frontmatter, creating a bridge
 between your notes and your reference manager.
 
+### Citation completion (citeref.nvim)
+
+Insert citations from your Zotero library directly in Neovim. Works by reading
+the auto-exported `library.bib` file -- Zotero does not need to be running.
+
+**Inline completion** -- type `@` in a markdown file to get citekey suggestions
+via blink.cmp. In LaTeX files, `\cite{` triggers completion automatically.
+
+**Picker** -- use a keybind to open an fzf-lua picker to search by citekey,
+title, author, or journal with a live preview.
+
+| Mode | Keybind | Action |
+|------|---------|--------|
+| insert | `@` | Inline citekey completion (markdown) |
+| insert | `\cite{` | Inline citekey completion (LaTeX) |
+| insert | `<C-a>m` | Open citation picker (markdown `@key`) |
+| normal | `<leader>am` | Open citation picker (markdown `@key`) |
+| insert | `<C-a>l` | Open citation picker (LaTeX `\cite{key}`) |
+| normal | `<leader>al` | Open citation picker (LaTeX `\cite{key}`) |
+| normal | `<leader>ar` | Replace citekey under cursor |
+
 ### Cross-machine sync
 
 ```bash
