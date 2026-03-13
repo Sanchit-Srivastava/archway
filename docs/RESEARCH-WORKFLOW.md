@@ -270,7 +270,47 @@ the clipboard and shows a notification.
 
 ### Neovim (`<leader>z` prefix)
 
-See the [zk-nvim keybinds](#neovim-integration-zk-nvim) table above.
+**zk-nvim** (note management -- global, all buffers):
+
+| Keybind | Action |
+|---------|--------|
+| `<leader>zn` | New note (prompts for title) |
+| `<leader>zj` | New journal entry (today) |
+| `<leader>zp` | New paper summary |
+| `<leader>zm` | New meeting notes |
+| `<leader>zI` | New idea |
+| `<leader>zf` | Find notes (sorted by modified) |
+| `<leader>zt` | Browse tags |
+| `<leader>zl` | List outgoing links |
+| `<leader>zB` | List backlinks |
+| `<leader>zs` | Search notes by content |
+| `v` `<leader>zn` | Create note from selection |
+
+**zotcite** (Zotero references -- buffer-local in markdown/tex/quarto):
+
+| Keybind | Mode | Action |
+|---------|------|--------|
+| `@` | insert | Citekey completion (LSP, markdown) |
+| `\cite{` | insert | Citekey completion (LSP, LaTeX) |
+| `<C-X><C-B>` | insert | Citation picker (telescope) |
+| `<leader>zi` | normal | Reference info (author, year, title) |
+| `<leader>za` | normal | All reference fields |
+| `<leader>zb` | normal | Insert abstract into buffer |
+| `<leader>zo` | normal | Open PDF attachment |
+| `<leader>zv` | normal | View compiled document (PDF/HTML) |
+
+**zotcite commands:**
+
+| Command | Action |
+|---------|--------|
+| `:Zseek [pattern]` | Fuzzy-search references (telescope) |
+| `:Zannotations [key]` | Extract Zotero annotations for a reference |
+| `:Zselectannotations [key]` | Selectively import annotations (telescope) |
+| `:Znote [key]` | Extract Zotero notes for a reference |
+| `:Zpdfnote [key]` | Extract external PDF annotations |
+| `:Zodt2md file.odt` | Convert ODT with Zotero citations to markdown |
+| `:Zinfo` | Show zotcite internal state (for debugging) |
+| `:Zconfig` | Show current zotcite configuration |
 
 ---
 
