@@ -139,5 +139,5 @@ binds {
     Mod+Z hotkey-overlay-title="Zotero Paper Search" { spawn "zotero-search"; }
     Mod+G hotkey-overlay-title="Quick Research Note" { spawn "quick-note"; }
     Mod+Alt+T hotkey-overlay-title="Translate Clipboard" { spawn "translate-clip"; }
-    Mod+Alt+C hotkey-overlay-title="Today's Schedule" { spawn "today-schedule"; }
+    Mod+Alt+C hotkey-overlay-title="Calendar Menu" { spawn "calendar-menu"; }
 }
