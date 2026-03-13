@@ -11,6 +11,7 @@ FUZZEL="fuzzel --dmenu --width=45 --lines=6"
 
 choice=$(printf '%s\n' \
 	"Add Event" \
+	"Weekly View" \
 	"Sync Calendar" \
 	"Today's Events" \
 	"Week's Events" | ${FUZZEL} --prompt="Calendar: ") || exit 0
@@ -20,6 +21,9 @@ choice=$(printf '%s\n' \
 case "$choice" in
 "Add Event")
 	exec quick-event
+	;;
+"Weekly View")
+	exec xdg-open "https://calendar.google.com/calendar/r/week"
 	;;
 "Sync Calendar")
 	notify-send "Calendar" "Syncing..." -t 2000
