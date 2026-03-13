@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Create a new zk note from a fuzzel prompt. Picks a note group, asks for title,
+# opens in Neovim in a new terminal window.
+
+NOTES_DIR="$HOME/notes"
+
+# Pick note type
+group=$(printf "journal\npaper\nidea\nmeeting\nnote" |
+	fuzzel --dmenu --prompt="Type: " --width=30)
+[[ -z "$group" ]] && exit 0
+
+if [[ "$group" == "journal" ]]; then
+	# Journal notes don't need a title
+	ghostty -e zk new --working-dir "$NOTES_DIR" --group journal &
+elif [[ "$group" == "note" ]]; then
+	title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
+	[[ -z "$title" ]] && exit 0
+	ghostty -e zk new --working-dir "$NOTES_DIR" --title "$title" &
+else
+	title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
+	[[ -z "$title" ]] && exit 0
+	ghostty -e zk new --working-dir "$NOTES_DIR" --group "$group" --title "$title" &
+fi

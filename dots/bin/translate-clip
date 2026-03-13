@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Translate clipboard text to English using translate-shell.
+
+text=$(wl-paste 2>/dev/null)
+[[ -z "$text" ]] && exit 0
+
+result=$(trans -b -t en "$text" 2>/dev/null)
+
+if [[ -n "$result" ]]; then
+	echo -n "$result" | wl-copy
+	notify-send "Translation" "$result" -t 5000
+else
+	notify-send "Translation failed" "Could not translate selection" -t 3000
+fi

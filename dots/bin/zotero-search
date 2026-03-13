@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Search Zotero library via Better BibTeX JSON-RPC, open PDF in Zathura.
+
+ZOTERO_RPC="http://127.0.0.1:23119/better-bibtex/json-rpc"
+
+bbt_rpc() {
+	local method="$1" params="$2"
+	curl -s "$ZOTERO_RPC" \
+		-X POST -H "Content-Type: application/json" -H "Accept: application/json" \
+		--data-binary "{\"jsonrpc\": \"2.0\", \"method\": \"$method\", \"params\": $params}"
+}
+
+# Get search query from user
+query=$(echo "" | fuzzel --dmenu --prompt="Zotero: " --width=60)
+[[ -z "$query" ]] && exit 0
+
+# Search via BBT JSON-RPC
+results=$(bbt_rpc "item.search" "[\"$query\"]")
+
+# Parse results into "citekey | title | authors" for fuzzel
+entries=$(echo "$results" | jq -r '.result[] |
+    "\(.citekey) | \(.title // "Untitled") | \(.creators // [] | map(.lastName // .name) | join(", "))"' 2>/dev/null)
+
+[[ -z "$entries" ]] && notify-send "Zotero" "No results for: $query" -t 3000 && exit 0
+
+# Let user pick
+selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines=15)
+[[ -z "$selected" ]] && exit 0
+
+# Extract citekey
+citekey=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
+
+# Get PDF path via attachments
+pdf_path=$(bbt_rpc "item.attachments" "[\"$citekey\"]" | jq -r '.result[0].path // empty' 2>/dev/null)
+
+if [[ -n "$pdf_path" ]] && [[ -f "$pdf_path" ]]; then
+	zathura "$pdf_path" &
+else
+	# Fallback: open in browser
+	notify-send "Zotero" "No local PDF, opening in browser" -t 2000
+	xdg-open "https://scholar.google.com/scholar?q=${query// /+}"
+fi

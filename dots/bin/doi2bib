@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Copy a DOI or arXiv ID, press the keybind, get a BibTeX entry on clipboard.
+# Tries Zotero first (if running), falls back to Crossref/arXiv APIs.
+
+ZOTERO_RPC="http://127.0.0.1:23119/better-bibtex/json-rpc"
+
+# Get identifier from clipboard or prompt
+id=$(wl-paste 2>/dev/null | tr -d '[:space:]')
+
+if [[ ! "$id" =~ ^10\. ]] && [[ ! "$id" =~ ^[0-9]{4}\.[0-9]+ ]] && [[ ! "$id" =~ ^https://doi.org/ ]]; then
+	id=$(echo "" | fuzzel --dmenu --prompt="DOI or arXiv ID: " --width=50)
+fi
+[[ -z "$id" ]] && exit 0
+
+# Normalize DOI
+id="${id#https://doi.org/}"
+id="${id#doi:}"
+
+# Try Zotero first (if running and has the item)
+if curl -s --max-time 1 "$ZOTERO_RPC" >/dev/null 2>&1; then
+	bib=$(curl -s "$ZOTERO_RPC" \
+		-X POST -H "Content-Type: application/json" -H "Accept: application/json" \
+		--data-binary "{\"jsonrpc\": \"2.0\", \"method\": \"item.search\", \"params\": [\"$id\"]}" |
+		jq -r '.result[0].citekey // empty' 2>/dev/null)
+	if [[ -n "$bib" ]]; then
+		result=$(curl -s "$ZOTERO_RPC" \
+			-X POST -H "Content-Type: application/json" -H "Accept: application/json" \
+			--data-binary "{\"jsonrpc\": \"2.0\", \"method\": \"item.export\", \"params\": [[\"$bib\"], \"Better BibTeX\"]}" |
+			jq -r '.result // empty' 2>/dev/null)
+		if [[ -n "$result" ]]; then
+			echo "$result" | wl-copy
+			notify-send "BibTeX (Zotero)" "Entry copied to clipboard" -t 3000
+			exit 0
+		fi
+	fi
+fi
+
+# Fallback: arXiv ID
+if [[ "$id" =~ ^[0-9]{4}\.[0-9]+ ]]; then
+	bib=$(curl -sL "https://arxiv.org/bibtex/${id}" 2>/dev/null)
+	if echo "$bib" | grep -q '@'; then
+		echo "$bib" | wl-copy
+		notify-send "BibTeX (arXiv)" "Entry copied to clipboard" -t 3000
+		exit 0
+	fi
+fi
+
+# Fallback: Crossref DOI
+bib=$(curl -sL -H "Accept: application/x-bibtex" "https://doi.org/${id}" 2>/dev/null)
+if echo "$bib" | grep -q '@'; then
+	echo "$bib" | wl-copy
+	notify-send "BibTeX (Crossref)" "Entry copied to clipboard" -t 3000
+else
+	notify-send "BibTeX Error" "Could not resolve: $id" -t 5000
+fi

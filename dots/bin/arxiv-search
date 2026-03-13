@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Search arXiv from fuzzel, pick a paper, open in browser.
+
+query=$(echo "" | fuzzel --dmenu --prompt="arXiv: " --width=60)
+[[ -z "$query" ]] && exit 0
+
+encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$query'''))")
+results=$(curl -s "http://export.arxiv.org/api/query?search_query=all:${encoded}&start=0&max_results=15&sortBy=relevance")
+
+entries=$(echo "$results" | python3 -c "
+import sys, xml.etree.ElementTree as ET
+root = ET.fromstring(sys.stdin.read())
+ns = {'a': 'http://www.w3.org/2005/Atom'}
+for e in root.findall('a:entry', ns):
+    title = ' '.join(e.find('a:title', ns).text.split())
+    aid = e.find('a:id', ns).text.split('/')[-1]
+    authors = ', '.join(
+        a.find('a:name', ns).text
+        for a in e.findall('a:author', ns)[:3]
+    )
+    if len(e.findall('a:author', ns)) > 3:
+        authors += ' et al.'
+    print(f'{aid} | {title} | {authors}')
+")
+
+[[ -z "$entries" ]] && notify-send "arXiv" "No results for: $query" -t 3000 && exit 0
+
+selected=$(echo "$entries" | fuzzel --dmenu --prompt="Open: " --width=80 --lines=15)
+[[ -z "$selected" ]] && exit 0
+
+arxiv_id=$(echo "$selected" | cut -d'|' -f1 | tr -d ' ')
+xdg-open "https://arxiv.org/abs/${arxiv_id}"

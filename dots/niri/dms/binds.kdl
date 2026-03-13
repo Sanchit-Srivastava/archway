@@ -132,4 +132,12 @@ binds {
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
     Mod+Shift+Slash { show-hotkey-overlay; }
     Mod+Tab repeat=false { toggle-overview; }
+
+    // Research launcher workflows
+    Mod+A hotkey-overlay-title="arXiv Search" { spawn "arxiv-search"; }
+    Mod+B hotkey-overlay-title="DOI/arXiv to BibTeX" { spawn "doi2bib"; }
+    Mod+P hotkey-overlay-title="Zotero Paper Search" { spawn "zotero-search"; }
+    Mod+G hotkey-overlay-title="Quick Research Note" { spawn "quick-note"; }
+    Mod+Alt+T hotkey-overlay-title="Translate Clipboard" { spawn "translate-clip"; }
+    Mod+Alt+C hotkey-overlay-title="Today's Schedule" { spawn "today-schedule"; }
 }
