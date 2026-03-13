@@ -5,7 +5,7 @@ set -euo pipefail
 # Run this AFTER dankinstall completes
 # Safe to re-run (idempotent)
 
-SCRIPT_VERSION="2026-03-12-1"
+SCRIPT_VERSION="2026-03-13-1"
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
@@ -21,6 +21,33 @@ NC='\033[0m'
 log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
 log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
 log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
+
+# Link a dotfile (symlink), backing up any existing non-symlink file.
+# Reuses the same pattern as dotfiles.sh for consistency.
+# Usage: link_dotfile <source> <destination>
+link_dotfile() {
+	local src="$1"
+	local dst="$2"
+
+	mkdir -p "$(dirname "$dst")"
+
+	if [[ -L "$dst" ]]; then
+		local current_target
+		current_target="$(readlink "$dst")"
+		if [[ "$current_target" == "$src" ]]; then
+			log_info "Already linked: $dst"
+			return 0
+		fi
+		log_warn "Removing old symlink: $dst -> $current_target"
+		rm "$dst"
+	elif [[ -e "$dst" ]]; then
+		log_warn "Backing up existing: $dst -> ${dst}.bak"
+		mv "$dst" "${dst}.bak"
+	fi
+
+	ln -s "$src" "$dst"
+	log_info "Linked: $dst -> $src"
+}
 
 # Error handler
 on_error() {

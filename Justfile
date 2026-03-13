@@ -52,6 +52,10 @@ sync:
     ./infra/dotfiles.sh
     ./infra/doctor.sh
 
+# Pull live DMS/niri configs into repo (run after changing settings)
+pull-dots:
+    ./infra/pull-dots.sh
+
 # Update system packages
 update:
     sudo pacman -Syu
