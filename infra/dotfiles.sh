@@ -235,6 +235,7 @@ EOF
 	# ==========================================================================
 	log_info "--- OpenCode ---"
 	link_dotfile "${DOTS_DIR}/opencode/opencode.json" "${HOME}/.config/opencode/opencode.json"
+	link_dotfile "${DOTS_DIR}/opencode/latex_server.py" "${HOME}/.config/opencode/latex_server.py"
 
 	# Create API key env file — decrypted from repo if age key is available,
 	# otherwise falls back to an empty template for manual population.

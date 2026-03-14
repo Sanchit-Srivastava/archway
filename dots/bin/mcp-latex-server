@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper to launch the MCP LaTeX Server via uv run.
+# PEP 723 inline metadata in latex_server.py handles dependencies.
+# Used by opencode.json as a cross-platform MCP server command.
+
+exec uv run "$HOME/.config/opencode/latex_server.py" "$@"
