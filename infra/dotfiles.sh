@@ -159,6 +159,27 @@ main() {
 	link_dotfile "${DOTS_DIR}/ssh/config" "${HOME}/.ssh/config"
 	chmod 600 "${HOME}/.ssh/config" 2>/dev/null || true
 
+	# Decrypt machine-specific SSH host entries (config.local)
+	# The main config already includes config.local via: Include config.local
+	local ssh_config_local="${HOME}/.ssh/config.local"
+	local ssh_config_local_template
+	ssh_config_local_template="$(
+		cat <<'TMPL'
+# Machine-specific SSH host entries (decrypted from secrets/ssh_config.local)
+# This file is included by ~/.ssh/config via: Include config.local
+#
+# Add your private hostnames, ForwardAgent, ProxyJump, etc. here.
+# To edit the encrypted source:  just secrets-edit ssh_config.local
+#
+# Example:
+#   Host my-server
+#       HostName 192.168.1.100
+#       User admin
+#       ForwardAgent yes
+TMPL
+	)"
+	decrypt_secret "${SECRETS_DIR}/ssh_config.local" "$ssh_config_local" "$ssh_config_local_template"
+
 	# ==========================================================================
 	# FUZZEL (Wayland launcher/dmenu)
 	# ==========================================================================
