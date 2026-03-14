@@ -22,10 +22,29 @@ log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
 
 # ── SOPS + age secrets support ───────────────────────────────────────────────
 # Check once whether we can decrypt secrets from the repo.
-# Returns 0 (true) if sops is installed AND an age key file exists.
+# Returns 0 (true) if sops is installed AND an age key file exists and is non-empty.
 AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/sops/age/keys.txt}"
 can_decrypt_secrets() {
-	command -v sops &>/dev/null && [[ -f "$AGE_KEY_FILE" ]]
+	command -v sops &>/dev/null && [[ -s "$AGE_KEY_FILE" ]]
+}
+
+# Ensure the age key directory and file exist so the user only needs to
+# paste the key content (from Bitwarden secure note) on a fresh machine.
+ensure_age_key_path() {
+	local age_dir
+	age_dir="$(dirname "$AGE_KEY_FILE")"
+	if [[ ! -d "$age_dir" ]]; then
+		mkdir -p "$age_dir"
+		chmod 700 "$age_dir"
+		log_info "Created age key directory: $age_dir"
+	fi
+	if [[ ! -f "$AGE_KEY_FILE" ]]; then
+		touch "$AGE_KEY_FILE"
+		chmod 600 "$AGE_KEY_FILE"
+		log_warn "Created empty age key file: $AGE_KEY_FILE"
+		log_warn "  Paste your age private key (AGE-SECRET-KEY-...) into this file"
+		log_warn "  then re-run: just dotfiles"
+	fi
 }
 
 # Decrypt a SOPS-encrypted file to a target path.
@@ -88,6 +107,9 @@ main() {
 		log_error "Dots directory not found: $DOTS_DIR"
 		exit 1
 	fi
+
+	# Ensure the age key path exists for SOPS secrets decryption
+	ensure_age_key_path
 
 	# ==========================================================================
 	# ZSH
@@ -385,14 +407,16 @@ TMPL
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
 	if can_decrypt_secrets; then
 		log_info "  - Secrets decrypted from repo (SOPS + age)"
-		log_info "  - Edit secrets: sops secrets/opencode.env"
+		log_info "  - Edit secrets: just secrets-edit opencode.env"
 	else
-		log_info "  - Secrets: fill in API keys at ~/.config/opencode/.env"
-		log_info "    Or set up SOPS + age (see docs/ARCHITECTURE.md)"
+		log_info "  - Secrets not decrypted (no age key found)"
+		log_info "    Paste your age private key into: $AGE_KEY_FILE"
+		log_info "    Then re-run: just dotfiles"
 	fi
-	log_info "  - Calendar setup: fill in ~/.config/vdirsyncer/secrets, then run:"
-	log_info "      vdirsyncer discover google_calendar && vdirsyncer sync"
-	log_info "      systemctl --user enable --now vdirsyncer.timer"
+	if [[ -n "${VDIRSYNCER_GOOGLE_COLLECTIONS:-}" ]]; then
+		log_info "  - Calendar: run vdirsyncer discover google_calendar && vdirsyncer sync"
+		log_info "      systemctl --user enable --now vdirsyncer.timer"
+	fi
 	log_info "  - Zen Browser manual steps after first launch:"
 	log_info "      1. Sign into Mozilla Sync (syncs extensions, bookmarks, prefs)"
 	log_info "      2. Set homepage to: file://${HOME}/.config/zen/startpage/index.html"

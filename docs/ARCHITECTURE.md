@@ -89,7 +89,9 @@ secrets/vdirsyncer.secrets    ──decrypt──▶  ~/.config/vdirsyncer/secre
 - One age keypair per user: `~/.config/sops/age/keys.txt`
 - The public key goes in `.sops.yaml` (committed to the repo)
 - The private key stays on the machine (backed up in Bitwarden as a secure note)
-- On a fresh machine: copy the private key from Bitwarden, then `just dotfiles`
+- `dotfiles.sh` creates the empty key directory and file automatically on first run
+- On a fresh machine: run `just dotfiles` (creates empty key file + templates),
+  then paste the private key from Bitwarden, then `just dotfiles` again to decrypt
 
 ### Editing secrets
 

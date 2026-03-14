@@ -235,22 +235,30 @@ If in graphical session, press `Ctrl+Alt+F2` to switch to TTY2 and log in there.
 cd ~/archway
 ```
 
-### 4.3 Set Up Secrets Decryption (Optional)
+### 4.3 Set Up Secrets Decryption
 
-If you have the age private key (stored in Bitwarden as a secure note):
+`dotfiles.sh` automatically creates an empty age key file at
+`~/.config/sops/age/keys.txt` on first run. Without a key, it creates empty
+templates for secrets files — you'll fill them in later.
+
+After the desktop is running and Bitwarden is available (Part 6+):
 
 ```bash
-# Create the key directory
-mkdir -p ~/.config/sops/age
-chmod 700 ~/.config/sops/age
-
-# Paste your age private key (starts with AGE-SECRET-KEY-...)
+# Open the empty key file that dotfiles.sh created
 nvim ~/.config/sops/age/keys.txt
-chmod 600 ~/.config/sops/age/keys.txt
+
+# Paste the full contents from your Bitwarden secure note:
+#   # created: 2025-...
+#   # public key: age1...
+#   AGE-SECRET-KEY-...
+# Save and close.
+
+# Re-run dotfiles to decrypt secrets from the repo
+just dotfiles
 ```
 
-If you don't have the key (e.g., you forked this repo), skip this step.
-`dotfiles.sh` will create empty templates for you to fill in manually.
+If you forked this repo and don't have the age key, skip this step entirely.
+The empty templates created during step 4.4 work fine — fill in values manually.
 
 ### 4.4 Install Dotfiles
 
@@ -654,6 +662,8 @@ If niri/DMS completely breaks:
 - Run `./install-dms.sh` (choose niri + your terminal)
 - Reboot
 - Run `./infra/doctor.sh` to validate
+- Paste age private key from Bitwarden into `~/.config/sops/age/keys.txt`
+- Re-run `just dotfiles` to decrypt secrets
 - Optional: Enroll fingerprints
 - Optional: Configure Bitwarden SSH agent
 - Optional: Configure Tailscale
