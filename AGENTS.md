@@ -23,6 +23,7 @@ lists rather than application code.
 | ----------------- | ------------------------------------ |
 | Primary Language  | Bash shell scripts                   |
 | Target OS         | Arch Linux                           |
+| Secrets           | SOPS + age encryption                |
 | Window Manager    | Hyprland (Wayland compositor)        |
 | Task Runner       | [just](https://github.com/casey/just)|
 | Shell             | Zsh with oh-my-zsh                   |
@@ -54,6 +55,11 @@ just audit              # Audit packages (detect drift from repo lists)
 # Maintenance
 just sync               # Pull repo, run bootstrap, validate
 just update             # Update system packages (pacman + AUR)
+
+# Secrets
+just secrets-edit <f>   # Decrypt-edit-reencrypt a secrets file (e.g., just secrets-edit opencode.env)
+just secrets-encrypt    # Encrypt all plaintext secrets files in secrets/
+just secrets-show <f>   # Print decrypted contents of a secrets file
 
 # Development
 just lint               # Lint shell scripts with shellcheck
@@ -100,8 +106,13 @@ archway/
 │   ├── nvim/                 # LazyVim configuration
 │   ├── zathura/              # Zathura PDF viewer config (synctex)
 │   └── ...
+├── secrets/                  # SOPS-encrypted secrets (committed to repo)
+│   ├── opencode.env          # OpenCode MCP API keys
+│   ├── vdirsyncer.secrets    # vdirsyncer OAuth + calendar IDs
+│   └── README                # Quick SOPS reference
 ├── docs/                     # Documentation
 │   └── ARCHITECTURE.md       # Design decisions (READ THIS)
+├── .sops.yaml                # SOPS encryption rules (age public key)
 ├── Justfile                  # Task runner commands
 └── README.md                 # Main documentation
 ```
@@ -217,6 +228,9 @@ File: `infra/services.system.txt`
 | `infra/pkgs.brew.txt`         | Homebrew formulae (macOS)            |
 | `infra/pkgs.brew-cask.txt`   | Homebrew casks (macOS)               |
 | `infra/services.system.txt`   | systemd services                     |
+| `.sops.yaml`                  | SOPS encryption rules (age key)      |
+| `secrets/opencode.env`        | Encrypted OpenCode MCP API keys      |
+| `secrets/vdirsyncer.secrets`  | Encrypted vdirsyncer OAuth + cal IDs |
 | `Justfile`                    | Available commands                   |
 
 ## Important Notes for AI Agents

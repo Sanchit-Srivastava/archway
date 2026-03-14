@@ -66,6 +66,28 @@ snapshot:
     sudo ./infra/pre-bootstrap.sh create
 
 # =============================================================================
+# SECRETS (SOPS + age)
+# =============================================================================
+
+# Edit an encrypted secrets file (decrypts → $EDITOR → re-encrypts)
+secrets-edit file:
+    sops secrets/{{file}}
+
+# Encrypt all plaintext secrets files in-place (first-time setup)
+secrets-encrypt:
+    @for f in secrets/opencode.env secrets/vdirsyncer.secrets; do \
+        if head -1 "$f" 2>/dev/null | grep -q 'sops'; then \
+            echo "Already encrypted: $f"; \
+        else \
+            sops --encrypt --in-place "$f" && echo "Encrypted: $f"; \
+        fi; \
+    done
+
+# Show decrypted secrets (stdout only — does not write files)
+secrets-show file:
+    sops --decrypt secrets/{{file}}
+
+# =============================================================================
 # DEVELOPMENT
 # =============================================================================
 

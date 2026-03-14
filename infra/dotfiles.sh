@@ -8,6 +8,7 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOTS_DIR="${REPO_ROOT}/dots"
+SECRETS_DIR="${REPO_ROOT}/secrets"
 
 # Colors for output
 RED='\033[0;31m'
@@ -18,6 +19,37 @@ NC='\033[0m'
 log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
 log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
 log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
+
+# ── SOPS + age secrets support ───────────────────────────────────────────────
+# Check once whether we can decrypt secrets from the repo.
+# Returns 0 (true) if sops is installed AND an age key file exists.
+AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/sops/age/keys.txt}"
+can_decrypt_secrets() {
+	command -v sops &>/dev/null && [[ -f "$AGE_KEY_FILE" ]]
+}
+
+# Decrypt a SOPS-encrypted file to a target path.
+# Falls back to creating an empty template if decryption is unavailable.
+# Usage: decrypt_secret <encrypted_src> <target> <template_content>
+decrypt_secret() {
+	local src="$1" target="$2" template="$3"
+
+	mkdir -p "$(dirname "$target")"
+
+	if can_decrypt_secrets && [[ -f "$src" ]]; then
+		SOPS_AGE_KEY_FILE="$AGE_KEY_FILE" sops --decrypt "$src" >"$target"
+		chmod 600 "$target"
+		log_info "Decrypted: $target"
+	elif [[ -f "$target" ]]; then
+		log_info "Secrets file already exists: $target"
+	else
+		printf '%s\n' "$template" >"$target"
+		chmod 600 "$target"
+		log_warn "No age key found — created empty template: $target"
+		log_warn "  To use SOPS decryption: place your age key at $AGE_KEY_FILE"
+		log_warn "  Or fill in the values manually."
+	fi
+}
 
 # Link a dotfile or directory
 # Usage: link_dotfile <source> <destination>
@@ -161,12 +193,12 @@ EOF
 	log_info "--- OpenCode ---"
 	link_dotfile "${DOTS_DIR}/opencode/opencode.json" "${HOME}/.config/opencode/opencode.json"
 
-	# Create API key env file template if it doesn't exist yet.
-	# The file is never committed (listed in .gitignore) — this just ensures
-	# a fresh install has a ready-to-fill template rather than silently missing keys.
+	# Create API key env file — decrypted from repo if age key is available,
+	# otherwise falls back to an empty template for manual population.
 	local opencode_env="${HOME}/.config/opencode/.env"
-	if [[ ! -f "$opencode_env" ]]; then
-		cat >"$opencode_env" <<'EOF'
+	local opencode_template
+	opencode_template="$(
+		cat <<'TMPL'
 # OpenCode MCP server API keys
 # Fill in the values below, then open a new shell (or: source this file).
 # This file is NOT tracked by git — keep your keys here, not in the repo.
@@ -179,13 +211,9 @@ EOF
 export BRAVE_API_KEY=
 export WOLFRAM_APP_ID=
 export SEMANTIC_SCHOLAR_API_KEY=
-EOF
-		chmod 600 "$opencode_env"
-		log_info "Created API key template: $opencode_env"
-		log_warn "ACTION REQUIRED: Fill in API keys in $opencode_env"
-	else
-		log_info "OpenCode env file already exists: $opencode_env"
-	fi
+TMPL
+	)"
+	decrypt_secret "${SECRETS_DIR}/opencode.env" "$opencode_env" "$opencode_template"
 
 	# ==========================================================================
 	# VALE (prose linter config)
@@ -234,11 +262,11 @@ EOF
 		# ==========================================================================
 		log_info "--- Vdirsyncer ---"
 
-		# Create secrets file template (never committed — holds OAuth credentials
-		# and personal calendar IDs)
+		# Decrypt or create secrets file (OAuth credentials + calendar IDs)
 		local vdirsyncer_secrets="${HOME}/.config/vdirsyncer/secrets"
-		if [[ ! -f "$vdirsyncer_secrets" ]]; then
-			cat >"$vdirsyncer_secrets" <<'EOF'
+		local vdirsyncer_template
+		vdirsyncer_template="$(
+			cat <<'TMPL'
 # vdirsyncer Google OAuth2 credentials & calendar list
 # Fill in the values below after creating a Google Cloud project:
 #   1. Go to https://console.developers.google.com
@@ -263,13 +291,9 @@ VDIRSYNCER_GOOGLE_COLLECTIONS=
 # Must match one of the calendar names from `khal printcalendars`.  Example:
 #   KHAL_DEFAULT_CALENDAR=user@gmail.com
 KHAL_DEFAULT_CALENDAR=
-EOF
-			chmod 600 "$vdirsyncer_secrets"
-			log_info "Created vdirsyncer secrets template: $vdirsyncer_secrets"
-			log_warn "ACTION REQUIRED: Fill in Google OAuth credentials in $vdirsyncer_secrets"
-		else
-			log_info "Vdirsyncer secrets file already exists: $vdirsyncer_secrets"
-		fi
+TMPL
+		)"
+		decrypt_secret "${SECRETS_DIR}/vdirsyncer.secrets" "$vdirsyncer_secrets" "$vdirsyncer_template"
 
 		# Render vdirsyncer config from template + secrets
 		# (The template contains @@COLLECTIONS@@ which is replaced with the
@@ -359,7 +383,13 @@ EOF
 	log_info "  - Oh-my-zsh and plugins will auto-install on first shell start"
 	log_info "  - Edit dots/git/.gitconfig to set your name and email"
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
-	log_info "  - Fill in API keys: ~/.config/opencode/.env"
+	if can_decrypt_secrets; then
+		log_info "  - Secrets decrypted from repo (SOPS + age)"
+		log_info "  - Edit secrets: sops secrets/opencode.env"
+	else
+		log_info "  - Secrets: fill in API keys at ~/.config/opencode/.env"
+		log_info "    Or set up SOPS + age (see docs/ARCHITECTURE.md)"
+	fi
 	log_info "  - Calendar setup: fill in ~/.config/vdirsyncer/secrets, then run:"
 	log_info "      vdirsyncer discover google_calendar && vdirsyncer sync"
 	log_info "      systemctl --user enable --now vdirsyncer.timer"

@@ -235,7 +235,24 @@ If in graphical session, press `Ctrl+Alt+F2` to switch to TTY2 and log in there.
 cd ~/archway
 ```
 
-### 4.3 Install Dotfiles
+### 4.3 Set Up Secrets Decryption (Optional)
+
+If you have the age private key (stored in Bitwarden as a secure note):
+
+```bash
+# Create the key directory
+mkdir -p ~/.config/sops/age
+chmod 700 ~/.config/sops/age
+
+# Paste your age private key (starts with AGE-SECRET-KEY-...)
+nvim ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+```
+
+If you don't have the key (e.g., you forked this repo), skip this step.
+`dotfiles.sh` will create empty templates for you to fill in manually.
+
+### 4.4 Install Dotfiles
 
 ```bash
 ./infra/dotfiles.sh
@@ -251,8 +268,9 @@ cd ~/archway
 - Symlinks fastfetch configuration
 - Creates bat and GitHub CLI configs
 - Symlinks environment.d session variables
+- Decrypts secrets from repo (SOPS + age) or creates empty templates
 
-### 4.4 Configure Git Identity
+### 4.5 Configure Git Identity
 
 **Important**: Edit your git config with your real name and email:
 
@@ -267,7 +285,7 @@ Change these lines:
     email = your.real@email.com
 ```
 
-### 4.5 Switch to Zsh (if not already)
+### 4.6 Switch to Zsh (if not already)
 
 The bootstrap script sets zsh as default shell, but it takes effect on next login.
 
