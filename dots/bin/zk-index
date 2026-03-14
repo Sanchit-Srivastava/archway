@@ -182,8 +182,8 @@ build_recent_section() {
 		if [[ $count -ge $RECENT_LIMIT ]]; then
 			break
 		fi
-	done < <(find "${ENTRIES_DIR}" -maxdepth 1 -name '*.md' -type f \
-		-printf '%T@ %p\n' | sort -rn | cut -d' ' -f2-)
+	done < <(find "${ENTRIES_DIR}" -maxdepth 1 -name '*.md' -type f -print0 |
+		xargs -0 ls -t)
 
 	if [[ ${#entries[@]} -eq 0 ]]; then
 		return
