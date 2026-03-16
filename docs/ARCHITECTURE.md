@@ -76,7 +76,7 @@ using [SOPS](https://github.com/getsops/sops) with
 
 ```
 secrets/opencode.env          ──decrypt──▶  ~/.config/opencode/.env
-secrets/vdirsyncer.secrets    ──decrypt──▶  ~/.config/vdirsyncer/secrets
+secrets/vdirsyncer.env        ──decrypt──▶  ~/.config/vdirsyncer/secrets
 ```
 
 - Encrypted files live in `secrets/` — keys are visible, values are AES-256-GCM

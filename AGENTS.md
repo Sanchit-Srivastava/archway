@@ -108,7 +108,7 @@ archway/
 │   └── ...
 ├── secrets/                  # SOPS-encrypted secrets (committed to repo)
 │   ├── opencode.env          # OpenCode MCP API keys
-│   ├── vdirsyncer.secrets    # vdirsyncer OAuth + calendar IDs
+│   ├── vdirsyncer.env        # vdirsyncer OAuth + calendar IDs
 │   └── README                # Quick SOPS reference
 ├── docs/                     # Documentation
 │   └── ARCHITECTURE.md       # Design decisions (READ THIS)
@@ -230,7 +230,7 @@ File: `infra/services.system.txt`
 | `infra/services.system.txt`   | systemd services                     |
 | `.sops.yaml`                  | SOPS encryption rules (age key)      |
 | `secrets/opencode.env`        | Encrypted OpenCode MCP API keys      |
-| `secrets/vdirsyncer.secrets`  | Encrypted vdirsyncer OAuth + cal IDs |
+| `secrets/vdirsyncer.env`      | Encrypted vdirsyncer OAuth + cal IDs |
 | `Justfile`                    | Available commands                   |
 
 ## Important Notes for AI Agents

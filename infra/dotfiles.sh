@@ -369,7 +369,7 @@ VDIRSYNCER_GOOGLE_COLLECTIONS=
 KHAL_DEFAULT_CALENDAR=
 TMPL
 		)"
-		decrypt_secret "${SECRETS_DIR}/vdirsyncer.secrets" "$vdirsyncer_secrets" "$vdirsyncer_template"
+		decrypt_secret "${SECRETS_DIR}/vdirsyncer.env" "$vdirsyncer_secrets" "$vdirsyncer_template"
 
 		# Render vdirsyncer config from template + secrets
 		# (The template contains @@COLLECTIONS@@ which is replaced with the
