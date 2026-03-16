@@ -1,51 +1,139 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Create a new zk note from a fuzzel prompt. Picks a note type, asks for title,
-# opens in Neovim in a new terminal window.
+# Notes launcher — search or create zk notes from a fuzzel prompt.
+# Opens in a persistent tmux "notes" session so all notes share one workspace.
 #
-# All notes are created in entries/ (flat). Note type determines the template
-# and filename pattern via --template.
+# Bound to Mod+G in niri keybindings.
 
 NOTES_DIR="$HOME/notes"
+TMUX_SESSION="notes"
 
-# Pick note type
-note_type=$(printf "journal\npaper\nidea\nmeeting\nnote" |
-	fuzzel --dmenu --prompt="Type: " --width=30)
-[[ -z "$note_type" ]] && exit 0
+# ── tmux helpers ──────────────────────────────────────────────────────────────
 
-case "$note_type" in
-journal)
-	# Journal notes use date as title, no prompt needed
-	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--template daily.md \
-		--title "$(date +%Y-%m-%d)" entries &
-	;;
-paper)
-	title=$(echo "" | fuzzel --dmenu --prompt="Paper: " --width=50)
-	[[ -z "$title" ]] && exit 0
-	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--template paper-summary.md \
-		--title "$title" entries &
-	;;
-meeting)
-	title=$(echo "" | fuzzel --dmenu --prompt="Meeting: " --width=50)
-	[[ -z "$title" ]] && exit 0
-	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--template meeting-notes.md \
-		--title "$(date +%Y-%m-%d)-${title}" entries &
-	;;
-idea)
-	title=$(echo "" | fuzzel --dmenu --prompt="Idea: " --width=50)
-	[[ -z "$title" ]] && exit 0
-	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--template research-note.md \
-		--title "$title" entries &
-	;;
-note)
-	title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
-	[[ -z "$title" ]] && exit 0
-	ghostty -e zk new --working-dir "$NOTES_DIR" \
-		--title "$title" entries &
-	;;
+# Ensure the persistent "notes" tmux session exists.
+ensure_session() {
+	if ! tmux has-session -t="$TMUX_SESSION" 2>/dev/null; then
+		tmux new-session -ds "$TMUX_SESSION" -c "$NOTES_DIR"
+	fi
+}
+
+# Focus an existing ghostty window attached to the notes session, or open one.
+# After calling this, the new tmux window we just created will be visible.
+focus_or_open_terminal() {
+	# Try to find a ghostty window whose tmux client is attached to our session.
+	# niri exposes window info via niri msg; we look for a ghostty window with
+	# "notes" in its title (tmux sets the terminal title to the session name).
+	if niri msg windows 2>/dev/null | grep -qi "ghostty.*${TMUX_SESSION}"; then
+		# There is an existing window — focus it via niri and let tmux handle
+		# the new window we already created. niri msg action focus-window is
+		# cumbersome without an id, so we use the simpler approach: just send
+		# a no-op to ensure the session foregrounds the latest window.
+		# The tmux window was already created; the user will see it on focus.
+		niri msg action focus-window --app-id ghostty 2>/dev/null || true
+	else
+		ghostty -e tmux attach-session -t "$TMUX_SESSION" &
+	fi
+}
+
+# Run a command in a new tmux window inside the notes session.
+# Args: window-name command [args...]
+tmux_run() {
+	local win_name="$1"
+	shift
+	ensure_session
+	tmux new-window -t "$TMUX_SESSION" -n "$win_name" -c "$NOTES_DIR" "$@"
+}
+
+# ── search notes ──────────────────────────────────────────────────────────────
+
+do_search() {
+	# Build a small inline script that runs inside the tmux window.
+	# Uses ripgrep + fzf for live content search across all notes, with bat
+	# preview. Selecting a result opens it in neovim at the matching line.
+	# Falling back to filename listing when the query is empty.
+	local search_script
+	read -r -d '' search_script <<'SEARCH' || true
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$HOME/notes"
+RG="rg --column --line-number --no-heading --color=always --smart-case"
+INITIAL=$($RG "" entries/ 2>/dev/null || true)
+selected=$(printf '%s' "$INITIAL" | fzf \
+    --ansi \
+    --disabled \
+    --query "" \
+    --prompt="Search notes> " \
+    --bind "change:reload:$RG {q} entries/ 2>/dev/null || true" \
+    --delimiter : \
+    --preview 'bat -p --color=always --highlight-line {2} -- {1} 2>/dev/null' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3' \
+    --header 'Type to search note content. Esc to cancel.' \
+) || exit 0
+file=$(echo "$selected" | cut -d: -f1)
+line=$(echo "$selected" | cut -d: -f2)
+if [[ -n "${file:-}" ]]; then
+    exec nvim "+${line}" "$file"
+fi
+SEARCH
+	tmux_run "search" bash -c "$search_script"
+	focus_or_open_terminal
+}
+
+# ── add note ──────────────────────────────────────────────────────────────────
+
+do_add() {
+	local note_type
+	note_type=$(printf "journal\npaper\nidea\nmeeting\nnote" |
+		fuzzel --dmenu --prompt="Type: " --width=30)
+	[[ -z "$note_type" ]] && exit 0
+
+	local title="" template="" zk_args=()
+
+	case "$note_type" in
+	journal)
+		title="$(date +%Y-%m-%d)"
+		template="daily.md"
+		;;
+	paper)
+		title=$(echo "" | fuzzel --dmenu --prompt="Paper: " --width=50)
+		[[ -z "$title" ]] && exit 0
+		template="paper-summary.md"
+		;;
+	meeting)
+		title=$(echo "" | fuzzel --dmenu --prompt="Meeting: " --width=50)
+		[[ -z "$title" ]] && exit 0
+		title="$(date +%Y-%m-%d)-${title}"
+		template="meeting-notes.md"
+		;;
+	idea)
+		title=$(echo "" | fuzzel --dmenu --prompt="Idea: " --width=50)
+		[[ -z "$title" ]] && exit 0
+		template="research-note.md"
+		;;
+	note)
+		title=$(echo "" | fuzzel --dmenu --prompt="Title: " --width=50)
+		[[ -z "$title" ]] && exit 0
+		;;
+	esac
+
+	zk_args=(new --working-dir "$NOTES_DIR" --title "$title")
+	if [[ -n "$template" ]]; then
+		zk_args+=(--template "$template")
+	fi
+	zk_args+=(entries)
+
+	tmux_run "new-note" zk "${zk_args[@]}"
+	focus_or_open_terminal
+}
+
+# ── main menu ─────────────────────────────────────────────────────────────────
+
+action=$(printf "Search notes\nAdd note" |
+	fuzzel --dmenu --prompt="Notes: " --width=30)
+[[ -z "$action" ]] && exit 0
+
+case "$action" in
+"Search notes") do_search ;;
+"Add note") do_add ;;
 esac

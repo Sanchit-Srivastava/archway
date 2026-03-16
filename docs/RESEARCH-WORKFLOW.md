@@ -237,12 +237,19 @@ Requires Zotero running with Better BibTeX installed.
 
 ### quick-note (`Mod+G`)
 
-Create a new zk note from a fuzzel menu:
+Notes launcher with search and creation, opening in a persistent tmux session:
 
-1. Pick note type (journal / paper / idea / meeting / note)
-2. Enter title (journal skips this step)
-3. Note is created in `entries/` with the appropriate template
-4. Opens in Neovim in a new Ghostty window
+1. Pick action: **Search notes** or **Add note**
+2. **Search notes** — live content search (ripgrep + fzf) across all notes in
+   `entries/`. Type to filter by content; select a match to open it in Neovim
+   at the matching line.
+3. **Add note** — pick note type (journal / paper / idea / meeting / note),
+   enter a title (journal skips this step), and the note is created in
+   `entries/` with the appropriate template, opening in Neovim.
+
+Both paths use a persistent tmux session called `notes` (working directory
+`~/notes`). If a Ghostty window is already attached to the session, it is
+reused; otherwise a new terminal is opened.
 
 ### today-schedule (`Mod+Alt+C`)
 
@@ -264,7 +271,7 @@ the clipboard and shows a notification.
 | `Mod+A` | `arxiv-search` | Search arXiv |
 | `Mod+B` | `doi2bib` | DOI/arXiv to BibTeX |
 | `Mod+P` | `zotero-search` | Search Zotero library |
-| `Mod+G` | `quick-note` | Create research note |
+| `Mod+G` | `quick-note` | Search or create research note |
 | `Mod+Alt+T` | `translate-clip` | Translate clipboard |
 | `Mod+Alt+C` | `today-schedule` | Today's schedule |
 
