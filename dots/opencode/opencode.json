@@ -65,6 +65,17 @@
       "url": "http://127.0.0.1:23120/mcp",
       "enabled": true
     },
+    "filesystem": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "~/notes",
+        "~/Projects"
+      ],
+      "enabled": true
+    },
     "latex": {
       "type": "local",
       "command": ["mcp-latex-server"],
