@@ -260,6 +260,38 @@ TMPL
 	decrypt_secret "${SECRETS_DIR}/opencode.env" "$opencode_env" "$opencode_template"
 
 	# ==========================================================================
+	# RESEARCH-TOOLS (Zotero RAG server credentials)
+	# ==========================================================================
+	log_info "--- Research-tools ---"
+
+	# Deploy Zotero API credentials used by the research-tools RAG server.
+	# Target: ~/research-tools/.env (loaded by python-dotenv at server startup)
+	local rt_home="${RESEARCH_TOOLS_HOME:-${HOME}/research-tools}"
+	local rt_env="${rt_home}/.env"
+	local rt_template
+	rt_template="$(
+		cat <<'TMPL'
+# research-tools RAG server credentials
+# Used by ~/research-tools/server/research-rag-server.py for Zotero Web API access.
+#
+# Get your credentials at:
+#   User ID:  https://www.zotero.org/settings/keys  (your numeric user ID)
+#   API Key:  https://www.zotero.org/settings/keys  (create a new key with read access)
+#
+# To edit the encrypted source:  just secrets-edit research-tools.env  (in archway)
+
+ZOTERO_USER_ID=
+ZOTERO_API_KEY=
+TMPL
+	)"
+	if [[ -d "$rt_home" ]]; then
+		decrypt_secret "${SECRETS_DIR}/research-tools.env" "$rt_env" "$rt_template"
+	else
+		log_warn "research-tools not found at $rt_home — skipping .env deployment"
+		log_warn "  Clone the repo first, then re-run: just dotfiles"
+	fi
+
+	# ==========================================================================
 	# VALE (prose linter config)
 	# ==========================================================================
 	log_info "--- Vale ---"
