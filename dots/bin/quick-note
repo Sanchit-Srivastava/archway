@@ -21,18 +21,19 @@ ensure_session() {
 # Focus an existing ghostty window attached to the notes session, or open one.
 # After calling this, the new tmux window we just created will be visible.
 focus_or_open_terminal() {
-	# Try to find a ghostty window whose tmux client is attached to our session.
-	# niri exposes window info via niri msg; we look for a ghostty window with
-	# "notes" in its title (tmux sets the terminal title to the session name).
-	if niri msg windows 2>/dev/null | grep -qi "ghostty.*${TMUX_SESSION}"; then
-		# There is an existing window — focus it via niri and let tmux handle
-		# the new window we already created. niri msg action focus-window is
-		# cumbersome without an id, so we use the simpler approach: just send
-		# a no-op to ensure the session foregrounds the latest window.
-		# The tmux window was already created; the user will see it on focus.
+	# Check if any tmux client is currently attached to the notes session.
+	local attached
+	attached=$(tmux list-clients -t "$TMUX_SESSION" -F '#{client_name}' 2>/dev/null || true)
+
+	if [[ -n "$attached" ]]; then
+		# A client is attached — focus its ghostty window via niri.
 		niri msg action focus-window --app-id ghostty 2>/dev/null || true
 	else
-		ghostty -e tmux attach-session -t "$TMUX_SESSION" &
+		# No client attached (session was detached or terminal closed).
+		# Use niri to spawn ghostty so the compositor manages the process
+		# lifecycle directly — backgrounding with & from a niri-spawned
+		# script causes the orphaned process to get cleaned up on exit.
+		niri msg action spawn -- ghostty -e tmux attach-session -t "$TMUX_SESSION"
 	fi
 }
 
@@ -42,7 +43,7 @@ tmux_run() {
 	local win_name="$1"
 	shift
 	ensure_session
-	tmux new-window -t "$TMUX_SESSION" -n "$win_name" -c "$NOTES_DIR" "$@"
+	tmux new-window -t "$TMUX_SESSION" -n "$win_name" -c "$NOTES_DIR" -- "$@"
 }
 
 # ── search notes ──────────────────────────────────────────────────────────────

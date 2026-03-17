@@ -48,8 +48,10 @@ content)
 		--bind "ctrl-/:become(quick-note-search files {q})" \
 		--delimiter ':') || exit 0
 
-	file=$(printf '%s' "$selected" | cut -d: -f1)
-	line=$(printf '%s' "$selected" | cut -d: -f2)
+	# Strip ANSI color codes before parsing the colon-delimited rg output
+	clean=$(printf '%s' "$selected" | sed 's/\x1b\[[0-9;]*m//g')
+	file=$(printf '%s' "$clean" | cut -d: -f1)
+	line=$(printf '%s' "$clean" | cut -d: -f2)
 	;;
 *)
 	echo "Usage: quick-note-search [files|content] [query]" >&2
@@ -57,6 +59,6 @@ content)
 	;;
 esac
 
-if [[ -n "${file:-}" ]]; then
+if [[ -n "${file:-}" && -f "$file" ]]; then
 	exec nvim "+${line}" "$file"
 fi
