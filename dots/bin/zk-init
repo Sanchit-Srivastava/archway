@@ -15,6 +15,10 @@ set -euo pipefail
 #   ├── references/                     (Zotero BibTeX)
 #   ├── index.md                        (entry point for Neovim)
 #   └── README.md                       (standard links for GitHub)
+#
+# Frontmatter convention:
+#   category: <string>   -- note type (journal, paper, meeting, research, plan)
+#   tags: [t1, t2, ...]  -- content/topic tags (defense-qa, nonlocality, ...)
 
 NOTES_DIR="$HOME/notes"
 ENTRIES_DIR="${NOTES_DIR}/entries"
@@ -94,58 +98,40 @@ EOF
 write_if_missing "${NOTES_DIR}/.zk/templates/daily.md" <<'TMPL'
 ---
 date: "{{format-date now '%Y-%m-%d'}}"
-tags: [journal]
+category: journal
+tags: []
 ---
 
 # {{format-date now "%A, %B %d, %Y"}}
 
-## Plan
-
--
-
-## Notes
-
--
-
-## End of day
-
--
+## TODO
+<!-- TODO:  {{format-date now "%A, %B %d, %Y"}} -->
+- []
+- []
+- []
+- []
 TMPL
 
 write_if_missing "${NOTES_DIR}/.zk/templates/paper-summary.md" <<'TMPL'
 ---
 title: "{{title}}"
 date: "{{format-date now '%Y-%m-%d'}}"
-tags: [paper]
+category: paper
+tags: []
 citekey:
 arxiv:
 authors:
 ---
 
 # {{title}}
-
-## Key Results
-
--
-
-## Methods
-
--
-
-## Relevance to My Work
-
--
-
-## Questions / Follow-ups
-
--
 TMPL
 
 write_if_missing "${NOTES_DIR}/.zk/templates/meeting-notes.md" <<'TMPL'
 ---
 title: "{{title}}"
 date: "{{format-date now '%Y-%m-%d'}}"
-tags: [meeting]
+category: meeting
+tags: []
 attendees:
 ---
 
@@ -153,10 +139,8 @@ attendees:
 
 ## Discussion
 
--
-
 ## Action Items
-
+<!-- TODO: {{title}} -->
 - [ ]
 TMPL
 
@@ -164,12 +148,11 @@ write_if_missing "${NOTES_DIR}/.zk/templates/research-note.md" <<'TMPL'
 ---
 title: "{{title}}"
 date: "{{format-date now '%Y-%m-%d'}}"
+category: research
 tags: []
 ---
 
 # {{title}}
-
-
 TMPL
 
 # Create index.md (placeholder -- zk-index will regenerate with links)

@@ -38,10 +38,11 @@ This creates:
 │   ├── config.toml        # zk configuration
 │   └── templates/         # note templates (daily, paper, meeting, research)
 ├── .git/                  # git repo for cross-machine sync
-├── entries/               # all notes (flat, categorized by frontmatter tags)
+├── entries/               # all notes (flat, categorized by frontmatter category)
 ├── references/            # Zotero BibTeX auto-export target
+├── topics/                # auto-generated per-topic pages (by zk-index)
 ├── index.md               # entry point (Neovim navigation, with frontmatter)
-└── README.md              # auto-generated index (recent notes + tag sections)
+└── README.md              # auto-generated index (recent notes + category sections)
 ```
 
 ### Second machine
@@ -67,9 +68,9 @@ zk-index              # regenerate README.md
 zk-index --dry-run    # preview without writing
 ```
 
-The generated README groups notes by frontmatter tags (papers, journal, ideas,
-meetings) and extracts titles from YAML frontmatter. It is designed to be
-regenerated, not hand-edited.
+The generated README groups notes by frontmatter `category` field (papers,
+journal, ideas, meetings) and shows a topic directory built from `tags`. It is
+designed to be regenerated, not hand-edited.
 
 Workflow:
 
@@ -82,7 +83,8 @@ cd ~/notes && git add -A && git commit -m "sync" && git push
 ### Note types
 
 All notes live in `entries/` (flat directory). Note type is determined by the
-template, which sets the appropriate frontmatter tags.
+template, which sets the `category` field in YAML frontmatter. Tags are used
+separately for content/topic classification.
 
 | Command | Template | Filename pattern |
 |---------|----------|-----------------|
@@ -336,7 +338,7 @@ the clipboard and shows a notification.
 | `dots/bin/today-schedule` | Calendar popup script |
 | `dots/bin/translate-clip` | Translation script |
 | `dots/bin/zk-init` | One-time notebook initializer |
-| `dots/bin/zk-index` | Regenerate README.md and index.md (groups by frontmatter tags) |
+| `dots/bin/zk-index` | Regenerate README.md and index.md (groups by category, indexes topics) |
 
 ## Packages added
 
