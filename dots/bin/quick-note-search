@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Search notes with fzf — two modes toggled with Ctrl-/:
+#   files   (default) — fuzzy-match filenames, bat preview of full file
+#   content           — ripgrep live search, bat preview at matching line
+#
+# The toggle works by re-launching this script with a mode argument via fzf's
+# become() action, which is simple and avoids fragile nested-shell transforms.
+#
+# Selecting a result opens it in neovim (at the matching line in content mode).
+# Called by quick-note inside a tmux window.
+
+cd "$HOME/notes"
+
+MODE="${1:-files}"
+INITIAL_QUERY="${2:-}"
+
+RG_CMD='rg --column --line-number --no-heading --color=always --smart-case'
+
+case "$MODE" in
+files)
+	selected=$(find entries/ -maxdepth 1 -name '*.md' -type f | sort | fzf \
+		--ansi \
+		--query "$INITIAL_QUERY" \
+		--prompt="Files> " \
+		--header "Ctrl-/: switch to content search" \
+		--preview 'bat -p --color=always -- {} 2>/dev/null' \
+		--preview-window 'up,60%,border-bottom' \
+		--bind "ctrl-/:become(quick-note-search content {q})" \
+		--delimiter ' ') || exit 0
+
+	file="$selected"
+	line=1
+	;;
+content)
+	# shellcheck disable=SC2086
+	selected=$(: | fzf \
+		--ansi \
+		--disabled \
+		--query "$INITIAL_QUERY" \
+		--prompt="Content> " \
+		--header "Ctrl-/: switch to file search" \
+		--preview 'bat -p --color=always --highlight-line {2} -- {1} 2>/dev/null' \
+		--preview-window 'up,60%,border-bottom,+{2}+3/3' \
+		--bind "start:reload:$RG_CMD {q} entries/ 2>/dev/null || true" \
+		--bind "change:reload:$RG_CMD {q} entries/ 2>/dev/null || true" \
+		--bind "ctrl-/:become(quick-note-search files {q})" \
+		--delimiter ':') || exit 0
+
+	file=$(printf '%s' "$selected" | cut -d: -f1)
+	line=$(printf '%s' "$selected" | cut -d: -f2)
+	;;
+*)
+	echo "Usage: quick-note-search [files|content] [query]" >&2
+	exit 1
+	;;
+esac
+
+if [[ -n "${file:-}" ]]; then
+	exec nvim "+${line}" "$file"
+fi
