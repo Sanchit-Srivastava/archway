@@ -49,29 +49,44 @@ tmux_run() {
 
 do_search() {
 	# Build a small inline script that runs inside the tmux window.
-	# Uses ripgrep + fzf for live content search across all notes, with bat
-	# preview. Selecting a result opens it in neovim at the matching line.
-	# Falling back to filename listing when the query is empty.
+	#
+	# Two modes, toggled with Ctrl-S:
+	#   Files mode (default) -- fuzzy match on filenames, bat preview of full file
+	#   Content mode         -- ripgrep live search, bat preview at matching line
+	#
+	# Selecting a result opens it in neovim (at the matching line in content mode).
 	local search_script
 	read -r -d '' search_script <<'SEARCH' || true
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$HOME/notes"
-RG="rg --column --line-number --no-heading --color=always --smart-case"
-INITIAL=$($RG "" entries/ 2>/dev/null || true)
-selected=$(printf '%s' "$INITIAL" | fzf \
+
+RG_CMD="rg --column --line-number --no-heading --color=always --smart-case"
+
+selected=$(find entries/ -maxdepth 1 -name '*.md' -type f | sort | fzf \
     --ansi \
-    --disabled \
     --query "" \
-    --prompt="Search notes> " \
-    --bind "change:reload:$RG {q} entries/ 2>/dev/null || true" \
-    --delimiter : \
-    --preview 'bat -p --color=always --highlight-line {2} -- {1} 2>/dev/null' \
-    --preview-window 'up,60%,border-bottom,+{2}+3/3' \
-    --header 'Type to search note content. Esc to cancel.' \
+    --prompt="Files> " \
+    --header "Ctrl-S: toggle files/content search" \
+    --preview 'bat -p --color=always -- {} 2>/dev/null' \
+    --preview-window 'up,60%,border-bottom' \
+    --bind "ctrl-s:transform:[[ \$FZF_PROMPT =~ Files ]] \
+        && echo 'rebind(change)+reload(${RG_CMD} {q} entries/ 2>/dev/null || true)+change-prompt(Content> )+disable-search+change-header(Ctrl-S: toggle files/content search)+change-preview(bat -p --color=always --highlight-line {2} -- {1} 2>/dev/null)+change-preview-window(up,60%,border-bottom,+{2}+3/3)+change-delimiter(:)' \
+        || echo 'unbind(change)+reload(find entries/ -maxdepth 1 -name *.md -type f | sort)+change-prompt(Files> )+enable-search+change-header(Ctrl-S: toggle files/content search)+change-preview(bat -p --color=always -- {} 2>/dev/null)+change-preview-window(up,60%,border-bottom)+change-delimiter( )'" \
+    --bind "change:reload:${RG_CMD} {q} entries/ 2>/dev/null || true" \
+    --unbind change \
+    --delimiter ' ' \
 ) || exit 0
-file=$(echo "$selected" | cut -d: -f1)
-line=$(echo "$selected" | cut -d: -f2)
+
+# In content mode, selected line is file:line:col:text; in files mode, just a path
+if [[ "$selected" == *:* ]]; then
+    file=$(echo "$selected" | cut -d: -f1)
+    line=$(echo "$selected" | cut -d: -f2)
+else
+    file="$selected"
+    line=1
+fi
+
 if [[ -n "${file:-}" ]]; then
     exec nvim "+${line}" "$file"
 fi
