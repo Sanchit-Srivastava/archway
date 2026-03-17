@@ -74,7 +74,7 @@ selected=$(find entries/ -maxdepth 1 -name '*.md' -type f | sort | fzf \
         && echo 'rebind(change)+reload(${RG_CMD} {q} entries/ 2>/dev/null || true)+change-prompt(Content> )+disable-search+change-header(Ctrl-S: toggle files/content search)+change-preview(bat -p --color=always --highlight-line {2} -- {1} 2>/dev/null)+change-preview-window(up,60%,border-bottom,+{2}+3/3)+change-delimiter(:)' \
         || echo 'unbind(change)+reload(find entries/ -maxdepth 1 -name *.md -type f | sort)+change-prompt(Files> )+enable-search+change-header(Ctrl-S: toggle files/content search)+change-preview(bat -p --color=always -- {} 2>/dev/null)+change-preview-window(up,60%,border-bottom)+change-delimiter( )'" \
     --bind "change:reload:${RG_CMD} {q} entries/ 2>/dev/null || true" \
-    --unbind change \
+    --bind "start:unbind(change)" \
     --delimiter ' ' \
 ) || exit 0
 
