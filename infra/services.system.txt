@@ -69,6 +69,13 @@ tailscaled
 # avahi-daemon
 
 # =============================================================================
+# KEYBOARD REMAPPING
+# =============================================================================
+
+# keyd: kernel-level key remapping (caps/escape swap on internal keyboard)
+keyd
+
+# =============================================================================
 # DISPLAY MANAGER
 # =============================================================================
 # SDDM provides graphical login screen (enabled by default)

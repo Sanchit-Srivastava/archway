@@ -693,6 +693,44 @@ configure_snapper() {
 }
 
 # =============================================================================
+# KEYD CONFIGURATION (keyboard remapping)
+# =============================================================================
+
+configure_keyd() {
+	log_info "Configuring keyd (keyboard remapping)..."
+
+	if ! command -v keyd >/dev/null 2>&1; then
+		log_warn "keyd not installed - skipping keyboard remapping configuration"
+		return 0
+	fi
+
+	local keyd_src="${REPO_ROOT}/dots/keyd/default.conf"
+	local keyd_dst="/etc/keyd/default.conf"
+
+	if [[ ! -f "$keyd_src" ]]; then
+		log_warn "keyd config not found at $keyd_src - skipping"
+		return 0
+	fi
+
+	sudo mkdir -p /etc/keyd
+
+	# Only update if the config has changed (avoids unnecessary service restarts)
+	if [[ -f "$keyd_dst" ]] && diff -q "$keyd_src" "$keyd_dst" >/dev/null 2>&1; then
+		log_info "keyd config already up to date"
+	else
+		sudo cp "$keyd_src" "$keyd_dst"
+		sudo chmod 644 "$keyd_dst"
+		log_info "Deployed keyd config to $keyd_dst"
+
+		# Reload keyd if the service is running (picks up config changes live)
+		if systemctl is-active keyd >/dev/null 2>&1; then
+			sudo keyd reload
+			log_info "Reloaded keyd daemon"
+		fi
+	fi
+}
+
+# =============================================================================
 # POLKIT CONFIGURATION
 # =============================================================================
 
@@ -871,6 +909,9 @@ main() {
 
 	CURRENT_PHASE="configuring XDG portals"
 	configure_portals
+
+	CURRENT_PHASE="configuring keyd (keyboard remapping)"
+	configure_keyd
 
 	CURRENT_PHASE="configuring polkit"
 	configure_polkit
