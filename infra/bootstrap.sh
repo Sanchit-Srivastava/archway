@@ -209,6 +209,42 @@ install_aur_packages() {
 # SYSTEMD SERVICES
 # =============================================================================
 
+# Known display manager service names
+DISPLAY_MANAGERS=(sddm lightdm gdm lxdm ly greetd plasmalogin)
+
+is_display_manager() {
+	local svc="$1"
+	local dm
+	for dm in "${DISPLAY_MANAGERS[@]}"; do
+		if [[ "$svc" == "$dm" || "$svc" == "${dm}.service" ]]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Swap in the desired display manager, disabling any existing one first.
+enable_display_manager() {
+	local desired="$1"
+	local dm_link="/etc/systemd/system/display-manager.service"
+
+	if systemctl is-enabled "$desired" >/dev/null 2>&1; then
+		log_info "Display manager $desired already enabled"
+		return 0
+	fi
+
+	# If another DM holds the display-manager.service slot, disable it first
+	if [[ -L "$dm_link" ]]; then
+		local current
+		current="$(basename "$(readlink -f "$dm_link")")"
+		log_warn "Replacing display manager ${current} with ${desired}"
+		sudo systemctl disable "${current}" 2>/dev/null || true
+	fi
+
+	log_info "Enabling display manager: $desired"
+	sudo systemctl enable "$desired"
+}
+
 enable_services() {
 	local svc_file="${SCRIPT_DIR}/services.system.txt"
 
@@ -233,7 +269,9 @@ enable_services() {
 	log_info "Enabling ${#services[@]} systemd services..."
 
 	for service in "${services[@]}"; do
-		if systemctl is-enabled "$service" >/dev/null 2>&1; then
+		if is_display_manager "$service"; then
+			enable_display_manager "$service"
+		elif systemctl is-enabled "$service" >/dev/null 2>&1; then
 			log_info "Service $service already enabled"
 		else
 			log_info "Enabling service: $service"
