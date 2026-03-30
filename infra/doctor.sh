@@ -65,6 +65,8 @@ declare -A CHECK_IDS=(
 	[plasma]="check_plasma_fallback"
 	[keyd]="check_keyd"
 	[dms]="check_dms_installed"
+	[zotero]="check_zotero_bbt"
+	[zotero-mcp]="check_zotero_mcp"
 )
 
 # Print TAP header
@@ -276,6 +278,36 @@ check_dms_installed() {
 		"DMS shell installed (quickshell/qs)" \
 		"command -v qs" \
 		"Install DMS: curl -fsSL https://dms.avenge.cloud | bash"
+}
+
+check_zotero_bbt() {
+	if ! command -v zotero >/dev/null 2>&1; then
+		run_check \
+			"Zotero Better BibTeX (skipped - Zotero not installed)" \
+			"true" \
+			""
+		return 0
+	fi
+
+	run_check \
+		"Zotero Better BibTeX plugin installed" \
+		"grep -rql 'better-bibtex@iris-advies.com' ${HOME}/.zotero/zotero/*/extensions.json 2>/dev/null" \
+		"Install from https://retorque.re/zotero-better-bibtex/installation/ (required by zotero-search, doi2bib, zotcite)"
+}
+
+check_zotero_mcp() {
+	if ! command -v zotero >/dev/null 2>&1; then
+		run_check \
+			"Zotero MCP plugin (skipped - Zotero not installed)" \
+			"true" \
+			""
+		return 0
+	fi
+
+	run_check \
+		"Zotero MCP plugin installed" \
+		"grep -rql 'zotero-mcp-plugin@autoagent.my' ${HOME}/.zotero/zotero/*/extensions.json 2>/dev/null" \
+		"Install from https://github.com/cookjohn/zotero-mcp/releases (required by OpenCode zotero MCP server)"
 }
 
 check_yay_installed() {
@@ -643,6 +675,10 @@ main() {
 			echo "  # DMS (DankMaterialShell)"
 			echo "  dms              DMS shell installed (quickshell/qs)"
 			echo ""
+			echo "  # Research Workflow"
+			echo "  zotero           Zotero Better BibTeX plugin installed"
+			echo "  zotero-mcp       Zotero MCP plugin installed"
+			echo ""
 			echo "Other modes:"
 			echo "  --audit-packages   Compare installed packages to repo lists"
 			exit 0
@@ -697,7 +733,7 @@ main() {
 
 	# Run checks
 	if [[ -z "$ONLY_CHECK" ]]; then
-		tap_plan 38
+		tap_plan 40
 
 		check_pipewire_running
 		check_pipewire_pulse
@@ -745,6 +781,10 @@ main() {
 
 		# DMS (optional - may not be installed yet)
 		check_dms_installed
+
+		# Research workflow
+		check_zotero_bbt
+		check_zotero_mcp
 	else
 		tap_plan 1
 		${CHECK_IDS[$ONLY_CHECK]}

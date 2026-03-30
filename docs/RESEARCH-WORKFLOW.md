@@ -122,6 +122,29 @@ BibTeX citation keys are used for compatibility with collaborative workflows.
 Zotero must be installed and its database accessible at the default path
 (`~/.zotero/zotero/*/zotero.sqlite`). The `sqlite3` CLI tool is required.
 
+#### Required Zotero plugins
+
+The repo cannot automate Zotero plugin installation -- these must be installed
+manually inside Zotero via **Tools > Add-ons > gear icon > Install Add-on From
+File** (select the downloaded `.xpi`, then restart Zotero). Run `just check
+zotero` and `just check zotero-mcp` to verify installation.
+
+**1. Better BibTeX for Zotero** --
+<https://retorque.re/zotero-better-bibtex/installation/>
+
+Download the latest `.xpi` from the link above. Better BibTeX provides the
+JSON-RPC endpoint (`localhost:23119`) used by `zotero-search`, `doi2bib`, and
+the zotcite Neovim plugin. Without it these tools will not function.
+
+**2. Zotero MCP Plugin** --
+<https://github.com/cookjohn/zotero-mcp/releases>
+
+Download the latest `zotero-mcp-plugin-*.xpi` from the releases page. This
+plugin embeds an MCP server inside Zotero (`localhost:23120/mcp`) that gives
+OpenCode direct access to search, read, and annotate your library. After
+installation, enable the server in Zotero: **Preferences > Zotero MCP Plugin >
+Enable Server** (default port 23120).
+
 **Completion** -- type `@` in a markdown file to get citekey suggestions via
 zotcite's built-in LSP. In LaTeX files, `\cite{` triggers completion. Use
 `<C-X><C-B>` in insert mode for a telescope picker.
