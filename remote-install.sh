@@ -84,4 +84,4 @@ if [[ ! -t 0 ]]; then
 fi
 
 log_info "Handing off to install.sh..."
-exec "$REPO_DIR/install.sh" "${PASSTHROUGH_ARGS[@]}"
+exec bash "$REPO_DIR/install.sh" "${PASSTHROUGH_ARGS[@]}"

@@ -10,6 +10,14 @@ Design: layered system baseline + user configs, with an optional desktop shell l
 
 ### Automated installation:
 
+On a fresh Arch/CachyOS install, ensure `curl` and `git` are available first:
+
+```bash
+sudo pacman -S --needed curl git
+```
+
+Then run:
+
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
 ```
