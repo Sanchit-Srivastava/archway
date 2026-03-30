@@ -352,11 +352,11 @@ main() {
 		return 0
 	fi
 
-	if is_graphical_session; then
-		log_info "Graphical session detected. Running Stage 2."
+	if [[ "${ARCHWAY_STAGE:-}" == "stage2" ]]; then
+		log_info "Stage 1 completed previously. Running Stage 2."
 		stage2
 	else
-		log_info "TTY session detected. Running Stage 1."
+		log_info "Running Stage 1."
 		stage1
 	fi
 }
