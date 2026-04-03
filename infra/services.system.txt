@@ -25,8 +25,9 @@ accounts-daemon
 # Automatic snapshot cleanup (keeps N snapshots per policy)
 # snapper-cleanup.timer
 
-# Regenerate GRUB menu when snapshots change
-# grub-btrfsd
+# Snapshot boot integration:
+#   Limine uses limine-snapper-sync (snapper plugin, no daemon needed)
+#   Configured via /etc/limine-snapper-sync.conf by bootstrap.sh
 
 # =============================================================================
 # HARDWARE / PERIPHERALS

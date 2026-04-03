@@ -14,8 +14,7 @@ ghostty
 # BTRFS & SNAPSHOTS
 # =============================================================================
 btrfs-progs
-grub-btrfs
-inotify-tools
+limine-snapper-sync
 snap-pac
 snapper
 

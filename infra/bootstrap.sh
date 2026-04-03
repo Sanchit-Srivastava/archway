@@ -722,9 +722,26 @@ configure_snapper() {
 	sudo systemctl enable --now snapper-timeline.timer
 	sudo systemctl enable --now snapper-cleanup.timer
 
-	if [[ -f /boot/grub/grub.cfg ]] && { [[ -f /usr/lib/systemd/system/grub-btrfsd.service ]] || [[ -f /etc/systemd/system/grub-btrfsd.service ]]; }; then
-		log_info "GRUB detected; enabling grub-btrfs daemon..."
-		sudo systemctl enable --now grub-btrfsd
+	# Configure Limine snapshot boot integration
+	if pacman -Q limine-snapper-sync &>/dev/null; then
+		log_info "Configuring limine-snapper-sync for archway subvolume layout..."
+		local limine_conf="/etc/limine-snapper-sync.conf"
+		if [[ -f "$limine_conf" ]]; then
+			# Ensure ROOT_SUBVOLUME_PATH matches our @ subvolume
+			if grep -q '^ROOT_SUBVOLUME_PATH=' "$limine_conf"; then
+				sudo sed -i 's|^ROOT_SUBVOLUME_PATH=.*|ROOT_SUBVOLUME_PATH="/@"|' "$limine_conf"
+			fi
+			# Ensure ROOT_SNAPSHOTS_PATH matches our @snapshots (sibling, not nested)
+			if grep -q '^ROOT_SNAPSHOTS_PATH=' "$limine_conf"; then
+				sudo sed -i 's|^ROOT_SNAPSHOTS_PATH=.*|ROOT_SNAPSHOTS_PATH="/@snapshots"|' "$limine_conf"
+			fi
+			log_info "limine-snapper-sync configured (ROOT_SNAPSHOTS_PATH=/@snapshots)"
+		else
+			log_warn "$limine_conf not found - limine-snapper-sync may need manual configuration"
+		fi
+	else
+		log_warn "limine-snapper-sync not installed - snapshot boot menu will not be available"
+		log_warn "Install with: sudo pacman -S limine-snapper-sync"
 	fi
 
 	log_info "Snapper configuration complete"

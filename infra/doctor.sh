@@ -61,7 +61,7 @@ declare -A CHECK_IDS=(
 	[btrfs]="check_btrfs_root"
 	[snapper]="check_snapper_configured"
 	[snapper-timers]="check_snapper_timers"
-	[grub-btrfs]="check_grub_btrfs"
+	[limine-snapper]="check_limine_snapper"
 	[plasma]="check_plasma_fallback"
 	[keyd]="check_keyd"
 	[dms]="check_dms_installed"
@@ -457,22 +457,22 @@ check_snapper_timers() {
 		"Enable: sudo systemctl enable --now snapper-timeline.timer"
 }
 
-check_grub_btrfs() {
+check_limine_snapper() {
 	local fstype
 	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
 
 	if [[ "$fstype" != "btrfs" ]]; then
 		run_check \
-			"grub-btrfs enabled (skipped - not Btrfs)" \
+			"Limine snapshot boot (skipped - not Btrfs)" \
 			"true" \
 			""
 		return 0
 	fi
 
 	run_check \
-		"grub-btrfs daemon enabled" \
-		"systemctl is-enabled grub-btrfsd >/dev/null 2>&1" \
-		"Enable: sudo systemctl enable --now grub-btrfsd"
+		"limine-snapper-sync installed" \
+		"pacman -Q limine-snapper-sync >/dev/null 2>&1" \
+		"Install: sudo pacman -S limine-snapper-sync"
 }
 
 check_plasma_fallback() {
@@ -667,7 +667,7 @@ main() {
 			echo "  btrfs            Root filesystem is Btrfs"
 			echo "  snapper          Snapper config exists"
 			echo "  snapper-timers   Snapper timeline timer enabled"
-			echo "  grub-btrfs       grub-btrfs daemon enabled"
+			echo "  limine-snapper   Limine snapshot boot (limine-snapper-sync)"
 			echo ""
 			echo "  # Fallback Session"
 			echo "  plasma           KDE Plasma fallback installed"
@@ -774,7 +774,7 @@ main() {
 		check_btrfs_root
 		check_snapper_configured
 		check_snapper_timers
-		check_grub_btrfs
+		check_limine_snapper
 
 		# Fallback
 		check_plasma_fallback

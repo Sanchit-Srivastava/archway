@@ -23,7 +23,7 @@ The installer runs in two stages with one reboot. If it doesn't resume automatic
 - niri compositor + DankMaterialShell desktop
 - Modern CLI tools (zsh, starship, eza, bat, fzf, etc.)
 - PipeWire audio, Bluetooth, NetworkManager
-- Btrfs snapshots with GRUB rollback (if using Btrfs)
+- Btrfs snapshots with Limine rollback (if using Btrfs)
 - Fingerprint authentication (if hardware supports it)
 
 ---
@@ -72,9 +72,10 @@ archway's bootstrap will create `@snapshots` automatically if missing.
 
 | Setting | Value |
 |---------|-------|
-| Bootloader | **GRUB** (required for Btrfs snapshot boot menu) |
+| Bootloader | **Limine** (supports Btrfs snapshot boot menu via `limine-snapper-sync`) |
 
-systemd-boot works but won't show snapshots in boot menu.
+archway assumes Limine as the bootloader. Bootstrap configures `/etc/limine-snapper-sync.conf`
+with the correct Btrfs subvolume paths so snapshots appear in the Limine boot menu.
 
 ### 1.4 Hostname
 
@@ -522,8 +523,8 @@ If something breaks:
 # List snapshots
 snapper list
 
-# Option 1: Boot into snapshot from GRUB menu
-# Reboot, select "Arch Linux Snapshots" in GRUB, choose snapshot
+# Option 1: Boot into snapshot from Limine boot menu
+# Reboot, select the snapshot entry in Limine, choose snapshot
 
 # Option 2: Rollback from command line
 sudo snapper rollback <snapshot-number>

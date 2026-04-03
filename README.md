@@ -211,7 +211,7 @@ If something breaks after bootstrap:
 # List snapshots
 snapper list
 
-# Boot into previous snapshot from GRUB menu
+# Boot into previous snapshot from Limine boot menu
 # Or rollback manually:
 sudo snapper rollback <snapshot-number>
 reboot
