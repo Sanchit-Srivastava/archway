@@ -9,7 +9,7 @@ set -euo pipefail
 # become() action, which is simple and avoids fragile nested-shell transforms.
 #
 # Selecting a result opens it in neovim (at the matching line in content mode).
-# Called by quick-note inside a tmux window.
+# Called by quick-note inside a ghostty terminal.
 
 cd "$HOME/notes"
 

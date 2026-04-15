@@ -2,55 +2,24 @@
 set -euo pipefail
 
 # Notes launcher — search or create zk notes from a fuzzel prompt.
-# Opens in a persistent tmux "notes" session so all notes share one workspace.
+# Each action spawns a fresh ghostty terminal via niri (no tmux).
 #
 # Bound to Mod+G in niri keybindings.
 
 NOTES_DIR="$HOME/notes"
-TMUX_SESSION="notes"
 
-# ── tmux helpers ──────────────────────────────────────────────────────────────
+# ── spawn helper ──────────────────────────────────────────────────────────────
 
-# Ensure the persistent "notes" tmux session exists.
-ensure_session() {
-	if ! tmux has-session -t="$TMUX_SESSION" 2>/dev/null; then
-		tmux new-session -ds "$TMUX_SESSION" -c "$NOTES_DIR"
-	fi
-}
-
-# Focus an existing ghostty window attached to the notes session, or open one.
-# After calling this, the new tmux window we just created will be visible.
-focus_or_open_terminal() {
-	# Check if any tmux client is currently attached to the notes session.
-	local attached
-	attached=$(tmux list-clients -t "$TMUX_SESSION" -F '#{client_name}' 2>/dev/null || true)
-
-	if [[ -n "$attached" ]]; then
-		# A client is attached — focus its ghostty window via niri.
-		niri msg action focus-window --app-id ghostty 2>/dev/null || true
-	else
-		# No client attached (session was detached or terminal closed).
-		# Use niri to spawn ghostty so the compositor manages the process
-		# lifecycle directly — backgrounding with & from a niri-spawned
-		# script causes the orphaned process to get cleaned up on exit.
-		niri msg action spawn -- ghostty -e tmux attach-session -t "$TMUX_SESSION"
-	fi
-}
-
-# Run a command in a new tmux window inside the notes session.
-# Args: window-name command [args...]
-tmux_run() {
-	local win_name="$1"
-	shift
-	ensure_session
-	tmux new-window -t "$TMUX_SESSION" -n "$win_name" -c "$NOTES_DIR" -- "$@"
+# Spawn a ghostty terminal running a command inside the notes directory.
+# niri manages the process lifecycle so it survives this script exiting.
+spawn_term() {
+	niri msg action spawn -- ghostty --working-directory="$NOTES_DIR" -e "$@"
 }
 
 # ── search notes ──────────────────────────────────────────────────────────────
 
 do_search() {
-	tmux_run "search" quick-note-search
-	focus_or_open_terminal
+	spawn_term quick-note-search
 }
 
 # ── add note ──────────────────────────────────────────────────────────────────
@@ -96,8 +65,7 @@ do_add() {
 	fi
 	zk_args+=(entries)
 
-	tmux_run "new-note" zk "${zk_args[@]}"
-	focus_or_open_terminal
+	spawn_term zk "${zk_args[@]}"
 }
 
 # ── main menu ─────────────────────────────────────────────────────────────────
