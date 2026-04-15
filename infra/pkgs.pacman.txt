@@ -14,7 +14,6 @@ ghostty
 # BTRFS & SNAPSHOTS
 # =============================================================================
 btrfs-progs
-limine-snapper-sync
 snap-pac
 snapper
 
@@ -231,9 +230,9 @@ opencode
 obsidian
 #-------Latex stuff-------------
 #tectonic
-texlive-core
+#texlive-core
 texlive-latex
-texlive-revtex
+#texlive-revtex
 texlive-bibtexextra
 texlive-binextra
 texlive-fontsextra

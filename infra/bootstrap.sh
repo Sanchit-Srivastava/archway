@@ -168,6 +168,47 @@ install_pacman_packages() {
 		return 0
 	fi
 
+	# Deduplicate the package list (preserves order, keeps first occurrence)
+	local seen_pkgs=()
+	local unique_packages=()
+	local pkg
+	for pkg in "${packages[@]}"; do
+		if ! array_contains "$pkg" "${seen_pkgs[@]+"${seen_pkgs[@]}"}"; then
+			seen_pkgs+=("$pkg")
+			unique_packages+=("$pkg")
+		else
+			log_warn "Duplicate package in $pkg_file: $pkg (skipping)"
+		fi
+	done
+	packages=("${unique_packages[@]}")
+
+	# Pre-validate: check which packages actually exist in the repos
+	log_info "Validating ${#packages[@]} packages against repos..."
+	local valid_packages=()
+	local invalid_packages=()
+	for pkg in "${packages[@]}"; do
+		if pacman -Si "$pkg" &>/dev/null; then
+			valid_packages+=("$pkg")
+		else
+			invalid_packages+=("$pkg")
+		fi
+	done
+
+	if [[ ${#invalid_packages[@]} -gt 0 ]]; then
+		log_error "The following packages were NOT found in any configured pacman repo:"
+		for pkg in "${invalid_packages[@]}"; do
+			log_error "  - $pkg"
+		done
+		log_error ""
+		log_error "Possible causes:"
+		log_error "  - Package name is wrong or has been renamed"
+		log_error "  - Package is AUR-only (move it to pkgs.aur.txt)"
+		log_error "  - Repos need refreshing (try: sudo pacman -Sy)"
+		log_error ""
+		log_error "Fix ${pkg_file} and re-run bootstrap."
+		return 1
+	fi
+
 	# Upgrade existing packages first, separately from installing new ones.
 	# Combining -Syu with a package list causes pacman to refuse non-interactively
 	# when an installed package conflicts with a newly-requested one (e.g. nodejs
@@ -177,7 +218,41 @@ install_pacman_packages() {
 	sudo pacman -Syu --noconfirm
 
 	log_info "Installing ${#packages[@]} pacman packages..."
-	sudo pacman -S --needed --noconfirm "${packages[@]}"
+	if sudo pacman -S --needed --noconfirm "${packages[@]}"; then
+		log_info "All pacman packages installed successfully"
+		return 0
+	fi
+
+	# Bulk install failed — fall back to one-by-one to identify the culprit(s)
+	log_warn "Bulk install failed. Installing packages individually to identify failures..."
+	local failed_packages=()
+	local succeeded=0
+	for pkg in "${packages[@]}"; do
+		if sudo pacman -S --needed --noconfirm "$pkg" &>/dev/null; then
+			succeeded=$((succeeded + 1))
+		else
+			log_error "Failed to install: $pkg"
+			failed_packages+=("$pkg")
+		fi
+	done
+
+	if [[ ${#failed_packages[@]} -gt 0 ]]; then
+		log_error ""
+		log_error "═══════════════════════════════════════════════════════════════════"
+		log_error "PACMAN INSTALL SUMMARY: ${#failed_packages[@]} package(s) failed"
+		log_error "═══════════════════════════════════════════════════════════════════"
+		for pkg in "${failed_packages[@]}"; do
+			log_error "  FAILED: $pkg"
+		done
+		log_error ""
+		log_error "Succeeded: ${succeeded}  |  Failed: ${#failed_packages[@]}  |  Total: ${#packages[@]}"
+		log_error ""
+		log_error "To debug a failure, run manually:"
+		log_error "  sudo pacman -S <package-name>"
+		return 1
+	fi
+
+	log_info "All pacman packages installed successfully (via individual fallback)"
 }
 
 install_aur_packages() {
@@ -202,7 +277,42 @@ install_aur_packages() {
 	fi
 
 	log_info "Installing ${#packages[@]} AUR packages..."
-	yay -S --needed --noconfirm "${packages[@]}"
+	if yay -S --needed --noconfirm "${packages[@]}"; then
+		log_info "All AUR packages installed successfully"
+		return 0
+	fi
+
+	# Bulk install failed — fall back to one-by-one to identify the culprit(s)
+	log_warn "Bulk AUR install failed. Installing packages individually to identify failures..."
+	local failed_packages=()
+	local succeeded=0
+	local pkg
+	for pkg in "${packages[@]}"; do
+		if yay -S --needed --noconfirm "$pkg" &>/dev/null; then
+			succeeded=$((succeeded + 1))
+		else
+			log_error "Failed to install AUR package: $pkg"
+			failed_packages+=("$pkg")
+		fi
+	done
+
+	if [[ ${#failed_packages[@]} -gt 0 ]]; then
+		log_error ""
+		log_error "═══════════════════════════════════════════════════════════════════"
+		log_error "AUR INSTALL SUMMARY: ${#failed_packages[@]} package(s) failed"
+		log_error "═══════════════════════════════════════════════════════════════════"
+		for pkg in "${failed_packages[@]}"; do
+			log_error "  FAILED: $pkg"
+		done
+		log_error ""
+		log_error "Succeeded: ${succeeded}  |  Failed: ${#failed_packages[@]}  |  Total: ${#packages[@]}"
+		log_error ""
+		log_error "To debug a failure, run manually:"
+		log_error "  yay -S <package-name>"
+		return 1
+	fi
+
+	log_info "All AUR packages installed successfully (via individual fallback)"
 }
 
 # =============================================================================
