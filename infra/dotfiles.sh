@@ -322,6 +322,16 @@ TMPL
 		link_dotfile "$script" "${HOME}/bin/${script_name}"
 	done
 
+	# zk-index lives in the notes repo (.githooks/zk-index) as the single
+	# source of truth. Symlink it to ~/bin so it is available on $PATH for
+	# standalone use (e.g., quick-note, manual invocation).
+	local notes_zk_index="${HOME}/notes/.githooks/zk-index"
+	if [[ -f "$notes_zk_index" ]]; then
+		link_dotfile "$notes_zk_index" "${HOME}/bin/zk-index"
+	else
+		log_warn "zk-index not found at $notes_zk_index — clone ~/notes first, then re-run"
+	fi
+
 	# ==========================================================================
 	# LINUX-ONLY SECTIONS
 	# ==========================================================================

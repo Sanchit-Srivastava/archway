@@ -38,6 +38,7 @@ This creates:
 │   ├── config.toml        # zk configuration
 │   └── templates/         # note templates (daily, paper, meeting, research)
 ├── .git/                  # git repo for cross-machine sync
+├── .githooks/             # pre-commit hook + zk-index (portable, tracked)
 ├── entries/               # all notes (flat, categorized by frontmatter category)
 ├── references/            # Zotero BibTeX auto-export target
 ├── topics/                # auto-generated per-topic pages (by zk-index)
@@ -47,24 +48,29 @@ This creates:
 
 ### Second machine
 
-Just clone the repo. The config and templates are tracked by git:
+Just clone the repo and activate the pre-commit hook:
 
 ```bash
 git clone git@github.com:you/notes.git ~/notes
+cd ~/notes && just setup    # activates core.hooksPath -> .githooks/
 ```
 
 `zk-init` detects a cloned repo (has a remote **and** a fully configured
 `.zk/config.toml` with alias definitions) and exits without touching anything.
 If the repo is empty (freshly created on GitHub), `zk-init` will populate it
-with the config, templates, and directory structure.
+with the config, templates, and directory structure, and activate the hook
+automatically.
 
 ### README index (`zk-index`)
 
 The `README.md` in `~/notes` is auto-generated with standard markdown links so
-notes are clickable on GitHub. Run after adding notes:
+notes are clickable on GitHub. The `zk-index` script lives in the notes repo
+itself at `~/notes/.githooks/zk-index` and runs automatically via a pre-commit
+hook. On archway machines, `dotfiles.sh` also symlinks it to `~/bin/zk-index`
+for standalone use.
 
 ```bash
-zk-index              # regenerate README.md
+zk-index              # regenerate README.md, index.md, and topics/
 zk-index --dry-run    # preview without writing
 ```
 
@@ -72,12 +78,18 @@ The generated README groups notes by frontmatter `category` field (papers,
 journal, ideas, meetings) and shows a topic directory built from `tags`. It is
 designed to be regenerated, not hand-edited.
 
+Hook activation (first time after cloning):
+
+```bash
+cd ~/notes && just setup    # or: git config core.hooksPath .githooks
+```
+
 Workflow:
 
 ```bash
 zk new --title "My note"   # write some notes...
-zk-index                   # rebuild the index
 cd ~/notes && git add -A && git commit -m "sync" && git push
+# zk-index runs automatically in the pre-commit hook
 ```
 
 ### Note types
@@ -360,8 +372,7 @@ the clipboard and shows a notification.
 | `dots/bin/quick-note` | Quick note launcher script |
 | `dots/bin/today-schedule` | Calendar popup script |
 | `dots/bin/translate-clip` | Translation script |
-| `dots/bin/zk-init` | One-time notebook initializer |
-| `dots/bin/zk-index` | Regenerate README.md and index.md (groups by category, indexes topics) |
+| `dots/bin/zk-init` | One-time notebook initializer (activates hook via `core.hooksPath`) |
 
 ## Packages added
 

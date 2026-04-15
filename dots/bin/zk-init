@@ -171,15 +171,21 @@ tags: [index]
 _(empty -- run `zk-index` after creating some notes)_
 EOF
 
-# Generate README.md and index.md with links to all notes
-if command -v zk-index &>/dev/null; then
+# Generate README.md and index.md with links to all notes.
+# zk-index lives in the notes repo at .githooks/zk-index. Try it directly,
+# fall back to $PATH (symlinked on archway machines), else write a placeholder.
+if [[ -x "${NOTES_DIR}/.githooks/zk-index" ]]; then
+	"${NOTES_DIR}/.githooks/zk-index"
+	log_info "Generated README.md and index.md via .githooks/zk-index"
+elif command -v zk-index &>/dev/null; then
 	zk-index
 	log_info "Generated README.md and index.md via zk-index"
 else
 	write_if_missing "${NOTES_DIR}/README.md" <<'EOF'
 # Research Notes
 
-> Run `zk-index` to regenerate this file with links to all notes.
+> Run `just setup` in ~/notes to activate the pre-commit hook,
+> then commit to auto-regenerate this file.
 
 ## Directories
 
@@ -199,23 +205,12 @@ if [[ ! -d "${NOTES_DIR}/.git" ]]; then
 	log_info "Initialized git repo"
 fi
 
-# Install pre-commit hook to auto-regenerate index on every commit
-HOOK_PATH="${NOTES_DIR}/.git/hooks/pre-commit"
-if [[ ! -f "$HOOK_PATH" ]] || ! grep -q 'zk-index' "$HOOK_PATH" 2>/dev/null; then
-	cat >"$HOOK_PATH" <<'HOOK'
-#!/usr/bin/env bash
-# Auto-regenerate README.md and index.md before each commit.
-# Installed by zk-init -- safe to customize.
-
-if command -v zk-index &>/dev/null; then
-    zk-index
-    git add README.md index.md
-fi
-HOOK
-	chmod +x "$HOOK_PATH"
-	log_info "Installed pre-commit hook (auto-runs zk-index)"
+# Activate the pre-commit hook via core.hooksPath (hook lives in .githooks/)
+if [[ -d "${NOTES_DIR}/.githooks" ]]; then
+	git -C "${NOTES_DIR}" config core.hooksPath .githooks
+	log_info "Activated pre-commit hook via core.hooksPath -> .githooks/"
 else
-	log_info "Pre-commit hook already installed"
+	log_warn ".githooks/ not found -- hook not activated (run 'just setup' in ~/notes after cloning)"
 fi
 
 # Stage and commit any new files (covers both fresh and cloned-empty cases)
@@ -236,3 +231,4 @@ log_info "  1. Add a git remote: cd ~/notes && git remote add origin <url>"
 log_info "  2. Set up Zotero Better BibTeX auto-export to ~/notes/references/library.bib"
 log_info "  3. Try: zk new --dir entries --title 'My first note'"
 log_info "  4. Commit as usual -- the pre-commit hook runs zk-index automatically"
+log_info "     (If hooks aren't active, run: just setup  -- or: git config core.hooksPath .githooks)"
