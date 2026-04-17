@@ -215,7 +215,7 @@ install_pacman_packages() {
 	# vs nodejs-lts-jod). Splitting into two steps lets pacman resolve conflicts
 	# cleanly at install time without hardcoding workarounds.
 	log_info "Upgrading existing packages..."
-	sudo pacman -Syu --noconfirm
+	sudo pacman -Syu --noconfirm --ask 4
 
 	log_info "Installing ${#packages[@]} pacman packages..."
 	if sudo pacman -S --needed --noconfirm "${packages[@]}"; then
