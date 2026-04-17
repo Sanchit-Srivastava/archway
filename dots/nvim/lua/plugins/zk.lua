@@ -10,10 +10,34 @@ return {
             name = "zk",
             on_attach = function(_, bufnr)
               local buf_opts = { noremap = true, silent = false, buffer = bufnr }
-              -- Follow link under cursor in a vertical split
+              -- Follow link under cursor
+              -- Single match: opens in a vertical split
+              -- Multiple matches: shows fzf picker in a temporary vertical split,
+              -- then opens selection in a new vertical split
               local function lsp_definition_vsplit()
-                vim.cmd("vsplit")
-                vim.lsp.buf.definition()
+                vim.lsp.buf.definition({
+                  on_list = function(options)
+                    if #options.items == 1 then
+                      vim.cmd("tabnew")
+                      vim.lsp.util.jump_to_location(options.items[1].user_data, "utf-8")
+                    else
+                      vim.fn.setqflist({}, " ", options)
+                      require("fzf-lua").quickfix({
+                        winopts = { split = "belowright vnew" },
+                        actions = {
+                          ["default"] = function(selected)
+                            local entry = selected[1]
+                            local file, line, col = entry:match("^(.+):(%d+):(%d+)")
+                            if file then
+                              vim.cmd("tabnew " .. vim.fn.fnameescape(file))
+                              vim.api.nvim_win_set_cursor(0, { tonumber(line), tonumber(col) - 1 })
+                            end
+                          end,
+                        },
+                      })
+                    end
+                  end,
+                })
               end
               vim.keymap.set("n", "<CR>", lsp_definition_vsplit, buf_opts)
               vim.keymap.set("n", "gf", lsp_definition_vsplit, buf_opts)
