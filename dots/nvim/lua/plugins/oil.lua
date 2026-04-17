@@ -29,6 +29,8 @@ return {
         ["<C-h>"] = false,
         ["<C-l>"] = false,
         ["<C-r>"] = "actions.refresh",
+        -- Close oil with q (matches convention for read-only/popup buffers)
+        ["q"] = "actions.close",
       },
       view_options = {
         show_hidden = true,
