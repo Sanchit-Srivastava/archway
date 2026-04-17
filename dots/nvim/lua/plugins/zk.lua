@@ -10,9 +10,13 @@ return {
             name = "zk",
             on_attach = function(_, bufnr)
               local buf_opts = { noremap = true, silent = false, buffer = bufnr }
-              -- Follow link under cursor (Enter and gf both use LSP definition)
-              vim.keymap.set("n", "<CR>", vim.lsp.buf.definition, buf_opts)
-              vim.keymap.set("n", "gf", vim.lsp.buf.definition, buf_opts)
+              -- Follow link under cursor in a vertical split
+              local function lsp_definition_vsplit()
+                vim.cmd("vsplit")
+                vim.lsp.buf.definition()
+              end
+              vim.keymap.set("n", "<CR>", lsp_definition_vsplit, buf_opts)
+              vim.keymap.set("n", "gf", lsp_definition_vsplit, buf_opts)
               -- Fallback for gf outside of LSP-resolved links
               vim.opt_local.suffixesadd:append(".md")
             end,

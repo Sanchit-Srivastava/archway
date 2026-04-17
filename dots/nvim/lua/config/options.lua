@@ -4,3 +4,9 @@
 
 -- Show Copilot suggestions as inline ghost text instead of in the completion menu
 vim.g.ai_cmp = false
+
+-- Disable diagnostics by default (toggle with <leader>ud)
+vim.diagnostic.enable(false)
+
+-- Disable spell checking by default (toggle with <leader>us)
+vim.opt.spell = false
