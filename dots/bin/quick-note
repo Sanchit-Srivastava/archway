@@ -45,7 +45,7 @@ do_add() {
 	meeting)
 		title=$(echo "" | fuzzel --dmenu --prompt="Meeting: " --width=50)
 		[[ -z "$title" ]] && exit 0
-		title="$(date +%Y-%m-%d)-${title}"
+		title="$(date +%Y-%m-%d)-${title}-meeting"
 		template="meeting-notes.md"
 		;;
 	idea)
