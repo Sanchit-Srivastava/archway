@@ -122,7 +122,7 @@ tailscale
 # =============================================================================
 # PORTAL SUPPORT (Screen sharing, file dialogs)
 # =============================================================================
-# Note: DMS installs xdg-desktop-portal-gtk
+# Note: xdg-desktop-portal-gtk is installed in the DMS section below
 xdg-desktop-portal
 xdg-desktop-portal-gnome
 
@@ -248,10 +248,25 @@ zathura
 zathura-pdf-mupdf
 python-pynvim
 # =============================================================================
-# DMS options
+# DMS (DankMaterialShell) - core stack and dependencies
 # =============================================================================
-cups-pk-helper
+# Pre-installing these so the `dankinstall` step has minimal work to do
+# (it was previously failing on heavy AUR builds during deployment).
+# Core: shell + niri-flavored config + Quickshell framework + dms CLI deps.
+# Optional integrations enable specific DMS features (theming, clipboard,
+# system telemetry, sound feedback, monitor brightness, etc.).
+accountsservice
 cava
+cliphist
+cups-pk-helper
+dms-shell-niri
+i2c-tools
+matugen
+niri
+qt6-multimedia
+quickshell
+xdg-desktop-portal-gtk
+xwayland-satellite
 
 
 # =============================================================================

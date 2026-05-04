@@ -26,6 +26,10 @@ satty
 # =============================================================================
 # DMS OPTIONS
 # =============================================================================
+# dgop: system telemetry backend used by DMS resource widgets. The only DMS
+# dependency not yet packaged in the official Arch repos, so we pull a
+# pre-built binary from AUR to avoid a Go build during `dankinstall`.
+dgop-bin
 dsearch-bin
 
 # =============================================================================
