@@ -7,7 +7,7 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
 
-SCRIPT_VERSION="2026-03-12-1"
+SCRIPT_VERSION="2026-05-03-1"
 
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
 STATE_FILE="${STATE_DIR}/install.state"
@@ -46,10 +46,41 @@ For remote installation, use remote-install.sh:
 
 Options:
   --dir <path>         Repo directory (default: ${DEFAULT_REPO_DIR})
+  --profile <name>     Install profile (default: full)
+                         minimal - tiers 1-2 (headless: base + shell, no GUI)
+                         safe    - tiers 1-3 (adds KDE Plasma fallback, no AUR/DMS)
+                         full    - all tiers (adds AUR + DankMaterialShell)
   --force              Re-run completed stages
   --skip-doctor        Skip infra/doctor.sh in stage 2
   -h, --help           Show this help
 EOF
+}
+
+validate_profile() {
+	case "$1" in
+	minimal | safe | full) return 0 ;;
+	*) die "Invalid --profile: $1 (expected: minimal, safe, full)" ;;
+	esac
+}
+
+# Maps a profile to the bootstrap.sh tier flag(s).
+# Echoes nothing for "full" (bootstrap defaults to all tiers).
+profile_bootstrap_args() {
+	case "$1" in
+	minimal) echo "--up-to 2" ;;
+	safe) echo "--up-to 3" ;;
+	full) echo "" ;;
+	esac
+}
+
+profile_includes_tier() {
+	# profile_includes_tier <profile> <tier-num>
+	local profile="$1" tier="$2"
+	case "$profile" in
+	minimal) [[ "$tier" -le 2 ]] ;;
+	safe) [[ "$tier" -le 3 ]] ;;
+	full) return 0 ;;
+	esac
 }
 
 ensure_not_root() {
@@ -84,6 +115,7 @@ write_state() {
 	cat >"$STATE_FILE" <<EOF
 ARCHWAY_STAGE="${ARCHWAY_STAGE}"
 ARCHWAY_REPO_DIR="${ARCHWAY_REPO_DIR}"
+ARCHWAY_PROFILE="${ARCHWAY_PROFILE}"
 EOF
 }
 
@@ -235,21 +267,34 @@ stage1() {
 	fi
 
 	log_info "Starting Stage 1 (TTY)"
+	log_info "Profile: ${ARCHWAY_PROFILE}"
 	ensure_repo_dir "$ARCHWAY_REPO_DIR"
 
 	log_info "Running bootstrap..."
-	ARCHWAY_SKIP_SDDM_AUTOLOGIN=1 "$ARCHWAY_REPO_DIR/infra/bootstrap.sh"
+	# shellcheck disable=SC2046
+	# Word-splitting of profile_bootstrap_args output is intentional.
+	ARCHWAY_SKIP_SDDM_AUTOLOGIN=1 "$ARCHWAY_REPO_DIR/infra/bootstrap.sh" \
+		$(profile_bootstrap_args "$ARCHWAY_PROFILE")
 
 	log_info "Running dotfiles..."
 	"$ARCHWAY_REPO_DIR/infra/dotfiles.sh"
 
-	install_dms
+	if profile_includes_tier "$ARCHWAY_PROFILE" 4; then
+		install_dms
+	else
+		log_info "Skipping DMS install (profile: ${ARCHWAY_PROFILE}, tier 4 disabled)"
+	fi
+
 	maybe_auth_github
 
-	if prompt_yes_no "Enable SDDM autologin into niri?" "y"; then
-		configure_sddm_autologin
+	if profile_includes_tier "$ARCHWAY_PROFILE" 3; then
+		if prompt_yes_no "Enable SDDM autologin into niri?" "y"; then
+			configure_sddm_autologin
+		else
+			log_warn "Skipping SDDM autologin configuration"
+		fi
 	else
-		log_warn "Skipping SDDM autologin configuration"
+		log_info "Skipping SDDM autologin (profile: ${ARCHWAY_PROFILE}, no graphical tier)"
 	fi
 
 	ARCHWAY_STAGE="stage2"
@@ -280,14 +325,24 @@ stage2() {
 		return 0
 	fi
 
-	if ! is_graphical_session; then
-		log_warn "Stage 2 should run in a graphical session after first DMS start"
-		log_warn "If you're in a TTY, log into DMS and run: ${ARCHWAY_REPO_DIR}/install.sh resume"
-		return 1
-	fi
+	# Stage 2's graphical bits only apply to profiles that install a desktop.
+	# For minimal (T1+T2 headless), skip session check and post-DMS hooks.
+	if profile_includes_tier "$ARCHWAY_PROFILE" 3; then
+		if ! is_graphical_session; then
+			log_warn "Stage 2 should run in a graphical session after first DMS start"
+			log_warn "If you're in a TTY, log into DMS and run: ${ARCHWAY_REPO_DIR}/install.sh resume"
+			return 1
+		fi
 
-	log_info "Starting Stage 2 (Graphical)"
-	"$ARCHWAY_REPO_DIR/infra/post-dms-install.sh"
+		log_info "Starting Stage 2 (Graphical)"
+		if profile_includes_tier "$ARCHWAY_PROFILE" 4; then
+			"$ARCHWAY_REPO_DIR/infra/post-dms-install.sh"
+		else
+			log_info "Skipping post-DMS hooks (profile: ${ARCHWAY_PROFILE}, tier 4 disabled)"
+		fi
+	else
+		log_info "Starting Stage 2 (headless profile: ${ARCHWAY_PROFILE})"
+	fi
 
 	if [[ "$SKIP_DOCTOR" == "0" ]]; then
 		"$ARCHWAY_REPO_DIR/infra/doctor.sh"
@@ -320,6 +375,11 @@ main() {
 			ARCHWAY_REPO_DIR="$2"
 			shift 2
 			;;
+		--profile)
+			validate_profile "$2"
+			ARCHWAY_PROFILE="$2"
+			shift 2
+			;;
 		--force)
 			FORCE="1"
 			shift
@@ -341,6 +401,8 @@ main() {
 	done
 
 	ARCHWAY_REPO_DIR="${ARCHWAY_REPO_DIR:-$DEFAULT_REPO_DIR}"
+	ARCHWAY_PROFILE="${ARCHWAY_PROFILE:-full}"
+	validate_profile "$ARCHWAY_PROFILE"
 	FORCE="${FORCE:-0}"
 	SKIP_DOCTOR="${SKIP_DOCTOR:-0}"
 

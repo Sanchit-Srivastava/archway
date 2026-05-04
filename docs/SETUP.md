@@ -17,6 +17,24 @@ The installer runs in two stages with one reboot. If it doesn't resume automatic
 ~/archway/install.sh resume
 ```
 
+### Install profiles
+
+`install.sh` accepts `--profile` to control how much of the system is installed.
+This maps directly to the [tier model](ARCHITECTURE.md#tier-model):
+
+| Profile   | Tiers   | Includes                                            |
+| --------- | ------- | --------------------------------------------------- |
+| `minimal` | T1+T2   | Headless: base + shell, no GUI                      |
+| `safe`    | T1+T2+T3 | Adds KDE Plasma fallback (no AUR/DMS)              |
+| `full`    | T1-T4   | Adds AUR + DankMaterialShell (default)              |
+
+Examples:
+```bash
+~/archway/install.sh --profile minimal   # headless server-style install
+~/archway/install.sh --profile safe      # robust desktop, no fragile AUR
+~/archway/install.sh                     # equivalent to --profile full
+```
+
 **Time estimate**: 45-90 minutes (depending on internet speed and familiarity)
 
 **End result**: A fully configured Arch Linux laptop with:
