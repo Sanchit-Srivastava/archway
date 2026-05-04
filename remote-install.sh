@@ -6,11 +6,21 @@ set -euo pipefail
 #
 # This script clones the repo and hands off to install.sh.
 # All interactive prompts happen in install.sh, not here.
+#
+# Options (consumed here, not passed to install.sh):
+#   --repo <url>   Override clone URL (default: github.com/Sanchit-Srivastava/archway)
+#   --dir <path>   Clone destination (default: ~/archway)
+#   --ref <ref>    Git ref to check out (tag, branch, or sha; default: main HEAD)
+#                  Use this for reproducible installs:
+#                    bash <(curl ...) --ref v2026.05.03 --profile safe
+#
+# All other flags pass through to install.sh.
 
-SCRIPT_VERSION="2026-03-12-1"
+SCRIPT_VERSION="2026-05-03-1"
 
 REPO_URL="https://github.com/Sanchit-Srivastava/archway.git"
 REPO_DIR="${HOME}/archway"
+REPO_REF=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -26,7 +36,7 @@ die() {
 	exit 1
 }
 
-# --- Parse arguments (pass-through to install.sh, except --repo/--dir) ---
+# --- Parse arguments (pass-through to install.sh, except --repo/--dir/--ref) ---
 
 PASSTHROUGH_ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -37,6 +47,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 	--dir)
 		REPO_DIR="$2"
+		shift 2
+		;;
+	--ref)
+		REPO_REF="$2"
 		shift 2
 		;;
 	*)
@@ -61,14 +75,27 @@ fi
 
 if [[ -d "$REPO_DIR/.git" ]]; then
 	log_info "Repo already exists at $REPO_DIR"
-	log_info "Pulling latest changes..."
-	git -C "$REPO_DIR" pull --ff-only || log_warn "Pull failed - continuing with existing checkout"
+	if [[ -n "$REPO_REF" ]]; then
+		log_info "Fetching ref: $REPO_REF"
+		git -C "$REPO_DIR" fetch --tags origin || log_warn "Fetch failed - continuing with existing checkout"
+		git -C "$REPO_DIR" checkout --detach "$REPO_REF" ||
+			die "Failed to check out ref: $REPO_REF"
+	else
+		log_info "Pulling latest changes..."
+		git -C "$REPO_DIR" pull --ff-only || log_warn "Pull failed - continuing with existing checkout"
+	fi
 else
 	if [[ -e "$REPO_DIR" ]]; then
 		die "Path exists but is not a git repo: $REPO_DIR"
 	fi
 	log_info "Cloning archway into $REPO_DIR..."
 	git clone "$REPO_URL" "$REPO_DIR"
+	if [[ -n "$REPO_REF" ]]; then
+		log_info "Checking out ref: $REPO_REF"
+		git -C "$REPO_DIR" fetch --tags origin || true
+		git -C "$REPO_DIR" checkout --detach "$REPO_REF" ||
+			die "Failed to check out ref: $REPO_REF"
+	fi
 fi
 
 # --- Hand off to install.sh ---

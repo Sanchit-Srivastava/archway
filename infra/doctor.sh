@@ -25,31 +25,35 @@ FORMAT="${DOCTOR_FORMAT:-human}"
 # Filter to run only specific checks (empty means all)
 ONLY_CHECK=""
 
+# Tier filter range (1..4 by default = run everything)
+TIER_MIN=1
+TIER_MAX=4
+
 # Check ID mapping for --only filtering
 declare -A CHECK_IDS=(
 	[pipewire]="check_pipewire_running"
-	[pipewire - pulse]="check_pipewire_pulse"
+	["pipewire-pulse"]="check_pipewire_pulse"
 	[wireplumber]="check_wireplumber_running"
-	[xdg - portal]="check_xdg_portal_running"
+	["xdg-portal"]="check_xdg_portal_running"
 	[niri]="check_niri_installed"
-	[portal - config]="check_portal_configuration"
-	[wayland - tools]="check_essential_wayland_tools"
+	["portal-config"]="check_portal_configuration"
+	["wayland-tools"]="check_essential_wayland_tools"
 	[terminal]="check_terminal_installed"
-	[file - manager]="check_file_manager_installed"
-	[polkit - agent]="check_polkit_agent"
-	[secret - service]="check_secret_service"
-	[pam - keyring]="check_pam_keyring"
-	[user - services]="check_user_services_enabled"
+	["file-manager"]="check_file_manager_installed"
+	["polkit-agent"]="check_polkit_agent"
+	["secret-service"]="check_secret_service"
+	["pam-keyring"]="check_pam_keyring"
+	["user-services"]="check_user_services_enabled"
 	[networkmanager]="check_network_manager"
 	[bluetooth]="check_bluetooth"
 	[udisks2]="check_udisks2"
 	[polkit]="check_polkit"
-	[accounts - daemon]="check_accounts_daemon"
+	["accounts-daemon"]="check_accounts_daemon"
 	[yay]="check_yay_installed"
 	[zsh]="check_zsh_installed"
 	[dotfiles]="check_dotfiles_linked"
 	[starship]="check_starship"
-	[starship - config]="check_starship_config"
+	["starship-config"]="check_starship_config"
 	[zoxide]="check_zoxide"
 	[eza]="check_eza"
 	[bat]="check_bat"
@@ -57,18 +61,88 @@ declare -A CHECK_IDS=(
 	[fd]="check_fd"
 	[ripgrep]="check_ripgrep"
 	[lazygit]="check_lazygit"
-	[environment - d]="check_environment_d"
+	["environment-d"]="check_environment_d"
 	[btrfs]="check_btrfs_root"
 	[snapper]="check_snapper_configured"
-	[snapper - timers]="check_snapper_timers"
-	[systemd - boot]="check_systemd_boot"
-	[snapper - rollback]="check_snapper_rollback"
+	["snapper-timers"]="check_snapper_timers"
+	["systemd-boot"]="check_systemd_boot"
+	["snapper-rollback"]="check_snapper_rollback"
 	[plasma]="check_plasma_fallback"
 	[keyd]="check_keyd"
 	[dms]="check_dms_installed"
 	[zotero]="check_zotero_bbt"
-	[zotero - mcp]="check_zotero_mcp"
+	["zotero-mcp"]="check_zotero_mcp"
 )
+
+# Tier assignment for each check ID, mirroring infra/pkgs/ tier files.
+#   T1 base    - core OS (audio, network, polkit, btrfs, boot)
+#   T2 shell   - CLI tools, dotfiles, headless services
+#   T3 desktop - GUI baseline (Plasma fallback, portals, terminal/file-manager)
+#   T4 extras  - DMS, niri, AUR-only stuff (zotero plugins, etc.)
+declare -A CHECK_TIERS=(
+	# T1 base
+	[pipewire]=1
+	["pipewire-pulse"]=1
+	[wireplumber]=1
+	[networkmanager]=1
+	[bluetooth]=1
+	[udisks2]=1
+	[polkit]=1
+	["accounts-daemon"]=1
+	[keyd]=1
+	[btrfs]=1
+	[snapper]=1
+	["snapper-timers"]=1
+	["systemd-boot"]=1
+	["snapper-rollback"]=1
+	# T2 shell / CLI
+	["user-services"]=2
+	[yay]=2
+	[zsh]=2
+	[dotfiles]=2
+	[starship]=2
+	["starship-config"]=2
+	[zoxide]=2
+	[eza]=2
+	[bat]=2
+	[fzf]=2
+	[fd]=2
+	[ripgrep]=2
+	[lazygit]=2
+	["environment-d"]=2
+	# T3 desktop (GUI without DMS)
+	["xdg-portal"]=3
+	["portal-config"]=3
+	["wayland-tools"]=3
+	[terminal]=3
+	["file-manager"]=3
+	["polkit-agent"]=3
+	["secret-service"]=3
+	["pam-keyring"]=3
+	[plasma]=3
+	# T4 extras (DMS / niri / AUR plugins)
+	[niri]=4
+	[dms]=4
+	[zotero]=4
+	["zotero-mcp"]=4
+)
+
+# tier_ok <check-id> — true if the check's tier is in the active range.
+tier_ok() {
+	local id="$1"
+	local t="${CHECK_TIERS[$id]:-}"
+	# Unknown tier: run by default (don't silently skip)
+	[[ -z "$t" ]] && return 0
+	[[ "$t" -ge "$TIER_MIN" && "$t" -le "$TIER_MAX" ]]
+}
+
+# gated_check <check-id> — run the check only if its tier is in range.
+gated_check() {
+	local id="$1"
+	if tier_ok "$id"; then
+		${CHECK_IDS[$id]}
+	fi
+}
 
 # Print TAP header
 tap_plan() {
@@ -716,6 +790,24 @@ main() {
 			fi
 			shift
 			;;
+		--tier)
+			[[ -n "${2:-}" && "$2" =~ ^[1-4]$ ]] || {
+				echo "error: --tier requires 1..4" >&2
+				exit 1
+			}
+			TIER_MIN="$2"
+			TIER_MAX="$2"
+			shift 2
+			;;
+		--up-to)
+			[[ -n "${2:-}" && "$2" =~ ^[1-4]$ ]] || {
+				echo "error: --up-to requires 1..4" >&2
+				exit 1
+			}
+			TIER_MIN=1
+			TIER_MAX="$2"
+			shift 2
+			;;
 		--audit-packages)
 			audit_packages
 			exit $?
@@ -729,6 +821,8 @@ main() {
 			echo "  --format FORMAT    Output format: human (default) or tap"
 			echo "  --list             List available checks"
 			echo "  --only ID          Run only the specified check"
+			echo "  --tier N           Run only checks in tier N (1..4)"
+			echo "  --up-to N          Run checks in tiers 1..N (default: 4)"
 			echo "  --audit-packages   Compare installed packages to repo lists"
 			echo "  --help, -h         Show this help"
 			exit 0
@@ -749,59 +843,67 @@ main() {
 
 	# Run checks
 	if [[ -z "$ONLY_CHECK" ]]; then
-		tap_plan 40
+		# Compute how many checks will actually run after tier filtering
+		local planned=0
+		local id
+		for id in "${!CHECK_IDS[@]}"; do
+			tier_ok "$id" && planned=$((planned + 1))
+		done
+		tap_plan "$planned"
 
-		check_pipewire_running
-		check_pipewire_pulse
-		check_wireplumber_running
-		check_xdg_portal_running
-		check_portal_configuration
-		check_niri_installed
-		check_essential_wayland_tools
-		check_terminal_installed
-		check_file_manager_installed
-		check_polkit_agent
-		check_secret_service
-		check_pam_keyring
-		check_user_services_enabled
-		check_network_manager
-		check_bluetooth
-		check_udisks2
-		check_polkit
-		check_accounts_daemon
-		check_keyd
-		check_yay_installed
-		check_zsh_installed
-		check_dotfiles_linked
+		# Dispatch via gated_check so tier filtering is uniform.
+		# Order here is the canonical run order; tier_ok decides whether each runs.
+		gated_check pipewire
+		gated_check pipewire-pulse
+		gated_check wireplumber
+		gated_check xdg-portal
+		gated_check portal-config
+		gated_check niri
+		gated_check wayland-tools
+		gated_check terminal
+		gated_check file-manager
+		gated_check polkit-agent
+		gated_check secret-service
+		gated_check pam-keyring
+		gated_check user-services
+		gated_check networkmanager
+		gated_check bluetooth
+		gated_check udisks2
+		gated_check polkit
+		gated_check accounts-daemon
+		gated_check keyd
+		gated_check yay
+		gated_check zsh
+		gated_check dotfiles
 
 		# Shell tools
-		check_starship
-		check_starship_config
-		check_zoxide
-		check_eza
-		check_bat
-		check_fzf
-		check_fd
-		check_ripgrep
-		check_lazygit
-		check_environment_d
+		gated_check starship
+		gated_check starship-config
+		gated_check zoxide
+		gated_check eza
+		gated_check bat
+		gated_check fzf
+		gated_check fd
+		gated_check ripgrep
+		gated_check lazygit
+		gated_check environment-d
 
 		# Btrfs checks
-		check_btrfs_root
-		check_snapper_configured
-		check_snapper_timers
-		check_systemd_boot
-		check_snapper_rollback
+		gated_check btrfs
+		gated_check snapper
+		gated_check snapper-timers
+		gated_check systemd-boot
+		gated_check snapper-rollback
 
 		# Fallback
-		check_plasma_fallback
+		gated_check plasma
 
-		# DMS (optional - may not be installed yet)
-		check_dms_installed
+		# DMS (T4 - skipped on safe/minimal profiles)
+		gated_check dms
 
-		# Research workflow
-		check_zotero_bbt
-		check_zotero_mcp
+		# Research workflow (T4)
+		gated_check zotero
+		gated_check zotero-mcp
 	else
 		tap_plan 1
 		${CHECK_IDS[$ONLY_CHECK]}

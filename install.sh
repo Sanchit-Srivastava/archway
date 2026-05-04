@@ -345,7 +345,9 @@ stage2() {
 	fi
 
 	if [[ "$SKIP_DOCTOR" == "0" ]]; then
-		"$ARCHWAY_REPO_DIR/infra/doctor.sh"
+		# shellcheck disable=SC2046  # word splitting on tier args is intended
+		"$ARCHWAY_REPO_DIR/infra/doctor.sh" \
+			$(profile_bootstrap_args "$ARCHWAY_PROFILE")
 	else
 		log_info "Skipping infra/doctor.sh"
 	fi
