@@ -114,6 +114,26 @@ Systemd units to enable system-wide are split per tier under `infra/services/`:
 
 - `infra/dotfiles.sh` symlinks all files from `dots/` into `~/`
 - Edits should be made in `dots/` and will reflect immediately
+- All dotfiles install on every run regardless of profile — symlinks are
+  inert when their target tool isn't installed (a dead `~/.config/niri/`
+  link is harmless if niri isn't on the system).
+
+## Doctor (validation)
+
+`infra/doctor.sh` runs system health checks. Each check is tagged with a
+tier in the `CHECK_TIERS` table at the top of the script, mirroring the
+package/dotfile tier model. Filter the same way:
+
+```
+./infra/doctor.sh --up-to 2   # core + CLI checks (no GUI/DMS)
+./infra/doctor.sh --up-to 3   # add GUI baseline
+./infra/doctor.sh --tier 1    # only T1 (audio, network, btrfs, …)
+./infra/doctor.sh --only ID   # single check (see --list)
+```
+
+`install.sh` automatically passes the profile-matching `--up-to` to doctor
+in stage 2, so a `safe`-profile install will not fail on missing T4
+checks (DMS, niri, AUR plugins).
 
 ## Secrets Management
 

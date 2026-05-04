@@ -16,11 +16,25 @@ On a fresh Arch/CachyOS install, ensure `curl` and `git` are available first:
 sudo pacman -S --needed curl git
 ```
 
-Then run:
+Then run one of the following, depending on how much you trust the run:
 
 ```bash
+# Default: full install (all 4 tiers, including AUR + DankMaterialShell)
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
+
+# Safe: T1+T2+T3 only (skip AUR, DMS, niri — KDE Plasma fallback works)
+bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) --profile safe
+
+# Minimal: T1+T2 only (headless / CLI only, no GUI)
+bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) --profile minimal
+
+# Reproducible: pin to a specific tag/branch/commit
+bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) --ref v2026.05.03 --profile safe
 ```
+
+**Recommended for a first run on unfamiliar hardware:** `--profile safe`,
+verify boot + login work, then re-run with `--profile full` (or run
+`./install-dms.sh` manually) to add the T4 extras.
 
 The installer runs in two stages with one reboot. If it doesn't resume automatically, run:
 
