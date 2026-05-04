@@ -4,6 +4,11 @@
 [user]
     name = Sanchit
     email = sanchit.srivastava@uwaterloo.ca
+    # SSH commit signing — key is supplied by the Bitwarden SSH agent on every
+    # machine (axiom/fractal/tangent/vector). Using the literal `key::` form
+    # avoids any per-host file path. The matching public key is registered as
+    # a "Signing Key" on the GitHub profile so commits show as Verified.
+    signingkey = key::ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKm12jvyioTIcvXipYjl+s5tB6Xm/sVilqgJan5/4FMV github_axiom
 
 [init]
     defaultBranch = main
@@ -52,9 +57,33 @@
     last = log -1 HEAD
     dft = "!f() { GIT_EXTERNAL_DIFF=difft git diff \"$@\"; }; f"
     dftl = "!f() { GIT_EXTERNAL_DIFF=difft git log -p --ext-diff \"$@\"; }; f"
+
 [credential "https://github.com"]
-	helper = 
-	helper = !/usr/bin/env gh auth git-credential
+    helper =
+    helper = !/usr/bin/env gh auth git-credential
+
 [credential "https://gist.github.com"]
-	helper = 
-	helper = !/usr/bin/env gh auth git-credential
+    helper =
+    helper = !/usr/bin/env gh auth git-credential
+
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
+
+# ── Commit signing ──────────────────────────────────────────────────────────
+# Sign all commits and tags by default using SSH (key from Bitwarden agent).
+# The allowed_signers file is populated by infra/dotfiles.sh so that
+# `git log --show-signature` can verify signatures locally.
+[gpg]
+    format = ssh
+
+[gpg "ssh"]
+    allowedSignersFile = ~/.config/git/allowed_signers
+
+[commit]
+    gpgsign = true
+
+[tag]
+    gpgsign = true

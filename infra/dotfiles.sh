@@ -143,6 +143,23 @@ main() {
 	log_info "--- Git ---"
 	link_dotfile "${DOTS_DIR}/git/.gitconfig" "${HOME}/.gitconfig"
 
+	# Allowed signers file for SSH commit signature verification.
+	# The signing key itself is supplied by the Bitwarden SSH agent (the
+	# `key::ssh-ed25519 …` literal in .gitconfig); this file only enables
+	# `git log --show-signature` to mark commits as "Good signature" locally.
+	# The pubkey here must match the `user.signingkey` literal in .gitconfig
+	# AND be registered as a Signing Key on the GitHub profile.
+	mkdir -p "${HOME}/.config/git"
+	local allowed_signers="${HOME}/.config/git/allowed_signers"
+	local signer_line='sanchit.srivastava@uwaterloo.ca ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKm12jvyioTIcvXipYjl+s5tB6Xm/sVilqgJan5/4FMV github_axiom'
+	if [[ ! -f "$allowed_signers" ]] || ! grep -qF "$signer_line" "$allowed_signers" 2>/dev/null; then
+		printf '%s\n' "$signer_line" >"$allowed_signers"
+		chmod 600 "$allowed_signers"
+		log_info "Wrote git allowed_signers: $allowed_signers"
+	else
+		log_info "Git allowed_signers already up to date"
+	fi
+
 	# ==========================================================================
 	# LAZYGIT
 	# ==========================================================================
