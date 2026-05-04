@@ -126,7 +126,16 @@ setup_third_party_repos() {
 		return 0
 	fi
 	log_info "Configuring third-party repos (multilib, CachyOS, chaotic-aur)..."
-	"$script"
+	# Best-effort: third-party repos are a quality-of-life feature (optimized
+	# kernel, gaming bits, cachyos-settings/chwd in T4). They MUST NOT gate
+	# base bootstrap — upstream installers, mirrors, and keyservers fail in
+	# ways outside our control. Packages depending on these repos live in T4
+	# (40-extras.txt) and will simply be skipped if the repo isn't present.
+	if ! "$script"; then
+		log_warn "Third-party repo setup failed; continuing without optional repos"
+		log_warn "T4 packages requiring CachyOS / chaotic-aur will be skipped"
+		log_warn "To retry later: sudo ${script}"
+	fi
 }
 
 # =============================================================================

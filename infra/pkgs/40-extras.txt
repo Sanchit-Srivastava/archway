@@ -36,3 +36,20 @@ telegram-desktop
 # NOTES / PKM (heavy electron app)
 # =============================================================================
 obsidian
+
+# =============================================================================
+# CACHYOS PERFORMANCE & HARDWARE DETECTION
+# =============================================================================
+# Requires the CachyOS third-party repo (added best-effort by
+# infra/setup-repos.sh during bootstrap). If the repo wasn't added (network
+# failure, upstream installer change, etc.) these will simply be skipped
+# rather than aborting bootstrap — see infra/bootstrap.sh:setup_third_party_repos.
+#
+# - cachyos-settings: sysctl/udev/I-O scheduler tweaks for desktop
+#   responsiveness and gaming. Drop-in configs; no daemon. Activates on
+#   next boot.
+# - chwd: hardware detection tool. Installs but does NOT auto-run. After
+#   first boot, run `just hwdetect` (or `sudo chwd -a`) to install matching
+#   driver profiles (e.g. NVIDIA dkms stack).
+cachyos-settings
+chwd

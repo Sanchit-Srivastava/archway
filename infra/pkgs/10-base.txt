@@ -101,15 +101,6 @@ git
 just
 man-db
 
-# =============================================================================
-# CACHYOS PERFORMANCE & HARDWARE DETECTION
-# =============================================================================
-# Requires the CachyOS repo (added by infra/setup-repos.sh during bootstrap).
-#
-# - cachyos-settings: sysctl/udev/I-O scheduler tweaks for desktop responsiveness
-#   and gaming. Just drop-in configs; no daemon. Activates on next boot.
-# - chwd: hardware detection tool. Installs but does NOT auto-run. After first
-#   boot, run `just hwdetect` (or `sudo chwd -a`) to install matching driver
-#   profiles (e.g. NVIDIA dkms stack).
-cachyos-settings
-chwd
+# NOTE: CachyOS-only packages (cachyos-settings, chwd) live in T4
+# (40-extras.txt) because they require the CachyOS third-party repo, which
+# is best-effort and must not gate base bootstrap.
