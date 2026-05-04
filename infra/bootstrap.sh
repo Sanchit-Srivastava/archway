@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Script metadata
-SCRIPT_VERSION="2026-05-03-1"
+SCRIPT_VERSION="2026-05-04-1"
 
 # Colors for output
 RED='\033[0;31m'
@@ -176,6 +176,13 @@ install_yay() {
 
 install_pacman_packages() {
 	local pkg_file="${1:?install_pacman_packages requires a package list path}"
+	# --skip-unavailable: warn and skip packages not found in any configured
+	# repo rather than failing. Used for T4 where CachyOS/chaotic-aur may not
+	# have been added (best-effort repos).
+	local skip_unavailable=0
+	if [[ "${2:-}" == "--skip-unavailable" ]]; then
+		skip_unavailable=1
+	fi
 
 	if [[ ! -f "$pkg_file" ]]; then
 		log_warn "No pacman package list found at $pkg_file"
@@ -222,18 +229,32 @@ install_pacman_packages() {
 	done
 
 	if [[ ${#invalid_packages[@]} -gt 0 ]]; then
-		log_error "The following packages were NOT found in any configured pacman repo:"
-		for pkg in "${invalid_packages[@]}"; do
-			log_error "  - $pkg"
-		done
-		log_error ""
-		log_error "Possible causes:"
-		log_error "  - Package name is wrong or has been renamed"
-		log_error "  - Package is AUR-only (move it to pkgs/40-extras.aur.txt)"
-		log_error "  - Repos need refreshing (try: sudo pacman -Sy)"
-		log_error ""
-		log_error "Fix ${pkg_file} and re-run bootstrap."
-		return 1
+		if [[ "$skip_unavailable" -eq 1 ]]; then
+			log_warn "The following packages were NOT found in any configured repo (skipping):"
+			for pkg in "${invalid_packages[@]}"; do
+				log_warn "  - $pkg"
+			done
+			log_warn "If these require CachyOS/chaotic-aur, retry after: sudo ${SCRIPT_DIR}/setup-repos.sh"
+			# Proceed with only the valid subset
+			packages=("${valid_packages[@]}")
+			if [[ ${#packages[@]} -eq 0 ]]; then
+				log_info "No packages remaining after skipping unavailable ones"
+				return 0
+			fi
+		else
+			log_error "The following packages were NOT found in any configured pacman repo:"
+			for pkg in "${invalid_packages[@]}"; do
+				log_error "  - $pkg"
+			done
+			log_error ""
+			log_error "Possible causes:"
+			log_error "  - Package name is wrong or has been renamed"
+			log_error "  - Package is AUR-only (move it to pkgs/40-extras.aur.txt)"
+			log_error "  - Repos need refreshing (try: sudo pacman -Sy)"
+			log_error ""
+			log_error "Fix ${pkg_file} and re-run bootstrap."
+			return 1
+		fi
 	fi
 
 	# Upgrade existing packages first, separately from installing new ones.
@@ -1129,7 +1150,13 @@ run_tier() {
 
 	CURRENT_PHASE="tier ${tier}: installing pacman packages"
 	if [[ -f "$pkg_file" ]]; then
-		install_pacman_packages "$pkg_file" || return 1
+		# T4 is best-effort: packages from optional repos (CachyOS, chaotic-aur)
+		# are skipped rather than aborting if those repos weren't configured.
+		if [[ "$tier" -eq 4 ]]; then
+			install_pacman_packages "$pkg_file" --skip-unavailable || return 1
+		else
+			install_pacman_packages "$pkg_file" || return 1
+		fi
 	fi
 
 	# AUR packages: only T4 ships an AUR list today, but support any tier.

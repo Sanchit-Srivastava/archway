@@ -14,7 +14,7 @@ set -eEuo pipefail
 #
 # This script is idempotent: safe to re-run.
 
-SCRIPT_VERSION="2026-05-03-2"
+SCRIPT_VERSION="2026-05-03-5"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -102,12 +102,50 @@ setup_cachyos_repo() {
 
 	tar -xf "${tmpdir}/cachyos-repo.tar.xz" -C "$tmpdir"
 
+	# The CachyOS installer unconditionally runs `pacman-key --recv-keys`
+	# against keyserver.ubuntu.com over the GPG keyserver protocol (HKP).
+	# In environments where HKP is blocked or flaky, this fails and the
+	# installer aborts before adding the repo block to pacman.conf.
+	#
+	# Workaround: pre-import the key over plain HTTPS (which works), then
+	# patch the installer to skip its own keyserver fetch.
+	local cachyos_key="F3B607488DB35A47"
+	local installer="${tmpdir}/cachyos-repo/cachyos-repo.sh"
+
+	if ! sudo pacman-key --list-keys "$cachyos_key" >/dev/null 2>&1; then
+		log_info "Pre-importing CachyOS signing key via HTTPS (keyserver fallback)..."
+		local keyserver_https="https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${cachyos_key}"
+		if ! curl -fsSL --retry 3 "$keyserver_https" | sudo pacman-key --add -; then
+			fail "Failed to fetch CachyOS signing key over HTTPS"
+			return 1
+		fi
+		sudo pacman-key --lsign-key "$cachyos_key"
+	else
+		log_info "CachyOS signing key already in pacman keyring"
+		# Ensure it's locally signed (idempotent — no-op if already signed)
+		sudo pacman-key --lsign-key "$cachyos_key" >/dev/null 2>&1 || true
+	fi
+
+	# Patch the installer to skip its own keyserver fetch+sign — we just did
+	# both above. Replace those two lines with `:` (bash no-op) so the rest
+	# of the installer (keyring/mirrorlist install, repo block insertion)
+	# still runs.
+	sed -i \
+		-e 's|^\(\s*\)pacman-key --recv-keys F3B607488DB35A47.*$|\1: # pre-imported by setup-repos.sh|' \
+		-e 's|^\(\s*\)pacman-key --lsign-key F3B607488DB35A47.*$|\1: # pre-signed by setup-repos.sh|' \
+		"$installer"
+
 	# The installer adds the repo entries + installs keyring/mirrorlist.
 	# It also runs `pacman -Syu` at the end (full system upgrade), which can
 	# fail for unrelated reasons. We don't treat that as fatal — we only
 	# care that the repo block landed in pacman.conf. The next pacman -Sy
 	# in bootstrap will pick up the new repo regardless.
-	if ! sudo bash "${tmpdir}/cachyos-repo/cachyos-repo.sh" --install; then
+	#
+	# IMPORTANT: the installer references its bundled awk scripts via
+	# relative paths (./install-repo.awk, ./install-v4-repo.awk, etc.) and
+	# silently swallows their failures with `|| true`. We must run it from
+	# its own directory or the repo block never gets inserted.
+	if ! (cd "${tmpdir}/cachyos-repo" && sudo bash ./cachyos-repo.sh --install); then
 		log_warn "CachyOS installer exited non-zero (often the trailing"
 		log_warn "  'pacman -Syu' step). Verifying repo was still added..."
 	fi
