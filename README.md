@@ -211,9 +211,13 @@ If something breaks after bootstrap:
 # List snapshots
 snapper list
 
-# Boot into previous snapshot from Limine boot menu
-# Or rollback manually:
+# Rollback to a snapshot from the running system, then reboot:
 sudo snapper rollback <snapshot-number>
 reboot
+
+# If the system is unbootable, boot a live USB and either:
+#   - chroot in and run snapper rollback, or
+#   - swap the @ subvolume manually with btrfs subvolume snapshot
+# (archway uses systemd-boot; there is no in-menu snapshot picker.)
 ```
 

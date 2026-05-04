@@ -41,6 +41,10 @@ ltex-ls-plus-bin
 vale-bin
 
 # =============================================================================
-SNAPSHOTS
+# SNAPSHOTS
 # =============================================================================
-limine-snapper-sync
+# snapper-rollback: simple CLI to rollback to a snapshot from a running system
+# (works with systemd-boot; no in-menu snapshot picker, but rollback + reboot
+# is straightforward and avoids the limine-snapper-sync / GraalVM dependency
+# chain that frequently fails to build from AUR).
+snapper-rollback

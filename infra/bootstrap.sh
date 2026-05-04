@@ -709,6 +709,71 @@ add_fstab_snapshots_entry() {
 	return 0
 }
 
+# =============================================================================
+# SYSTEMD-BOOT CONFIGURATION
+# =============================================================================
+
+# Detect mounted ESP. Returns mount path on stdout, or empty on stdout + rc=1.
+detect_esp_mount() {
+	local mp
+	for mp in /efi /boot /boot/efi; do
+		if findmnt -n -o FSTYPE "$mp" 2>/dev/null | grep -q '^vfat$'; then
+			echo "$mp"
+			return 0
+		fi
+	done
+	return 1
+}
+
+configure_systemd_boot() {
+	log_info "Checking systemd-boot installation..."
+
+	# Only relevant on UEFI systems
+	if [[ ! -d /sys/firmware/efi ]]; then
+		log_warn "System is not booted in UEFI mode - skipping systemd-boot setup"
+		return 0
+	fi
+
+	if ! command -v bootctl >/dev/null 2>&1; then
+		log_error "bootctl not found (expected from systemd) - skipping"
+		return 0
+	fi
+
+	local esp
+	if ! esp=$(detect_esp_mount); then
+		log_warn "Could not detect ESP mount (looked at /efi, /boot, /boot/efi)"
+		log_warn "Mount your EFI System Partition first, then re-run bootstrap"
+		return 0
+	fi
+	log_info "ESP detected at: $esp"
+
+	# Idempotent install. bootctl install is safe to skip if already installed;
+	# bootctl update will only update if the on-disk binary is older.
+	if sudo bootctl --esp-path="$esp" is-installed 2>/dev/null | grep -q '^yes'; then
+		log_info "systemd-boot already installed in ESP - running update (no-op if current)"
+		sudo bootctl --esp-path="$esp" update || true
+	else
+		log_info "Installing systemd-boot to $esp ..."
+		if ! sudo bootctl --esp-path="$esp" install; then
+			log_error "bootctl install failed - leaving existing bootloader in place"
+			return 0
+		fi
+	fi
+
+	# Ensure pacman hook exists so bootctl update runs on systemd upgrades.
+	# Arch ships /usr/share/libalpm/hooks/95-systemd-boot.hook out of the box;
+	# warn if absent.
+	if [[ ! -f /usr/share/libalpm/hooks/95-systemd-boot.hook ]] &&
+		[[ ! -f /etc/pacman.d/hooks/95-systemd-boot.hook ]]; then
+		log_warn "systemd-boot pacman update hook not found"
+		log_warn "Run 'sudo bootctl update' manually after systemd package updates"
+	fi
+
+	# Sanity report
+	log_info "systemd-boot status:"
+	sudo bootctl --esp-path="$esp" status 2>/dev/null | head -20 || true
+}
+
 configure_snapper() {
 	log_info "Checking for Btrfs snapshot configuration..."
 
@@ -832,26 +897,34 @@ configure_snapper() {
 	sudo systemctl enable --now snapper-timeline.timer
 	sudo systemctl enable --now snapper-cleanup.timer
 
-	# Configure Limine snapshot boot integration
-	if pacman -Q limine-snapper-sync &>/dev/null; then
-		log_info "Configuring limine-snapper-sync for archway subvolume layout..."
-		local limine_conf="/etc/limine-snapper-sync.conf"
-		if [[ -f "$limine_conf" ]]; then
-			# Ensure ROOT_SUBVOLUME_PATH matches our @ subvolume
-			if grep -q '^ROOT_SUBVOLUME_PATH=' "$limine_conf"; then
-				sudo sed -i 's|^ROOT_SUBVOLUME_PATH=.*|ROOT_SUBVOLUME_PATH="/@"|' "$limine_conf"
+	# Configure snapper-rollback (AUR) for our subvolume layout, if installed.
+	# This provides a `snapper-rollback <id>` CLI that swaps the @ subvolume to
+	# a snapshot. It is a convenience wrapper around manual btrfs subvolume ops.
+	if pacman -Q snapper-rollback &>/dev/null; then
+		log_info "Configuring snapper-rollback for archway subvolume layout..."
+		local sr_conf="/etc/snapper-rollback.conf"
+		if [[ -f "$sr_conf" ]]; then
+			# subvol_main = the active root subvolume (archway uses @)
+			if grep -q '^subvol_main' "$sr_conf"; then
+				sudo sed -i 's|^subvol_main.*|subvol_main = @|' "$sr_conf"
 			fi
-			# Ensure ROOT_SNAPSHOTS_PATH matches our @snapshots (sibling, not nested)
-			if grep -q '^ROOT_SNAPSHOTS_PATH=' "$limine_conf"; then
-				sudo sed -i 's|^ROOT_SNAPSHOTS_PATH=.*|ROOT_SNAPSHOTS_PATH="/@snapshots"|' "$limine_conf"
+			# subvol_snapshots = where snapper writes snapshots (archway uses @snapshots)
+			if grep -q '^subvol_snapshots' "$sr_conf"; then
+				sudo sed -i 's|^subvol_snapshots.*|subvol_snapshots = @snapshots|' "$sr_conf"
 			fi
-			log_info "limine-snapper-sync configured (ROOT_SNAPSHOTS_PATH=/@snapshots)"
+			# dev = the Btrfs device hosting these subvolumes
+			local btrfs_dev
+			btrfs_dev=$(get_btrfs_device)
+			if [[ -n "$btrfs_dev" ]] && grep -q '^dev' "$sr_conf"; then
+				sudo sed -i "s|^dev.*|dev = ${btrfs_dev}|" "$sr_conf"
+			fi
+			log_info "snapper-rollback configured (subvol_main=@, subvol_snapshots=@snapshots)"
 		else
-			log_warn "$limine_conf not found - limine-snapper-sync may need manual configuration"
+			log_warn "$sr_conf not found - snapper-rollback may need manual configuration"
 		fi
 	else
-		log_warn "limine-snapper-sync not installed - snapshot boot menu will not be available"
-		log_warn "Install with: sudo pacman -S limine-snapper-sync"
+		log_warn "snapper-rollback not installed - using snapper rollback directly is fine"
+		log_warn "Install with: yay -S snapper-rollback"
 	fi
 
 	log_info "Snapper configuration complete"
@@ -1083,6 +1156,9 @@ main() {
 
 	CURRENT_PHASE="configuring SDDM autologin"
 	configure_sddm_autologin
+
+	CURRENT_PHASE="configuring systemd-boot (UEFI bootloader)"
+	configure_systemd_boot
 
 	CURRENT_PHASE="configuring snapper (Btrfs snapshots)"
 	configure_snapper

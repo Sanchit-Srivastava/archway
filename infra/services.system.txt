@@ -26,8 +26,10 @@ accounts-daemon
 # snapper-cleanup.timer
 
 # Snapshot boot integration:
-#   Limine uses limine-snapper-sync (snapper plugin, no daemon needed)
-#   Configured via /etc/limine-snapper-sync.conf by bootstrap.sh
+#   archway uses systemd-boot. There is no in-menu snapshot picker; rollback
+#   is performed from a running system (snapper rollback) or from a live USB
+#   if the system is unbootable. snapper-rollback (AUR) is installed as a
+#   convenience wrapper. See docs/SETUP.md for the rollback procedure.
 
 # =============================================================================
 # HARDWARE / PERIPHERALS

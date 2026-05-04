@@ -23,7 +23,7 @@ The installer runs in two stages with one reboot. If it doesn't resume automatic
 - niri compositor + DankMaterialShell desktop
 - Modern CLI tools (zsh, starship, eza, bat, fzf, etc.)
 - PipeWire audio, Bluetooth, NetworkManager
-- Btrfs snapshots with Limine rollback (if using Btrfs)
+- Btrfs snapshots with `snapper` rollback (if using Btrfs)
 - Fingerprint authentication (if hardware supports it)
 
 ---
@@ -72,10 +72,27 @@ archway's bootstrap will create `@snapshots` automatically if missing.
 
 | Setting | Value |
 |---------|-------|
-| Bootloader | **Limine** (supports Btrfs snapshot boot menu via `limine-snapper-sync`) |
+| Bootloader | **systemd-boot** (UEFI; ships with `systemd`, no extra package) |
 
-archway assumes Limine as the bootloader. Bootstrap configures `/etc/limine-snapper-sync.conf`
-with the correct Btrfs subvolume paths so snapshots appear in the Limine boot menu.
+archway standardizes on systemd-boot. Bootstrap runs `bootctl install` (idempotent)
+against the detected ESP (`/efi`, `/boot`, or `/boot/efi`) and verifies the pacman
+hook that auto-runs `bootctl update` on systemd upgrades.
+
+**Why systemd-boot:**
+- Zero AUR dependencies (no GraalVM/Gradle build chain)
+- Auto-detects Windows Boot Manager for dual-boot
+- Default and recommended bootloader on CachyOS
+- Trivial to make idempotent in scripts
+
+**Snapshot rollback:** systemd-boot has no in-menu snapshot picker. archway
+installs `snapper-rollback` (AUR) for command-line rollback from a running
+system. If the system is unbootable, recover via a live USB. See
+[Section 8.5](#85-rollback-btrfs).
+
+If you previously used Limine on this machine, `bootctl install` will write
+systemd-boot to the ESP without removing the Limine binary; you may need to
+delete `\EFI\limine\` and remove the Limine UEFI entry with `efibootmgr -b
+<id> -B` after confirming systemd-boot works.
 
 ### 1.4 Hostname
 
@@ -523,12 +540,23 @@ If something breaks:
 # List snapshots
 snapper list
 
-# Option 1: Boot into snapshot from Limine boot menu
-# Reboot, select the snapshot entry in Limine, choose snapshot
-
-# Option 2: Rollback from command line
+# Option 1: Rollback from a running system (preferred)
 sudo snapper rollback <snapshot-number>
 reboot
+
+# Option 2: Use the snapper-rollback CLI wrapper (AUR, configured by bootstrap)
+sudo snapper-rollback <snapshot-number>
+reboot
+
+# Option 3: System unbootable -> boot a live USB (Arch/CachyOS), then either
+#   a) chroot in and run snapper rollback, or
+#   b) manually swap the @ subvolume:
+#        mount -o subvolid=5 /dev/<dev> /mnt
+#        mv /mnt/@ /mnt/@.broken
+#        btrfs subvolume snapshot /mnt/@snapshots/<N>/snapshot /mnt/@
+#        reboot
+#
+# (systemd-boot has no in-menu snapshot picker, by design.)
 ```
 
 ---

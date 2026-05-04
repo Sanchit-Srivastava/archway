@@ -69,8 +69,9 @@ main() {
 	log_info "Snapshot created successfully"
 	log_info ""
 	log_info "To rollback if something goes wrong:"
-	log_info "  1. Reboot and select the snapshot from the Limine boot menu"
-	log_info "  2. Or use: sudo snapper -c root rollback <number>"
+	log_info "  1. From a running system: sudo snapper -c root rollback <number> && reboot"
+	log_info "  2. If unbootable: boot a live USB, mount @, swap subvolumes manually"
+	log_info "     (or use snapper-rollback from a chroot)"
 	log_info ""
 	log_info "To list snapshots: snapper list"
 }

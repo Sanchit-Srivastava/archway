@@ -61,7 +61,8 @@ declare -A CHECK_IDS=(
 	[btrfs]="check_btrfs_root"
 	[snapper]="check_snapper_configured"
 	[snapper-timers]="check_snapper_timers"
-	[limine-snapper]="check_limine_snapper"
+	[systemd-boot]="check_systemd_boot"
+	[snapper-rollback]="check_snapper_rollback"
 	[plasma]="check_plasma_fallback"
 	[keyd]="check_keyd"
 	[dms]="check_dms_installed"
@@ -458,21 +459,34 @@ check_snapper_timers() {
 }
 
 check_limine_snapper() {
-	local fstype
-	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
+	# Deprecated: kept for backward compatibility; delegates to new checks.
+	check_systemd_boot
+	check_snapper_rollback
+}
 
-	if [[ "$fstype" != "btrfs" ]]; then
-		run_check \
-			"Limine snapshot boot (skipped - not Btrfs)" \
-			"true" \
-			""
+check_systemd_boot() {
+	# Skip on non-UEFI systems
+	if [[ ! -d /sys/firmware/efi ]]; then
+		run_check "systemd-boot installed (skipped - not UEFI)" "true" ""
 		return 0
 	fi
-
 	run_check \
-		"limine-snapper-sync installed" \
-		"pacman -Q limine-snapper-sync >/dev/null 2>&1" \
-		"Install: sudo pacman -S limine-snapper-sync"
+		"systemd-boot installed in ESP" \
+		"bootctl is-installed 2>/dev/null | grep -q '^yes'" \
+		"Install: sudo bootctl install (or re-run bootstrap.sh)"
+}
+
+check_snapper_rollback() {
+	local fstype
+	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
+	if [[ "$fstype" != "btrfs" ]]; then
+		run_check "snapper-rollback (skipped - not Btrfs)" "true" ""
+		return 0
+	fi
+	run_check \
+		"snapper-rollback installed" \
+		"pacman -Q snapper-rollback >/dev/null 2>&1" \
+		"Install: yay -S snapper-rollback"
 }
 
 check_plasma_fallback() {
@@ -667,7 +681,8 @@ main() {
 			echo "  btrfs            Root filesystem is Btrfs"
 			echo "  snapper          Snapper config exists"
 			echo "  snapper-timers   Snapper timeline timer enabled"
-			echo "  limine-snapper   Limine snapshot boot (limine-snapper-sync)"
+			echo "  systemd-boot     systemd-boot installed in ESP"
+			echo "  snapper-rollback snapper-rollback CLI installed"
 			echo ""
 			echo "  # Fallback Session"
 			echo "  plasma           KDE Plasma fallback installed"
@@ -774,7 +789,8 @@ main() {
 		check_btrfs_root
 		check_snapper_configured
 		check_snapper_timers
-		check_limine_snapper
+		check_systemd_boot
+		check_snapper_rollback
 
 		# Fallback
 		check_plasma_fallback
