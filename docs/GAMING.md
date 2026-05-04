@@ -11,7 +11,7 @@ Nothing in this document is installed by default. Each section is opt-in.
 
 ## 1. Hardware detection (chwd)
 
-`chwd` (CachyOS Hardware Detection) is installed by `pkgs.pacman.txt` but does
+`chwd` (CachyOS Hardware Detection) is installed by `infra/pkgs/10-base.txt` but does
 **not** auto-run during bootstrap.
 
 After your first boot, run:
@@ -160,6 +160,6 @@ After `chwd` installs the driver:
 ## See also
 
 - `infra/setup-repos.sh` - how repos get added
-- `infra/pkgs.pacman.txt` - what's installed by default (cachyos-settings, chwd)
+- `infra/pkgs/10-base.txt` - what's installed by default (cachyos-settings, chwd)
 - [CachyOS package browser](https://software.cachyos.org/)
 - [Chaotic-AUR package list](https://aur.chaotic.cx/packages)

@@ -31,14 +31,27 @@ The installer runs in two stages with one reboot. If it doesn't resume automatic
 
 ## Overview
 
-archway uses a two-layer model:
+archway uses a two-layer model with a tiered system baseline:
 
 | Layer | Tools | Purpose |
 |-------|-------|---------|
-| **System baseline** | pacman, AUR (yay), systemd | System packages, services, `/etc` config |
+| **System baseline** | pacman, AUR (yay), systemd | System packages, services, `/etc` config (split into 4 tiers) |
 | **User environment** | Shell scripts, dotfile symlinks | CLI tools, shell config, editor setup |
 
 A third optional layer (**DankMaterialShell**) provides the desktop shell experience.
+
+The system baseline is partitioned into four resilience tiers so fragile
+components (AUR, DMS) cannot brick the system:
+
+| Tier | Name    | What it installs                                              |
+|------|---------|---------------------------------------------------------------|
+| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit |
+| 2    | shell   | CLI tools, editors, secrets, zsh as default shell             |
+| 3    | desktop | KDE Plasma + SDDM (fallback graphical session)                |
+| 4    | extras  | AUR packages, DMS, niri, messaging apps (fragile)             |
+
+Tiers run in order; a failed tier stops higher tiers but preserves lower-tier
+state. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#tier-model) for details.
 
 See the **[Complete Setup Guide](docs/SETUP.md)** for step-by-step instructions starting from a fresh Arch installation.
 
@@ -73,13 +86,19 @@ reboot
 ```
 archway/
 ├── infra/                    # System baseline layer
-│   ├── bootstrap.sh          # Main installer (packages + services)
+│   ├── bootstrap.sh          # Tiered installer (--tier/--up-to/--tiers)
 │   ├── dotfiles.sh           # User dotfile symlinker
 │   ├── doctor.sh             # System validation
 │   ├── pre-bootstrap.sh      # Btrfs snapshot creator
-│   ├── pkgs.pacman.txt       # Official repo packages
-│   ├── pkgs.aur.txt          # AUR packages
-│   └── services.system.txt   # systemd services to enable
+│   ├── pkgs/                 # Per-tier package lists
+│   │   ├── 10-base.txt       # T1 native (core OS)
+│   │   ├── 20-shell.txt      # T2 native (CLI/shell)
+│   │   ├── 30-desktop.txt    # T3 native (KDE Plasma)
+│   │   ├── 40-extras.txt     # T4 native (DMS deps, etc.)
+│   │   └── 40-extras.aur.txt # T4 AUR (the only AUR list)
+│   └── services/             # Per-tier systemd unit lists
+│       ├── 10-base.txt       # polkit, NetworkManager, bluetooth, …
+│       └── 30-desktop.txt    # sddm
 │
 ├── dots/                     # User dotfiles (symlinked to ~)
 │   ├── zsh/                  # Zsh configuration
@@ -148,13 +167,18 @@ Edit `dots/ssh/config` to add your hosts.
 
 ### Adding Packages
 
-1. Edit `infra/pkgs.pacman.txt` (official repos) or `infra/pkgs.aur.txt` (AUR)
-2. Re-run `./infra/bootstrap.sh`
+1. Pick the tier:
+   - T1 base: core OS (networking, audio, bluetooth, fonts)
+   - T2 shell: CLI tools, editors
+   - T3 desktop: KDE Plasma, GUI apps
+   - T4 extras: AUR-only packages, DMS/niri ecosystem
+2. Edit the matching file under `infra/pkgs/` (use `40-extras.aur.txt` for AUR)
+3. Re-run `./infra/bootstrap.sh --tier N` (or the full `./infra/bootstrap.sh`)
 
 ### Adding Services
 
-1. Edit `infra/services.system.txt`
-2. Re-run `./infra/bootstrap.sh`
+1. Edit the matching file under `infra/services/` (usually `10-base.txt`)
+2. Re-run `./infra/bootstrap.sh --tier N`
 
 ## Maintenance
 

@@ -376,7 +376,7 @@ the clipboard and shows a notification.
 
 ## Packages added
 
-### Official repos (`infra/pkgs.pacman.txt`)
+### Official repos (`infra/pkgs/20-shell.txt`)
 
 - `difftastic` -- structural diffs
 - `git-delta` -- syntax-highlighted git pager
@@ -385,7 +385,7 @@ the clipboard and shows a notification.
 - `vdirsyncer` -- CalDAV/CardDAV sync
 - `zk` -- already present
 
-### AUR (`infra/pkgs.aur.txt`)
+### AUR (`infra/pkgs/40-extras.aur.txt`)
 
 - `ltex-ls-plus-bin` -- grammar/spell LSP
 - `vale-bin` -- prose linter

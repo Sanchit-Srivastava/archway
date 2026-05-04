@@ -11,7 +11,7 @@ It is intentionally opinionated and optimized for reproducibility over flexibili
 
 ## Layered Model
 
-archway uses three layers with clear ownership boundaries:
+archway uses three logical layers with clear ownership boundaries:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -47,6 +47,42 @@ archway uses three layers with clear ownership boundaries:
 - Owns its configuration and update flow
 - Provides the graphical shell experience
 
+## Tier Model
+
+Within the System Baseline layer, packages and services are partitioned into
+four **resilience tiers** so that fragile components cannot brick the system.
+Tiers run in numeric order; a failed tier stops higher tiers but leaves
+lower-tier completion markers intact.
+
+| Tier | Name    | Contents                                                              | Failure tolerance |
+|------|---------|-----------------------------------------------------------------------|-------------------|
+| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit, PAM, snapper, systemd-boot, keyd, firewall | Must succeed — bricks system if it fails |
+| 2    | shell   | CLI tools, editors, dotfile prerequisites, secrets, zsh as default shell | Must succeed for usable headless system |
+| 3    | desktop | KDE Plasma + SDDM + portals + browsers + GUI apps (zathura, latex, …) | Optional — system remains usable headless if it fails |
+| 4    | extras  | All AUR packages (yay), DMS, niri, messaging apps, obsidian            | Always non-fatal — falls back to Plasma |
+
+**Why AUR is strictly tier 4:** AUR is by far the most common failure mode
+(builds break, upstream URLs rot, signatures change). Even packages that are
+logically tier 1 (e.g. `snapper-rollback`) live in tier 4 if they come from
+AUR. Resilience wins over logical grouping.
+
+**Per-tier markers:** each successful tier writes
+`~/.config/archway/bootstrap.tier{N}.complete`. The aggregate
+`bootstrap.complete` is written only when all requested tiers succeed and
+tier 1 was included.
+
+**CLI usage:**
+
+```bash
+./infra/bootstrap.sh                # all tiers (default)
+./infra/bootstrap.sh --tier 1       # just tier 1
+./infra/bootstrap.sh --up-to 3      # tiers 1..3 (no AUR/DMS)
+./infra/bootstrap.sh --tiers 1,2,4  # arbitrary subset
+```
+
+Or via the Justfile: `just bootstrap-minimal` (T1+T2),
+`just bootstrap-safe` (T1+T2+T3), `just bootstrap-tier 3`.
+
 ## Idempotency
 
 All scripts are safe to re-run. Package installs use `--needed`, services are checked before enabling,
@@ -54,12 +90,25 @@ and dotfiles use symlink-with-backup behavior.
 
 ## Package Lists
 
-- `infra/pkgs.pacman.txt` for official packages
-- `infra/pkgs.aur.txt` for AUR packages
+Native (pacman) and AUR packages are split per tier under `infra/pkgs/`:
+
+- `infra/pkgs/10-base.txt`        — tier 1, native
+- `infra/pkgs/20-shell.txt`       — tier 2, native
+- `infra/pkgs/30-desktop.txt`     — tier 3, native
+- `infra/pkgs/40-extras.txt`      — tier 4, native
+- `infra/pkgs/40-extras.aur.txt`  — tier 4, AUR (the only AUR list)
+
+Add a package by editing the appropriate tier file and re-running
+`./infra/bootstrap.sh --tier N` (or the full bootstrap).
 
 ## Services
 
-- `infra/services.system.txt` is the source of truth for system services
+Systemd units to enable system-wide are split per tier under `infra/services/`:
+
+- `infra/services/10-base.txt`    — polkit, NetworkManager, bluetooth, audio plumbing, keyd, …
+- `infra/services/20-shell.txt`   — (currently empty; user-level services live in dotfiles)
+- `infra/services/30-desktop.txt` — sddm
+- `infra/services/40-extras.txt`  — (currently empty)
 
 ## Dotfiles
 

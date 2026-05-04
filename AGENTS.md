@@ -91,16 +91,22 @@ shfmt -d infra/*.sh     # Show diff without writing (for CI)
 ```
 archway/
 ├── infra/                    # System baseline scripts
-│   ├── bootstrap.sh          # Main system installer (Arch Linux)
+│   ├── bootstrap.sh          # Tiered system installer (Arch Linux)
 │   ├── bootstrap-mac.sh      # macOS bootstrap (Homebrew + shell)
 │   ├── dotfiles.sh           # User dotfile symlinker (cross-platform)
 │   ├── doctor.sh             # System validation/health checks
 │   ├── pre-bootstrap.sh      # Btrfs snapshot creator
-│   ├── pkgs.pacman.txt       # Official repo packages (Arch)
-│   ├── pkgs.aur.txt          # AUR packages (Arch)
+│   ├── pkgs/                 # Per-tier package lists (Arch)
+│   │   ├── 10-base.txt       # T1 native (core OS)
+│   │   ├── 20-shell.txt      # T2 native (CLI/shell)
+│   │   ├── 30-desktop.txt    # T3 native (KDE Plasma)
+│   │   ├── 40-extras.txt     # T4 native (DMS deps, etc.)
+│   │   └── 40-extras.aur.txt # T4 AUR (only AUR list)
+│   ├── services/             # Per-tier systemd unit lists
+│   │   ├── 10-base.txt       # polkit, NetworkManager, bluetooth, …
+│   │   └── 30-desktop.txt    # sddm
 │   ├── pkgs.brew.txt         # Homebrew formulae (macOS)
-│   ├── pkgs.brew-cask.txt    # Homebrew casks (macOS)
-│   └── services.system.txt   # systemd services to enable
+│   └── pkgs.brew-cask.txt    # Homebrew casks (macOS)
 ├── dots/                     # User dotfiles (symlinked to ~)
 │   ├── zsh/                  # .zshrc, .zshenv
 │   ├── nvim/                 # LazyVim configuration
@@ -184,12 +190,17 @@ sed -i 's/foo/bar/' /etc/config
 
 ### Package List Format
 
-Files: `infra/pkgs.pacman.txt`, `infra/pkgs.aur.txt`, `infra/pkgs.brew.txt`, `infra/pkgs.brew-cask.txt`
+Arch native packages live in tier files: `infra/pkgs/10-base.txt`, `20-shell.txt`,
+`30-desktop.txt`, `40-extras.txt`. AUR packages have a single tier file
+`infra/pkgs/40-extras.aur.txt` (AUR is always T4, regardless of logical grouping).
+macOS uses `infra/pkgs.brew.txt` and `infra/pkgs.brew-cask.txt`.
 
 - One package per line
 - Comments start with `#`
 - Group by section with comment headers
 - Alphabetize within sections
+- Place packages in the lowest tier whose failure you can tolerate
+  (T1 = must work for headless system; T4 = OK if it breaks)
 
 ```
 # Audio
@@ -204,9 +215,10 @@ git
 
 ### Service List Format
 
-File: `infra/services.system.txt`
+Tier files: `infra/services/10-base.txt`, `20-shell.txt`, `30-desktop.txt`, `40-extras.txt`.
 - One service per line
 - Use full unit names (e.g., `bluetooth.service` or just `bluetooth`)
+- Place in the lowest tier whose failure you can tolerate
 
 ## Design Principles
 
@@ -223,11 +235,11 @@ File: `infra/services.system.txt`
 | `infra/bootstrap.sh`          | Main system setup script (Arch)      |
 | `infra/bootstrap-mac.sh`     | macOS bootstrap (Homebrew)           |
 | `infra/doctor.sh`             | System validation                    |
-| `infra/pkgs.pacman.txt`       | Official package list (Arch)         |
-| `infra/pkgs.aur.txt`          | AUR package list (Arch)              |
+| `infra/pkgs/`                 | Tiered Arch package lists (10-base..40-extras) |
+| `infra/pkgs/40-extras.aur.txt`| AUR package list (always T4)         |
 | `infra/pkgs.brew.txt`         | Homebrew formulae (macOS)            |
 | `infra/pkgs.brew-cask.txt`   | Homebrew casks (macOS)               |
-| `infra/services.system.txt`   | systemd services                     |
+| `infra/services/`             | Tiered systemd unit lists            |
 | `.sops.yaml`                  | SOPS encryption rules (age key)      |
 | `secrets/opencode.env`        | Encrypted OpenCode MCP API keys      |
 | `secrets/vdirsyncer.env`      | Encrypted vdirsyncer OAuth + cal IDs |
