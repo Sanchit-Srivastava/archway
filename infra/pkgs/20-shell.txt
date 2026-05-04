@@ -1,54 +1,85 @@
-# AUR packages (one per line)
-# Keep packages grouped by section; keep entries alphabetized within a section
+# Tier 2 (shell) — CLI tools, editor, daily-driver shell environment
+#
+# Goal: a pleasant, fully usable headless system. After T2 the user can log
+# in at a TTY, edit files, manage git/ssh, decrypt secrets, and operate the
+# system entirely from the command line.
+#
+# Keep packages grouped by section; keep entries alphabetized within a section.
 
 # =============================================================================
-# BROWSERS
+# DATABASE (used by many CLI tools — zk, lazygit, etc.)
 # =============================================================================
-zen-browser-bin
+sqlite
 
 # =============================================================================
-# TERMINAL
+# SHELL & CORE CLI TOOLS
 # =============================================================================
-# ghostty
+bat
+btop
+dust
+duf
+eza
+fastfetch
+fd
+fzf
+github-cli
+glow
+inxi
+jq
+lazygit
+less
+neovim
+pdfgrep
+plocate
+ripgrep
+starship
+systemctl-tui
+tmux
+translate-shell
+unzip
+yazi
+zk
+zoxide
+zsh
 
 # =============================================================================
-# WAYLAND UTILITIES
+# RUNTIMES (needed by editors/LSPs/AI tooling)
 # =============================================================================
-# Freeze screen before screenshot
-wayfreeze
+nodejs-lts-jod
+npm
+python
+python-uv
 
 # =============================================================================
-# SCREENSHOT TOOLS
+# IMAGE / MEDIA UTILITIES (terminal-friendly)
 # =============================================================================
-satty
-
-
-# =============================================================================
-# DMS OPTIONS
-# =============================================================================
-# dgop: system telemetry backend used by DMS resource widgets. The only DMS
-# dependency not yet packaged in the official Arch repos, so we pull a
-# pre-built binary from AUR to avoid a Go build during `dankinstall`.
-dgop-bin
-dsearch-bin
+imagemagick
+playerctl
 
 # =============================================================================
-# OTHER TOOLS
+# GIT ENHANCEMENTS
 # =============================================================================
-zotero
-pacseek
+difftastic
+git-delta
+git-lfs
 
 # =============================================================================
-# WRITING QUALITY
+# CALENDAR & TASK SYNC (terminal calendar)
 # =============================================================================
-ltex-ls-plus-bin
-vale-bin
+khal
+python-aiohttp-oauthlib
+vdirsyncer
 
 # =============================================================================
-# SNAPSHOTS
+# NEOVIM LSPs & FORMATTERS
 # =============================================================================
-# snapper-rollback: simple CLI to rollback to a snapshot from a running system
-# (works with systemd-boot; no in-menu snapshot picker, but rollback + reboot
-# is straightforward and avoids the limine-snapper-sync / GraalVM dependency
-# chain that frequently fails to build from AUR).
-snapper-rollback
+bash-language-server
+lua-language-server
+shellcheck
+shfmt
+stylua
+
+# =============================================================================
+# AI CODING AGENT
+# =============================================================================
+opencode

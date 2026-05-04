@@ -1,0 +1,112 @@
+# Tier 3 (desktop) — KDE Plasma graphical fallback session + GUI apps
+#
+# Goal: a fully working graphical desktop using KDE Plasma. This is the
+# "robust baseline GUI" — entirely from official repos, no AUR, no DMS.
+# If T4 (DMS) ever breaks, the user logs into Plasma from SDDM and has a
+# functional daily-driver desktop.
+#
+# Keep packages grouped by section; keep entries alphabetized within a section.
+
+# =============================================================================
+# TERMINAL EMULATOR (graphical)
+# =============================================================================
+ghostty
+
+# =============================================================================
+# PASSWORD MANAGER (GUI)
+# =============================================================================
+bitwarden
+bitwarden-cli
+
+# =============================================================================
+# WAYLAND / SCREEN UTILITIES
+# =============================================================================
+fuzzel
+grim
+imv
+pamixer
+pavucontrol
+slurp
+wl-clipboard
+
+# =============================================================================
+# BLUETOOTH TUI (works headless too, but pairs with desktop)
+# =============================================================================
+bluetui
+
+# =============================================================================
+# BROWSERS
+# =============================================================================
+chromium
+qutebrowser
+
+# =============================================================================
+# KDE PLASMA (fallback graphical session)
+# =============================================================================
+# Minimal Plasma — enough for a working daily-driver desktop without DMS.
+bluedevil
+kde-gtk-config
+kscreen
+plasma-desktop
+plasma-nm
+plasma-pa
+
+# =============================================================================
+# DISPLAY MANAGER + BOOT SPLASH
+# =============================================================================
+plymouth
+sddm
+
+# =============================================================================
+# FILE MANAGERS (graphical)
+# =============================================================================
+dolphin
+gnome-disk-utility
+nautilus
+nautilus-python
+thunar
+
+# =============================================================================
+# PRINTING (graphical config; daemons are optional, see services/)
+# =============================================================================
+avahi
+cups
+cups-browsed
+cups-filters
+nss-mdns
+system-config-printer
+
+# =============================================================================
+# XDG PORTALS (file dialogs, screen sharing)
+# =============================================================================
+xdg-desktop-portal
+xdg-desktop-portal-gnome
+xdg-desktop-portal-gtk
+
+# =============================================================================
+# POLKIT GUI AGENT (auth prompts under non-DMS sessions like Plasma)
+# =============================================================================
+polkit-gnome
+
+# =============================================================================
+# PDF VIEWER + LATEX TOOLCHAIN (light)
+# =============================================================================
+biber
+zathura
+zathura-pdf-mupdf
+texlive-basic
+texlive-binextra
+texlive-bibtexextra
+texlive-fontsrecommended
+texlive-latex
+texlive-latexextra
+texlive-pictures
+texlive-plaingeneric
+texlive-publishers
+texlive-fontsextra
+python-pynvim
+
+# =============================================================================
+# VPN
+# =============================================================================
+proton-vpn-cli

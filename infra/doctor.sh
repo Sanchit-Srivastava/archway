@@ -28,28 +28,28 @@ ONLY_CHECK=""
 # Check ID mapping for --only filtering
 declare -A CHECK_IDS=(
 	[pipewire]="check_pipewire_running"
-	[pipewire-pulse]="check_pipewire_pulse"
+	[pipewire - pulse]="check_pipewire_pulse"
 	[wireplumber]="check_wireplumber_running"
-	[xdg-portal]="check_xdg_portal_running"
+	[xdg - portal]="check_xdg_portal_running"
 	[niri]="check_niri_installed"
-	[portal-config]="check_portal_configuration"
-	[wayland-tools]="check_essential_wayland_tools"
+	[portal - config]="check_portal_configuration"
+	[wayland - tools]="check_essential_wayland_tools"
 	[terminal]="check_terminal_installed"
-	[file-manager]="check_file_manager_installed"
-	[polkit-agent]="check_polkit_agent"
-	[secret-service]="check_secret_service"
-	[pam-keyring]="check_pam_keyring"
-	[user-services]="check_user_services_enabled"
+	[file - manager]="check_file_manager_installed"
+	[polkit - agent]="check_polkit_agent"
+	[secret - service]="check_secret_service"
+	[pam - keyring]="check_pam_keyring"
+	[user - services]="check_user_services_enabled"
 	[networkmanager]="check_network_manager"
 	[bluetooth]="check_bluetooth"
 	[udisks2]="check_udisks2"
 	[polkit]="check_polkit"
-	[accounts-daemon]="check_accounts_daemon"
+	[accounts - daemon]="check_accounts_daemon"
 	[yay]="check_yay_installed"
 	[zsh]="check_zsh_installed"
 	[dotfiles]="check_dotfiles_linked"
 	[starship]="check_starship"
-	[starship-config]="check_starship_config"
+	[starship - config]="check_starship_config"
 	[zoxide]="check_zoxide"
 	[eza]="check_eza"
 	[bat]="check_bat"
@@ -57,17 +57,17 @@ declare -A CHECK_IDS=(
 	[fd]="check_fd"
 	[ripgrep]="check_ripgrep"
 	[lazygit]="check_lazygit"
-	[environment-d]="check_environment_d"
+	[environment - d]="check_environment_d"
 	[btrfs]="check_btrfs_root"
 	[snapper]="check_snapper_configured"
-	[snapper-timers]="check_snapper_timers"
-	[systemd-boot]="check_systemd_boot"
-	[snapper-rollback]="check_snapper_rollback"
+	[snapper - timers]="check_snapper_timers"
+	[systemd - boot]="check_systemd_boot"
+	[snapper - rollback]="check_snapper_rollback"
 	[plasma]="check_plasma_fallback"
 	[keyd]="check_keyd"
 	[dms]="check_dms_installed"
 	[zotero]="check_zotero_bbt"
-	[zotero-mcp]="check_zotero_mcp"
+	[zotero - mcp]="check_zotero_mcp"
 )
 
 # Print TAP header
@@ -501,8 +501,6 @@ check_plasma_fallback() {
 # =============================================================================
 
 audit_packages() {
-	local pkg_pacman="${SCRIPT_DIR}/pkgs.pacman.txt"
-	local pkg_aur="${SCRIPT_DIR}/pkgs.aur.txt"
 	local tmpdir
 	tmpdir=$(mktemp -d)
 
@@ -513,18 +511,21 @@ audit_packages() {
 	pacman -Qqen | sort >"${tmpdir}/explicit-native.txt"
 	pacman -Qqem | sort >"${tmpdir}/explicit-foreign.txt"
 
-	# Get repo lists
-	if [[ -f "$pkg_pacman" ]]; then
-		grep -v '^[[:space:]]*#' "$pkg_pacman" | grep -v '^[[:space:]]*$' | sort >"${tmpdir}/repo-native.txt"
-	else
-		touch "${tmpdir}/repo-native.txt"
-	fi
-
-	if [[ -f "$pkg_aur" ]]; then
-		grep -v '^[[:space:]]*#' "$pkg_aur" | grep -v '^[[:space:]]*$' | sort >"${tmpdir}/repo-foreign.txt"
-	else
-		touch "${tmpdir}/repo-foreign.txt"
-	fi
+	# Build union of all tier package lists.
+	# Native: pkgs/{10-base,20-shell,30-desktop,40-extras}.txt
+	# Foreign (AUR): pkgs/*.aur.txt
+	: >"${tmpdir}/repo-native.raw"
+	: >"${tmpdir}/repo-foreign.raw"
+	local f
+	for f in "${SCRIPT_DIR}/pkgs"/*.txt; do
+		[[ -f "$f" ]] || continue
+		case "$f" in
+		*.aur.txt) cat "$f" >>"${tmpdir}/repo-foreign.raw" ;;
+		*) cat "$f" >>"${tmpdir}/repo-native.raw" ;;
+		esac
+	done
+	grep -v '^[[:space:]]*#' "${tmpdir}/repo-native.raw" | grep -v '^[[:space:]]*$' | sort -u >"${tmpdir}/repo-native.txt"
+	grep -v '^[[:space:]]*#' "${tmpdir}/repo-foreign.raw" | grep -v '^[[:space:]]*$' | sort -u >"${tmpdir}/repo-foreign.txt"
 
 	# Compare
 	comm -23 "${tmpdir}/explicit-native.txt" "${tmpdir}/repo-native.txt" >"${tmpdir}/untracked-native.txt"
@@ -549,7 +550,7 @@ audit_packages() {
 		printf "${YELLOW}Untracked native packages (%s):${NC}\n" "$untracked_native_count"
 		sed 's/^/  - /' "${tmpdir}/untracked-native.txt"
 		echo ""
-		echo "  Action: Add to infra/pkgs.pacman.txt or remove"
+		echo "  Action: Add to a tier file under infra/pkgs/ or remove"
 		echo ""
 	else
 		printf "${GREEN}No untracked native packages${NC}\n"
@@ -559,7 +560,7 @@ audit_packages() {
 		printf "${YELLOW}Untracked AUR packages (%s):${NC}\n" "$untracked_foreign_count"
 		sed 's/^/  - /' "${tmpdir}/untracked-foreign.txt"
 		echo ""
-		echo "  Action: Add to infra/pkgs.aur.txt or remove"
+		echo "  Action: Add to infra/pkgs/40-extras.aur.txt or remove"
 		echo ""
 	else
 		printf "${GREEN}No untracked AUR packages${NC}\n"

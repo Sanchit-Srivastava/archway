@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Script metadata
-SCRIPT_VERSION="2026-02-17-1"
+SCRIPT_VERSION="2026-05-03-1"
 
 # Colors for output
 RED='\033[0;31m'
@@ -68,6 +68,10 @@ on_error() {
 
 on_exit() {
 	local code="$1"
+	# Suppress messages for help/early-exit paths
+	if [[ "${BOOTSTRAP_STARTED:-0}" -eq 0 ]]; then
+		return
+	fi
 	if [[ "$code" -eq 0 ]]; then
 		log_info "Bootstrap finished successfully"
 	else
@@ -162,7 +166,7 @@ install_yay() {
 # =============================================================================
 
 install_pacman_packages() {
-	local pkg_file="${SCRIPT_DIR}/pkgs.pacman.txt"
+	local pkg_file="${1:?install_pacman_packages requires a package list path}"
 
 	if [[ ! -f "$pkg_file" ]]; then
 		log_warn "No pacman package list found at $pkg_file"
@@ -216,7 +220,7 @@ install_pacman_packages() {
 		log_error ""
 		log_error "Possible causes:"
 		log_error "  - Package name is wrong or has been renamed"
-		log_error "  - Package is AUR-only (move it to pkgs.aur.txt)"
+		log_error "  - Package is AUR-only (move it to pkgs/40-extras.aur.txt)"
 		log_error "  - Repos need refreshing (try: sudo pacman -Sy)"
 		log_error ""
 		log_error "Fix ${pkg_file} and re-run bootstrap."
@@ -270,7 +274,7 @@ install_pacman_packages() {
 }
 
 install_aur_packages() {
-	local pkg_file="${SCRIPT_DIR}/pkgs.aur.txt"
+	local pkg_file="${1:?install_aur_packages requires a package list path}"
 
 	if [[ ! -f "$pkg_file" ]]; then
 		log_warn "No AUR package list found at $pkg_file"
@@ -370,7 +374,7 @@ enable_display_manager() {
 }
 
 enable_services() {
-	local svc_file="${SCRIPT_DIR}/services.system.txt"
+	local svc_file="${1:?enable_services requires a services list path}"
 
 	if [[ ! -f "$svc_file" ]]; then
 		log_warn "No services list found at $svc_file"
@@ -1087,18 +1091,186 @@ set_default_shell() {
 }
 
 # =============================================================================
+# TIER DISPATCH
+# =============================================================================
+
+# Run a single tier's package install + service enable + per-tier configuration.
+# Returns non-zero on failure but does NOT abort the script (caller decides).
+run_tier() {
+	local tier="$1"
+	local prefix
+	case "$tier" in
+	1) prefix="10-base" ;;
+	2) prefix="20-shell" ;;
+	3) prefix="30-desktop" ;;
+	4) prefix="40-extras" ;;
+	*)
+		log_error "Unknown tier: $tier"
+		return 1
+		;;
+	esac
+	local pkg_file="${SCRIPT_DIR}/pkgs/${prefix}.txt"
+	local svc_file="${SCRIPT_DIR}/services/${prefix}.txt"
+	local aur_file="${SCRIPT_DIR}/pkgs/${prefix}.aur.txt"
+
+	log_info ""
+	log_info "═══════════════════════════════════════════════════════════════════"
+	log_info "TIER ${tier} (${prefix})"
+	log_info "═══════════════════════════════════════════════════════════════════"
+
+	CURRENT_PHASE="tier ${tier}: installing pacman packages"
+	if [[ -f "$pkg_file" ]]; then
+		install_pacman_packages "$pkg_file" || return 1
+	fi
+
+	# AUR packages: only T4 ships an AUR list today, but support any tier.
+	if [[ -f "$aur_file" ]]; then
+		CURRENT_PHASE="tier ${tier}: installing AUR packages"
+		install_aur_packages "$aur_file" || return 1
+	fi
+
+	CURRENT_PHASE="tier ${tier}: enabling systemd services"
+	if [[ -f "$svc_file" ]]; then
+		enable_services "$svc_file" || return 1
+	fi
+
+	# Per-tier configuration steps
+	case "$tier" in
+	1)
+		CURRENT_PHASE="tier 1: configuring keyd"
+		configure_keyd
+
+		CURRENT_PHASE="tier 1: configuring polkit"
+		configure_polkit
+
+		CURRENT_PHASE="tier 1: configuring systemd-boot"
+		configure_systemd_boot
+
+		CURRENT_PHASE="tier 1: configuring snapper"
+		configure_snapper
+		;;
+	2)
+		CURRENT_PHASE="tier 2: configuring PAM for gnome-keyring"
+		configure_pam_keyring
+
+		CURRENT_PHASE="tier 2: configuring PAM for fingerprint auth"
+		configure_pam_fingerprint
+
+		# User-level setup (skip if running as root)
+		if [[ $EUID -ne 0 ]]; then
+			CURRENT_PHASE="tier 2: setting default shell to zsh"
+			set_default_shell
+		else
+			log_warn "Running as root - skipping shell change"
+		fi
+		;;
+	3)
+		CURRENT_PHASE="tier 3: configuring XDG portals"
+		configure_portals
+
+		CURRENT_PHASE="tier 3: configuring SDDM autologin"
+		configure_sddm_autologin
+
+		# User-level graphical session services
+		if [[ $EUID -ne 0 ]]; then
+			CURRENT_PHASE="tier 3: enabling user systemd services"
+			enable_user_services
+		else
+			log_warn "Running as root - skipping user service setup"
+		fi
+		;;
+	4)
+		CURRENT_PHASE="tier 4: configuring PAM for DMS lock screen"
+		configure_pam_dms
+		;;
+	esac
+
+	log_info "Tier ${tier} complete"
+	return 0
+}
+
+# =============================================================================
+# CLI
+# =============================================================================
+
+usage() {
+	cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Tiered system bootstrap. Runs tiers in order; a failed tier stops higher
+tiers but leaves lower-tier markers intact.
+
+Tiers:
+  1 = base     Core OS plumbing (network, audio, bluetooth, fonts, polkit)
+  2 = shell    CLI tools, editors, secrets, zsh
+  3 = desktop  KDE Plasma + SDDM (fallback graphical session)
+  4 = extras   AUR packages, DMS, niri, messaging apps (fragile)
+
+Options:
+  --tier N        Run only tier N (1-4)
+  --up-to N       Run tiers 1..N inclusive
+  --tiers LIST    Run a comma-separated list of tiers (e.g. 1,2,3)
+  -h, --help      Show this help
+
+Default: --up-to 4 (all tiers)
+EOF
+}
+
+parse_args() {
+	TIERS_TO_RUN=(1 2 3 4)
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--tier)
+			[[ $# -ge 2 ]] || die "--tier requires a value"
+			TIERS_TO_RUN=("$2")
+			shift 2
+			;;
+		--up-to)
+			[[ $# -ge 2 ]] || die "--up-to requires a value"
+			local n="$2"
+			[[ "$n" =~ ^[1-4]$ ]] || die "--up-to must be 1..4"
+			TIERS_TO_RUN=()
+			local i
+			for ((i = 1; i <= n; i++)); do TIERS_TO_RUN+=("$i"); done
+			shift 2
+			;;
+		--tiers)
+			[[ $# -ge 2 ]] || die "--tiers requires a value"
+			IFS=',' read -r -a TIERS_TO_RUN <<<"$2"
+			shift 2
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		*)
+			log_error "Unknown argument: $1"
+			usage
+			exit 1
+			;;
+		esac
+	done
+
+	# Validate
+	local t
+	for t in "${TIERS_TO_RUN[@]}"; do
+		[[ "$t" =~ ^[1-4]$ ]] || die "Invalid tier: $t (must be 1..4)"
+	done
+}
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
 main() {
+	BOOTSTRAP_STARTED=1
 	log_info "Bootstrap script version: ${SCRIPT_VERSION}"
 	log_info "Starting archway bootstrap..."
 	log_info "Repository: $REPO_ROOT"
+	log_info "Tiers requested: ${TIERS_TO_RUN[*]}"
 
 	local state_dir
-	local state_file
 	state_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
-	state_file="${state_dir}/bootstrap.complete"
 
 	# Safety reminder about pre-bootstrap snapshot (only if Btrfs detected)
 	local root_fstype
@@ -1140,74 +1312,63 @@ main() {
 	CURRENT_PHASE="configuring third-party repos"
 	setup_third_party_repos
 
-	CURRENT_PHASE="installing yay (AUR helper)"
-	install_yay
-
-	CURRENT_PHASE="installing pacman packages"
-	install_pacman_packages
-
-	CURRENT_PHASE="installing AUR packages"
-	install_aur_packages
-
-	CURRENT_PHASE="enabling systemd services"
-	enable_services
-
-	# Configure system settings
-	CURRENT_PHASE="configuring PAM for gnome-keyring"
-	configure_pam_keyring
-
-	CURRENT_PHASE="configuring PAM for fingerprint auth"
-	configure_pam_fingerprint
-
-	CURRENT_PHASE="configuring PAM for DMS lock screen"
-	configure_pam_dms
-
-	CURRENT_PHASE="configuring XDG portals"
-	configure_portals
-
-	CURRENT_PHASE="configuring keyd (keyboard remapping)"
-	configure_keyd
-
-	CURRENT_PHASE="configuring polkit"
-	configure_polkit
-
-	CURRENT_PHASE="configuring SDDM autologin"
-	configure_sddm_autologin
-
-	CURRENT_PHASE="configuring systemd-boot (UEFI bootloader)"
-	configure_systemd_boot
-
-	CURRENT_PHASE="configuring snapper (Btrfs snapshots)"
-	configure_snapper
-
-	# User-level setup (skip if running as root)
-	if [[ $EUID -ne 0 ]]; then
-		CURRENT_PHASE="enabling user systemd services"
-		enable_user_services
-
-		CURRENT_PHASE="setting default shell to zsh"
-		set_default_shell
-	else
-		log_warn "Running as root - skipping user service setup and shell change"
-		log_warn "Run as regular user to enable: pipewire, wireplumber, portal services"
+	# yay is required only when an AUR tier is requested (currently T4)
+	if array_contains 4 "${TIERS_TO_RUN[@]}"; then
+		CURRENT_PHASE="installing yay (AUR helper)"
+		install_yay
 	fi
 
-	CURRENT_PHASE="complete"
-	log_info "Bootstrap complete!"
-
 	mkdir -p "$state_dir"
-	cat >"$state_file" <<EOF
+
+	local tier
+	local failed_tiers=()
+	for tier in "${TIERS_TO_RUN[@]}"; do
+		if run_tier "$tier"; then
+			local marker="${state_dir}/bootstrap.tier${tier}.complete"
+			cat >"$marker" <<EOF
 BOOTSTRAP_VERSION="${SCRIPT_VERSION}"
+BOOTSTRAP_TIER="${tier}"
 BOOTSTRAP_COMPLETED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 REPO_ROOT="${REPO_ROOT}"
 EOF
-	log_info "Wrote bootstrap marker: $state_file"
+			log_info "Wrote tier marker: $marker"
+		else
+			log_error "Tier ${tier} failed; lower tiers (if any) remain valid."
+			failed_tiers+=("$tier")
+			# Per design: T4 failure must not abort lower tiers, but we should
+			# stop processing higher tiers in this run since they may depend on it.
+			break
+		fi
+	done
+
+	# Legacy aggregate marker: written only if all requested tiers succeeded
+	# AND tier 1 was included (i.e. a meaningful baseline run).
+	if [[ ${#failed_tiers[@]} -eq 0 ]] && array_contains 1 "${TIERS_TO_RUN[@]}"; then
+		local state_file="${state_dir}/bootstrap.complete"
+		cat >"$state_file" <<EOF
+BOOTSTRAP_VERSION="${SCRIPT_VERSION}"
+BOOTSTRAP_TIERS="${TIERS_TO_RUN[*]}"
+BOOTSTRAP_COMPLETED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+REPO_ROOT="${REPO_ROOT}"
+EOF
+		log_info "Wrote bootstrap marker: $state_file"
+	fi
+
+	CURRENT_PHASE="complete"
+	if [[ ${#failed_tiers[@]} -gt 0 ]]; then
+		log_warn "Bootstrap finished with failed tiers: ${failed_tiers[*]}"
+		log_warn "Re-run a single tier with: ./infra/bootstrap.sh --tier ${failed_tiers[0]}"
+		exit 1
+	fi
+
+	log_info "Bootstrap complete!"
 	log_info ""
 	log_info "Next steps:"
 	log_info "  1. Reboot to start SDDM (graphical login screen)"
 	log_info "  2. Apply dotfiles: ./infra/dotfiles.sh"
-	log_info "  3. Install DMS: curl -fsSL https://dms.avenge.cloud | bash"
+	log_info "  3. Install DMS (optional): ./install-dms.sh"
 	log_info "  4. Validate: ./infra/doctor.sh"
 }
 
-main "$@"
+parse_args "$@"
+main

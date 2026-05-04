@@ -122,7 +122,15 @@ ensure_repo_dir() {
 
 install_dms() {
 	log_info "Starting DankMaterialShell installer..."
-	"$ARCHWAY_REPO_DIR/install-dms.sh"
+	# DMS is the most fragile component (curl|sh from a third-party domain).
+	# Failure here must NOT brick the install: the system remains usable on
+	# the Plasma fallback session installed by tier 3.
+	if ! "$ARCHWAY_REPO_DIR/install-dms.sh"; then
+		log_warn "DMS install failed."
+		log_warn "System remains usable; log in to KDE Plasma at SDDM."
+		log_warn "Retry later with: $ARCHWAY_REPO_DIR/install-dms.sh"
+		return 0
+	fi
 }
 
 maybe_auth_github() {

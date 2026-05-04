@@ -1,0 +1,15 @@
+# Tier 3 (desktop) systemd units to enable system-wide
+# KDE Plasma fallback graphical session
+
+# =============================================================================
+# DISPLAY MANAGER
+# =============================================================================
+# SDDM provides graphical login. Disable to prefer TTY login.
+sddm
+
+# =============================================================================
+# PRINTING (Optional - uncomment if you use printers)
+# =============================================================================
+# cups
+# cups-browsed
+# avahi-daemon

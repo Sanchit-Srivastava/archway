@@ -1,0 +1,38 @@
+# Tier 4 (extras) — DMS, niri, messaging, heavy/fragile components
+#
+# Goal: the polished daily-driver experience. Failures here MUST NOT brick
+# the system — Plasma from T3 remains a complete fallback session.
+#
+# This is the tier most likely to fail (DMS curl|sh, niri ecosystem churn,
+# heavy texlive metapackages) and is the tier most acceptable to defer when
+# bandwidth/time is limited (e.g. offline ISO recovery installs).
+#
+# Keep packages grouped by section; keep entries alphabetized within a section.
+
+# =============================================================================
+# DMS (DankMaterialShell) - core stack and dependencies
+# =============================================================================
+# Pre-installing these so the `dankinstall` step has minimal work to do
+# (it has previously failed on heavy AUR builds during deployment).
+accountsservice
+cava
+cliphist
+cups-pk-helper
+dms-shell-niri
+i2c-tools
+matugen
+niri
+qt6-multimedia
+quickshell
+xwayland-satellite
+
+# =============================================================================
+# MESSAGING
+# =============================================================================
+discord
+telegram-desktop
+
+# =============================================================================
+# NOTES / PKM (heavy electron app)
+# =============================================================================
+obsidian

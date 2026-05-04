@@ -9,9 +9,25 @@ default:
 # INSTALLATION
 # =============================================================================
 
-# Run full bootstrap (packages, services, configuration)
+# Run full bootstrap (all tiers: base + shell + desktop + extras)
 bootstrap:
     ./infra/bootstrap.sh
+
+# Run a single tier (1=base, 2=shell, 3=desktop, 4=extras)
+bootstrap-tier n:
+    ./infra/bootstrap.sh --tier {{n}}
+
+# Run tiers 1..N inclusive (e.g. just bootstrap-up-to 3 for a no-AUR install)
+bootstrap-up-to n:
+    ./infra/bootstrap.sh --up-to {{n}}
+
+# Minimal install: T1+T2 only (headless baseline, no GUI)
+bootstrap-minimal:
+    ./infra/bootstrap.sh --up-to 2
+
+# Safe install: T1+T2+T3 only (skips fragile AUR/DMS in T4)
+bootstrap-safe:
+    ./infra/bootstrap.sh --up-to 3
 
 # Install user dotfiles
 dotfiles:

@@ -1,5 +1,5 @@
 # Homebrew formulae (one per line)
-# macOS equivalent of pkgs.pacman.txt — CLI tools and editor layer only
+# macOS equivalent of pkgs/20-shell.txt — CLI tools and editor layer only
 # Keep packages grouped by section; keep entries alphabetized within a section
 
 # =============================================================================
