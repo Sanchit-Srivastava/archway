@@ -112,6 +112,20 @@ check_prerequisites() {
 }
 
 # =============================================================================
+# THIRD-PARTY REPOS (CachyOS + Chaotic-AUR + multilib)
+# =============================================================================
+
+setup_third_party_repos() {
+	local script="${SCRIPT_DIR}/setup-repos.sh"
+	if [[ ! -x "$script" ]]; then
+		log_warn "setup-repos.sh not found or not executable; skipping repo setup"
+		return 0
+	fi
+	log_info "Configuring third-party repos (multilib, CachyOS, chaotic-aur)..."
+	"$script"
+}
+
+# =============================================================================
 # YAY AUR HELPER
 # =============================================================================
 
@@ -1122,6 +1136,9 @@ main() {
 
 	CURRENT_PHASE="pre-flight checks"
 	check_prerequisites
+
+	CURRENT_PHASE="configuring third-party repos"
+	setup_third_party_repos
 
 	CURRENT_PHASE="installing yay (AUR helper)"
 	install_yay

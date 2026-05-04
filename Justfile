@@ -66,6 +66,24 @@ snapshot:
     sudo ./infra/pre-bootstrap.sh create
 
 # =============================================================================
+# HARDWARE / GAMING (CachyOS extras)
+# =============================================================================
+
+# Configure third-party repos (multilib, CachyOS, chaotic-aur). Idempotent.
+# Bootstrap calls this automatically; run manually to refresh repo setup.
+setup-repos:
+    ./infra/setup-repos.sh
+
+# Detect hardware and install matching driver profiles via chwd
+# (e.g. NVIDIA dkms stack). Run once after first boot, then reboot.
+hwdetect:
+    sudo chwd -a
+
+# Show available chwd profiles for detected hardware (no install)
+hwdetect-list:
+    sudo chwd -l
+
+# =============================================================================
 # SECRETS (SOPS + age)
 # =============================================================================
 
