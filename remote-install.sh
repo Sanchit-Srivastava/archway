@@ -2,7 +2,12 @@
 set -euo pipefail
 
 # Remote bootstrap for archway - fetched via:
-#   bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) [profile]
+#
+# The fast path is a single positional arg: minimal | safe | full
+#   bash <(curl ...) safe         # T1+T2+T3 (KDE Plasma fallback, no AUR/DMS)
+#   bash <(curl ...) full         # T1-T4 (full install with DMS)
+#   bash <(curl ...)              # defaults to full
 #
 # This script clones the repo and hands off to install.sh.
 # All interactive prompts happen in install.sh, not here.
@@ -12,11 +17,11 @@ set -euo pipefail
 #   --dir <path>   Clone destination (default: ~/archway)
 #   --ref <ref>    Git ref to check out (tag, branch, or sha; default: main HEAD)
 #                  Use this for reproducible installs:
-#                    bash <(curl ...) --ref v2026.05.03 --profile safe
+#                    bash <(curl ...) --ref v2026.05.03 safe
 #
 # All other flags pass through to install.sh.
 
-SCRIPT_VERSION="2026-05-03-1"
+SCRIPT_VERSION="2026-05-03-2"
 
 REPO_URL="https://github.com/Sanchit-Srivastava/archway.git"
 REPO_DIR="${HOME}/archway"
@@ -37,6 +42,7 @@ die() {
 }
 
 # --- Parse arguments (pass-through to install.sh, except --repo/--dir/--ref) ---
+# Bare positional `safe`/`minimal`/`full` is sugar for `--profile <x>`.
 
 PASSTHROUGH_ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -52,6 +58,10 @@ while [[ $# -gt 0 ]]; do
 	--ref)
 		REPO_REF="$2"
 		shift 2
+		;;
+	minimal | safe | full)
+		PASSTHROUGH_ARGS+=(--profile "$1")
+		shift
 		;;
 	*)
 		PASSTHROUGH_ARGS+=("$1")
@@ -100,6 +110,7 @@ fi
 
 # --- Hand off to install.sh ---
 log_info "archway remote-install (v${SCRIPT_VERSION})"
+log_info "Repo dir: $REPO_DIR | Ref: ${REPO_REF:-main HEAD} | Forwarded args: ${PASSTHROUGH_ARGS[*]:-<none>}"
 
 # Ensure stdin is the terminal, not a pipe.
 # This is the belt-and-suspenders fix: even if someone mistakenly runs
@@ -108,6 +119,10 @@ log_info "archway remote-install (v${SCRIPT_VERSION})"
 if [[ ! -t 0 ]]; then
 	log_warn "stdin is not a terminal - redirecting from /dev/tty"
 	exec </dev/tty
+fi
+
+if [[ ! -f "$REPO_DIR/install.sh" ]]; then
+	die "install.sh not found at $REPO_DIR/install.sh - clone or checkout did not produce expected layout. Try: rm -rf $REPO_DIR && re-run."
 fi
 
 log_info "Handing off to install.sh..."
