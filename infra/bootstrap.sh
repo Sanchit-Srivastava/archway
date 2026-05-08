@@ -1144,22 +1144,22 @@ configure_sddm_autologin() {
 
 	# Session selection order:
 	#   1. ARCHWAY_AUTOLOGIN_SESSION env var (explicit user override)
-	#      e.g. ARCHWAY_AUTOLOGIN_SESSION=niri ./infra/bootstrap.sh
-	#   2. plasma (canonical archinstall baseline — always-working fallback)
-	#   3. plasmawayland (older Plasma session name)
-	#   4. niri (T4 — only autologged-in if no Plasma is present, e.g. on a
-	#      machine the user installed via Minimal profile against archway's
-	#      previous defaults; not preferred because T4 is allowed to break)
+	#      e.g. ARCHWAY_AUTOLOGIN_SESSION=plasma ./infra/bootstrap.sh
+	#   2. niri (preferred primary session on archway laptops; installed via
+	#      DMS in T4 — if it's present on disk the user has opted into it)
+	#   3. plasma (canonical archinstall baseline — fallback when niri is
+	#      not installed, e.g. fresh KDE-only baseline before DMS install)
+	#   4. plasmawayland (older Plasma session name)
 	if [[ -n "${ARCHWAY_AUTOLOGIN_SESSION:-}" ]]; then
 		autologin_session="$ARCHWAY_AUTOLOGIN_SESSION"
 		log_info "Using ARCHWAY_AUTOLOGIN_SESSION override: $autologin_session"
+	elif [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
+		autologin_session="niri"
 	elif [[ -f "/usr/share/wayland-sessions/plasma.desktop" ]] ||
 		[[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
 		autologin_session="plasma"
 	elif [[ -f "/usr/share/wayland-sessions/plasmawayland.desktop" ]]; then
 		autologin_session="plasmawayland"
-	elif [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
-		autologin_session="niri"
 	fi
 
 	if [[ -z "$autologin_session" ]]; then
