@@ -65,6 +65,7 @@ declare -A CHECK_IDS=(
 	[btrfs]="check_btrfs_root"
 	[snapper]="check_snapper_configured"
 	["snapper-timers"]="check_snapper_timers"
+	["btrfs-default-subvol"]="check_btrfs_default_subvol"
 	["systemd-boot"]="check_systemd_boot"
 	["snapper-rollback"]="check_snapper_rollback"
 	[plasma]="check_plasma_fallback"
@@ -93,6 +94,7 @@ declare -A CHECK_TIERS=(
 	[btrfs]=1
 	[snapper]=1
 	["snapper-timers"]=1
+	["btrfs-default-subvol"]=1
 	["systemd-boot"]=1
 	["snapper-rollback"]=1
 	# T2 shell / CLI
@@ -538,6 +540,47 @@ check_limine_snapper() {
 	check_snapper_rollback
 }
 
+# Verifies the Btrfs default subvolume matches the subvolume `/` is mounted
+# from. Required for `snapper rollback` (it reads the default to determine the
+# rollback ambit). archinstall often leaves this as ID 5 (top-level), which
+# breaks rollback even though the @/@home/@snapshots layout is otherwise fine.
+# Read-only check; the fix lives in bootstrap.sh:configure_btrfs_default_subvolume.
+check_btrfs_default_subvol() {
+	local fstype root_subvol default_id root_id
+	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
+	if [[ "$fstype" != "btrfs" ]]; then
+		run_check "Btrfs default subvolume matches root (skipped - not Btrfs)" "true" ""
+		return 0
+	fi
+
+	root_subvol=$(findmnt -n -o FSROOT / 2>/dev/null)
+	root_subvol="${root_subvol#/}"
+	if [[ -z "$root_subvol" ]]; then
+		# Root mounted from top-level (FSROOT == "/"); rollback layout impossible.
+		run_check \
+			"Btrfs default subvolume matches root" \
+			"false" \
+			"Root is mounted from Btrfs top-level (ID 5). Rollback requires / to live in a named subvolume (e.g. @). Restructure needed; can't fix in-place."
+		return 0
+	fi
+
+	default_id=$(sudo btrfs subvolume get-default / 2>/dev/null | awk '{print $2}')
+	root_id=$(sudo btrfs subvolume list / 2>/dev/null | awk -v sv="$root_subvol" '$NF == sv {print $2; exit}')
+
+	if [[ -z "$default_id" || -z "$root_id" ]]; then
+		run_check \
+			"Btrfs default subvolume matches root" \
+			"false" \
+			"Could not read default/root subvolume IDs (need sudo). Re-run with: sudo ./infra/doctor.sh --only btrfs-default-subvol"
+		return 0
+	fi
+
+	run_check \
+		"Btrfs default subvolume matches root (ID ${root_id} = ${root_subvol})" \
+		"[[ '$default_id' == '$root_id' ]]" \
+		"Default is ID ${default_id}, expected ${root_id}. Fix: sudo btrfs subvolume set-default ${root_id} /  (or re-run ./infra/bootstrap.sh --tier 1)"
+}
+
 check_systemd_boot() {
 	# Skip on non-UEFI systems
 	if [[ ! -d /sys/firmware/efi ]]; then
@@ -756,6 +799,7 @@ main() {
 			echo "  btrfs            Root filesystem is Btrfs"
 			echo "  snapper          Snapper config exists"
 			echo "  snapper-timers   Snapper timeline timer enabled"
+			echo "  btrfs-default-subvol  Btrfs default subvol = root subvol (snapper rollback prereq)"
 			echo "  systemd-boot     systemd-boot installed in ESP"
 			echo "  snapper-rollback snapper-rollback CLI installed"
 			echo ""
@@ -892,6 +936,7 @@ main() {
 		gated_check btrfs
 		gated_check snapper
 		gated_check snapper-timers
+		gated_check btrfs-default-subvol
 		gated_check systemd-boot
 		gated_check snapper-rollback
 

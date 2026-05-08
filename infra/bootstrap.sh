@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Script metadata
-SCRIPT_VERSION="2026-05-07-1"
+SCRIPT_VERSION="2026-05-08-1"
 
 # Colors for output
 RED='\033[0;31m'
@@ -749,6 +749,77 @@ create_snapshots_subvolume() {
 	return 0
 }
 
+# Ensure the Btrfs default subvolume matches the subvolume `/` is mounted from.
+#
+# Why: `snapper rollback` requires this. If the default is the top-level
+# (ID 5 / FS_TREE) — which is what archinstall leaves behind unless the
+# "snapshots with snapper" preset is selected — snapper bails out with:
+#   "Cannot detect ambit since default subvolume is unknown."
+#
+# What this does (idempotent):
+#   - Reads the subvolume `/` is mounted from (e.g. `@`) via findmnt.
+#   - Looks up its subvolume ID with `btrfs subvolume list /`.
+#   - If the current default differs, runs `btrfs subvolume set-default <id> /`.
+#   - No-op if `/` is already mounted from a default-set named subvolume.
+#
+# Notes:
+#   - We do NOT touch this if `/` is mounted from the top-level (FSROOT == "/"),
+#     because there's no named subvolume to promote — that requires a layout
+#     restructure that's out of scope here. We warn instead.
+#   - The change takes effect immediately for new mounts; the running root
+#     mount is unaffected (so safe to run any time).
+configure_btrfs_default_subvolume() {
+	local root_fstype root_subvol default_id root_id list_line
+
+	root_fstype=$(findmnt -n -o FSTYPE /)
+	if [[ "$root_fstype" != "btrfs" ]]; then
+		return 0
+	fi
+
+	# FSROOT is e.g. "/@" for a normal subvolume mount, or "/" for top-level.
+	root_subvol=$(findmnt -n -o FSROOT /)
+	root_subvol="${root_subvol#/}"
+	if [[ -z "$root_subvol" ]]; then
+		log_warn "Root is mounted from the Btrfs top-level subvolume (ID 5)."
+		log_warn "Rollback-capable layout requires / to live in a named subvolume (e.g. @)."
+		log_warn "This needs a manual filesystem restructure; skipping default-subvol fix."
+		return 0
+	fi
+
+	# Current default subvolume ID; first token after "ID" is the number.
+	default_id=$(sudo btrfs subvolume get-default / 2>/dev/null | awk '{print $2}')
+
+	# Find the ID of the subvolume `/` is actually mounted from.
+	# `btrfs subvolume list /` lines look like:
+	#   ID 256 gen 3676 top level 5 path @
+	list_line=$(sudo btrfs subvolume list / 2>/dev/null | awk -v sv="$root_subvol" '$NF == sv {print; exit}')
+	if [[ -z "$list_line" ]]; then
+		log_warn "Could not find subvolume '$root_subvol' in 'btrfs subvolume list /'"
+		log_warn "Skipping default-subvolume fix"
+		return 0
+	fi
+	root_id=$(awk '{print $2}' <<<"$list_line")
+
+	if [[ -z "$default_id" || -z "$root_id" ]]; then
+		log_warn "Could not determine Btrfs default/root subvolume IDs; skipping"
+		return 0
+	fi
+
+	if [[ "$default_id" == "$root_id" ]]; then
+		log_info "Btrfs default subvolume already set to ID ${root_id} (${root_subvol})"
+		return 0
+	fi
+
+	log_warn "Btrfs default subvolume is ID ${default_id}; expected ID ${root_id} (${root_subvol})"
+	log_info "Setting Btrfs default subvolume to ID ${root_id} (${root_subvol})..."
+	if sudo btrfs subvolume set-default "$root_id" /; then
+		log_info "Default subvolume updated. 'snapper rollback' will now be able to detect ambit."
+	else
+		log_error "Failed to set default subvolume; 'snapper rollback' may still fail"
+		return 1
+	fi
+}
+
 # Add /.snapshots entry to fstab
 add_fstab_snapshots_entry() {
 	local device="$1"
@@ -848,6 +919,12 @@ configure_snapper() {
 	fi
 
 	log_info "Btrfs detected on root filesystem"
+
+	# Ensure the default subvolume points at the active root (e.g. @).
+	# Required for `snapper rollback` to work; archinstall often leaves the
+	# default at ID 5 (top-level), which makes rollback fail with
+	# "Cannot detect ambit since default subvolume is unknown."
+	configure_btrfs_default_subvolume
 
 	if ! command -v snapper >/dev/null 2>&1; then
 		log_warn "snapper not installed - skipping snapshot configuration"
