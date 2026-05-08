@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -eEuo pipefail
 
-# setup-repos.sh: idempotently configure third-party pacman repositories
+# setup-repos.sh: idempotently configure OPT-IN third-party pacman repositories
+#
+# This script is NOT called by bootstrap.sh. It is opt-in. Run it manually
+# (or via `just setup-repos`) when you want CachyOS / chaotic-aur packages.
+# Multilib is enabled directly by bootstrap.sh.
 #
 # Adds:
 #   - CachyOS repos (cachyos, cachyos-v3, cachyos-v4 if CPU supports)
@@ -10,11 +14,12 @@ set -eEuo pipefail
 #   - Chaotic-AUR repo
 #       Pre-built AUR binaries (proton-ge-custom, nvidia-open-dkms, etc.)
 #
-# Also enables [multilib] (needed for 32-bit Steam/Wine on NVIDIA).
+# Also re-asserts [multilib] is enabled (bootstrap.sh already does this, but
+# this script remains usable on systems that skipped bootstrap).
 #
 # This script is idempotent: safe to re-run.
 
-SCRIPT_VERSION="2026-05-03-5"
+SCRIPT_VERSION="2026-05-07-1"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -241,11 +246,14 @@ main() {
 	fi
 
 	log_info "Repository setup complete"
-	log_info "Available extras now installable:"
+	log_info ""
+	log_info "Next step: install the CachyOS extras you want, e.g."
+	log_info "  just setup-cachyos-extras   # cachyos-settings + chwd"
+	log_info "  just hwdetect               # auto-install hardware drivers (after reboot)"
+	log_info ""
+	log_info "Other packages now installable from these repos:"
 	log_info "  - linux-cachyos          (optimized kernel)"
-	log_info "  - cachyos-settings       (perf tweaks; in pkgs/40-extras.txt)"
-	log_info "  - chwd                   (hardware detection; in pkgs/40-extras.txt)"
-	log_info "  - cachyos-gaming-meta    (gaming bundle - opt-in)"
+	log_info "  - cachyos-gaming-meta    (gaming bundle)"
 	log_info "  - proton-cachyos         (optimized Proton)"
 	log_info "  - proton-ge-custom-bin   (via chaotic-aur)"
 	log_info "See docs/GAMING.md for the full list."

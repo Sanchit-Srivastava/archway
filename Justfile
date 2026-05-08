@@ -82,13 +82,22 @@ snapshot:
     sudo ./infra/pre-bootstrap.sh create
 
 # =============================================================================
-# HARDWARE / GAMING (CachyOS extras)
+# OPT-IN: CACHYOS EXTRAS
 # =============================================================================
+# These recipes are NOT run by `just bootstrap`. They opt-in to the CachyOS
+# third-party repos and packages (optimized kernel, perf tweaks, hardware
+# detection, gaming meta). See docs/GAMING.md for details.
 
-# Configure third-party repos (multilib, CachyOS, chaotic-aur). Idempotent.
-# Bootstrap calls this automatically; run manually to refresh repo setup.
+# Configure third-party repos (CachyOS + chaotic-aur). Idempotent.
+# Multilib is enabled by `just bootstrap` directly and does NOT need this.
 setup-repos:
     ./infra/setup-repos.sh
+
+# Install CachyOS perf tweaks + hardware detection tool (cachyos-settings, chwd).
+# Requires `just setup-repos` first.
+setup-cachyos-extras:
+    sudo pacman -S --needed --noconfirm cachyos-settings chwd
+    @echo "Installed. Reboot to activate cachyos-settings, then run 'just hwdetect'."
 
 # Detect hardware and install matching driver profiles via chwd
 # (e.g. NVIDIA dkms stack). Run once after first boot, then reboot.

@@ -101,6 +101,6 @@ git
 just
 man-db
 
-# NOTE: CachyOS-only packages (cachyos-settings, chwd) live in T4
-# (40-extras.txt) because they require the CachyOS third-party repo, which
-# is best-effort and must not gate base bootstrap.
+# NOTE: CachyOS extras (cachyos-settings, chwd, linux-cachyos, etc.) are
+# NOT installed by default. They are an opt-in feature — see docs/GAMING.md
+# and `just setup-repos` to enable the CachyOS third-party repo first.

@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Script metadata
-SCRIPT_VERSION="2026-05-04-1"
+SCRIPT_VERSION="2026-05-07-1"
 
 # Colors for output
 RED='\033[0;31m'
@@ -116,26 +116,39 @@ check_prerequisites() {
 }
 
 # =============================================================================
-# THIRD-PARTY REPOS (CachyOS + Chaotic-AUR + multilib)
+# MULTILIB REPO
 # =============================================================================
+# 32-bit support is needed for Steam, Wine, and a handful of common tools.
+# This is a stock Arch repo — just needs uncommenting in /etc/pacman.conf.
+#
+# Optional third-party repos (CachyOS, chaotic-aur) are NOT configured by
+# bootstrap. They were previously auto-enabled but caused more friction
+# (keyserver flakiness, upstream installer changes, mirror outages) than
+# benefit. To opt in, run `just setup-repos` (see infra/setup-repos.sh).
 
-setup_third_party_repos() {
-	local script="${SCRIPT_DIR}/setup-repos.sh"
-	if [[ ! -x "$script" ]]; then
-		log_warn "setup-repos.sh not found or not executable; skipping repo setup"
+enable_multilib() {
+	local pacman_conf="/etc/pacman.conf"
+	if pacman-conf --repo=multilib >/dev/null 2>&1; then
+		log_info "multilib repo already enabled"
 		return 0
 	fi
-	log_info "Configuring third-party repos (multilib, CachyOS, chaotic-aur)..."
-	# Best-effort: third-party repos are a quality-of-life feature (optimized
-	# kernel, gaming bits, cachyos-settings/chwd in T4). They MUST NOT gate
-	# base bootstrap — upstream installers, mirrors, and keyservers fail in
-	# ways outside our control. Packages depending on these repos live in T4
-	# (40-extras.txt) and will simply be skipped if the repo isn't present.
-	if ! "$script"; then
-		log_warn "Third-party repo setup failed; continuing without optional repos"
-		log_warn "T4 packages requiring CachyOS / chaotic-aur will be skipped"
-		log_warn "To retry later: sudo ${script}"
+
+	log_info "Enabling [multilib] repo in ${pacman_conf}"
+	# Uncomment the [multilib] section header AND the Include line that
+	# follows it. Idempotent: only matches a still-commented block.
+	sudo sed -i '/^\s*#\s*\[multilib\]/{
+		s/^\s*#\s*//
+		n
+		s/^\s*#\s*//
+	}' "$pacman_conf"
+
+	if ! pacman-conf --repo=multilib >/dev/null 2>&1; then
+		log_warn "Failed to enable [multilib] in ${pacman_conf} - inspect manually"
+		return 0
 	fi
+
+	log_info "Refreshing pacman databases for new multilib repo..."
+	sudo pacman -Sy || log_warn "pacman -Sy failed; databases may be stale"
 }
 
 # =============================================================================
@@ -177,8 +190,9 @@ install_yay() {
 install_pacman_packages() {
 	local pkg_file="${1:?install_pacman_packages requires a package list path}"
 	# --skip-unavailable: warn and skip packages not found in any configured
-	# repo rather than failing. Used for T4 where CachyOS/chaotic-aur may not
-	# have been added (best-effort repos).
+	# repo rather than failing. Used for T4 where optional third-party repos
+	# (CachyOS, chaotic-aur — opt-in via `just setup-repos`) may not be
+	# configured.
 	local skip_unavailable=0
 	if [[ "${2:-}" == "--skip-unavailable" ]]; then
 		skip_unavailable=1
@@ -234,7 +248,7 @@ install_pacman_packages() {
 			for pkg in "${invalid_packages[@]}"; do
 				log_warn "  - $pkg"
 			done
-			log_warn "If these require CachyOS/chaotic-aur, retry after: sudo ${SCRIPT_DIR}/setup-repos.sh"
+			log_warn "If these require optional third-party repos, run: just setup-repos"
 			# Proceed with only the valid subset
 			packages=("${valid_packages[@]}")
 			if [[ ${#packages[@]} -eq 0 ]]; then
@@ -1150,8 +1164,9 @@ run_tier() {
 
 	CURRENT_PHASE="tier ${tier}: installing pacman packages"
 	if [[ -f "$pkg_file" ]]; then
-		# T4 is best-effort: packages from optional repos (CachyOS, chaotic-aur)
-		# are skipped rather than aborting if those repos weren't configured.
+		# T4 is best-effort: packages from optional repos (CachyOS, chaotic-aur
+		# — opt-in via `just setup-repos`) are skipped rather than aborting if
+		# those repos weren't configured.
 		if [[ "$tier" -eq 4 ]]; then
 			install_pacman_packages "$pkg_file" --skip-unavailable || return 1
 		else
@@ -1345,8 +1360,8 @@ main() {
 	CURRENT_PHASE="pre-flight checks"
 	check_prerequisites
 
-	CURRENT_PHASE="configuring third-party repos"
-	setup_third_party_repos
+	CURRENT_PHASE="enabling multilib repo"
+	enable_multilib
 
 	# yay is required only when an AUR tier is requested (currently T4)
 	if array_contains 4 "${TIERS_TO_RUN[@]}"; then

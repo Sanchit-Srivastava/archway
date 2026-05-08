@@ -1,7 +1,8 @@
 # Gaming on archway (NVIDIA + CachyOS repos)
 
-archway is base Arch with the **CachyOS** and **Chaotic-AUR** repositories
-enabled by `infra/setup-repos.sh`. This gives you most of what CachyOS offers
+archway is base Arch. The **CachyOS** and **Chaotic-AUR** third-party
+repositories are NOT enabled by default — they are opt-in via
+`infra/setup-repos.sh`. Once enabled, you get most of what CachyOS offers
 (optimized kernel, gaming meta-packages, Proton builds, hardware detection)
 without leaving Arch.
 
@@ -9,12 +10,30 @@ Nothing in this document is installed by default. Each section is opt-in.
 
 ---
 
+## 0. Enable the third-party repos (prerequisite)
+
+Run this once before installing anything below:
+
+```bash
+just setup-repos          # adds CachyOS + chaotic-aur to /etc/pacman.conf
+```
+
+This previously ran automatically during bootstrap but caused too much
+friction (keyserver flakiness, upstream installer changes, mirror
+outages). It is now strictly opt-in.
+
+---
+
 ## 1. Hardware detection (chwd)
 
-`chwd` (CachyOS Hardware Detection) is installed by `infra/pkgs/10-base.txt` but does
-**not** auto-run during bootstrap.
+`chwd` (CachyOS Hardware Detection) is NOT installed by default. After
+running `just setup-repos`, install it:
 
-After your first boot, run:
+```bash
+just setup-cachyos-extras  # installs cachyos-settings + chwd
+```
+
+Then detect and install matching driver profiles:
 
 ```bash
 just hwdetect              # installs nonfree (NVIDIA) profiles automatically
@@ -159,7 +178,7 @@ After `chwd` installs the driver:
 
 ## See also
 
-- `infra/setup-repos.sh` - how repos get added
-- `infra/pkgs/10-base.txt` - what's installed by default (cachyos-settings, chwd)
+- `infra/setup-repos.sh` — opt-in script that adds CachyOS + chaotic-aur repos
+- `just setup-cachyos-extras` — installs cachyos-settings + chwd after repos are added
 - [CachyOS package browser](https://software.cachyos.org/)
 - [Chaotic-AUR package list](https://aur.chaotic.cx/packages)
