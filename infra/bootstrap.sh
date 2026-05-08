@@ -1141,16 +1141,29 @@ configure_sddm_autologin() {
 	local autologin_conf="/etc/sddm.conf.d/autologin.conf"
 	local autologin_user="${SUDO_USER:-$USER}"
 	local autologin_session=""
-	if [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
-		autologin_session="niri"
-	elif [[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
+
+	# Session selection order:
+	#   1. ARCHWAY_AUTOLOGIN_SESSION env var (explicit user override)
+	#      e.g. ARCHWAY_AUTOLOGIN_SESSION=niri ./infra/bootstrap.sh
+	#   2. plasma (canonical archinstall baseline — always-working fallback)
+	#   3. plasmawayland (older Plasma session name)
+	#   4. niri (T4 — only autologged-in if no Plasma is present, e.g. on a
+	#      machine the user installed via Minimal profile against archway's
+	#      previous defaults; not preferred because T4 is allowed to break)
+	if [[ -n "${ARCHWAY_AUTOLOGIN_SESSION:-}" ]]; then
+		autologin_session="$ARCHWAY_AUTOLOGIN_SESSION"
+		log_info "Using ARCHWAY_AUTOLOGIN_SESSION override: $autologin_session"
+	elif [[ -f "/usr/share/wayland-sessions/plasma.desktop" ]] ||
+		[[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
 		autologin_session="plasma"
 	elif [[ -f "/usr/share/wayland-sessions/plasmawayland.desktop" ]]; then
 		autologin_session="plasmawayland"
+	elif [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
+		autologin_session="niri"
 	fi
 
 	if [[ -z "$autologin_session" ]]; then
-		log_warn "No known SDDM session found (niri/plasma). Skipping autologin configuration"
+		log_warn "No known SDDM session found (plasma/niri). Skipping autologin configuration"
 		return 0
 	fi
 
@@ -1160,13 +1173,16 @@ configure_sddm_autologin() {
 		log_warn "To enable autologin manually, create $autologin_conf with:"
 		log_warn "  [Autologin]"
 		log_warn "  User=yourusername"
-		log_warn "  Session=niri"
+		log_warn "  Session=$autologin_session"
 		return 0
 	fi
 
-	# Check if already configured for this user
-	if [[ -f "$autologin_conf" ]] && grep -q "User=$autologin_user" "$autologin_conf" 2>/dev/null; then
-		log_info "SDDM autologin already configured for $autologin_user"
+	# Check if already configured for this user AND session (re-run safe;
+	# also reapplies if the user changed ARCHWAY_AUTOLOGIN_SESSION).
+	if [[ -f "$autologin_conf" ]] &&
+		grep -q "User=$autologin_user" "$autologin_conf" 2>/dev/null &&
+		grep -q "Session=$autologin_session" "$autologin_conf" 2>/dev/null; then
+		log_info "SDDM autologin already configured for $autologin_user → $autologin_session"
 		return 0
 	fi
 

@@ -136,9 +136,33 @@ delete `\EFI\limine\` and remove the Limine UEFI entry with `efibootmgr -b
 
 | Setting | Value |
 |---------|-------|
-| Profile | **Minimal** |
+| Profile type | **Desktop** |
+| Desktop environment | **KDE Plasma** |
+| Login manager | **SDDM** (default for KDE) |
+| Greeter / extras | Accept the profile defaults |
 
-Do NOT select a desktop environment - archway handles this.
+**Why KDE Plasma is the canonical archway baseline:**
+
+archway's Tier 4 (T4) layer installs DankMaterialShell + niri as the daily-driver
+session. T4 is allowed to break — by design. The KDE Plasma session is the
+**always-working fallback**: if niri/DMS fails to start, you log into Plasma
+from SDDM and have a fully functional graphical desktop, browser, file manager,
+network manager, and bluetooth UI.
+
+Picking the KDE Plasma profile in archinstall (instead of "Minimal") gives us
+this fallback for free, with the distro's blessed package set. archway then
+**layers on top** — it does not re-install Plasma. Specifically:
+
+- `infra/pkgs/30-desktop.txt` lists only what archway *adds* on top of
+  `plasma-meta` (the metapackage installed by the archinstall KDE profile).
+  Anything provided by `plasma-meta` is omitted from that list.
+- `infra/doctor.sh --audit-packages` knows about the `plasma-meta` baseline
+  and will not flag those packages as "untracked".
+- `infra/dotfiles.sh` deploys `~/.config/autostart/kwalletd6.desktop` with
+  `Hidden=true` to disable KWallet — archway uses gnome-keyring as its single
+  Secret Service provider, and the two daemons race for the same D-Bus name.
+
+Do NOT select any *additional* desktop environment alongside Plasma.
 
 ### 1.8 Audio
 

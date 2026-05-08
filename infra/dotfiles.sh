@@ -354,6 +354,21 @@ TMPL
 	# ==========================================================================
 	if [[ "$(uname)" != "Darwin" ]]; then
 		# ==========================================================================
+		# XDG AUTOSTART OVERRIDES (mask system-level .desktop entries)
+		# ==========================================================================
+		# Per-user copies in ~/.config/autostart/ override /etc/xdg/autostart/
+		# entries with the same filename (Desktop Entry Spec). We use this to
+		# disable kwalletd6, which the KDE Plasma archinstall profile pulls in
+		# and which races gnome-keyring for the Secret Service D-Bus name.
+		log_info "--- XDG autostart overrides ---"
+		mkdir -p "${HOME}/.config/autostart"
+		for entry in "${DOTS_DIR}"/autostart/*.desktop; do
+			[[ -f "$entry" ]] || continue
+			entry_name="$(basename "$entry")"
+			link_dotfile "$entry" "${HOME}/.config/autostart/${entry_name}"
+		done
+
+		# ==========================================================================
 		# ENVIRONMENT.D (systemd user session environment)
 		# ==========================================================================
 		log_info "--- Environment.d ---"

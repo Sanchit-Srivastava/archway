@@ -1,0 +1,18 @@
+[Desktop Entry]
+# Per-user XDG autostart override that masks /etc/xdg/autostart/kwalletd6.desktop
+# (shipped by the kwallet package, pulled in by the KDE Plasma archinstall profile).
+#
+# Why: archway uses gnome-keyring as its single Secret Service provider (T1).
+# When KWallet's autostart is also active, both daemons race to claim the
+# org.freedesktop.secrets D-Bus name, which intermittently breaks libsecret
+# clients (Bitwarden CLI, gh, opencode) and pops the KWallet wizard at login.
+#
+# Setting Hidden=true here causes XDG to skip the system-level entry per the
+# Desktop Entry Specification §"Hidden". This is reversible (delete the file)
+# and survives KDE upgrades.
+#
+# Source of truth: archway repo at dots/autostart/kwalletd6.desktop
+# Symlinked to ~/.config/autostart/kwalletd6.desktop by infra/dotfiles.sh.
+Type=Application
+Name=KDE Wallet (disabled by archway)
+Hidden=true

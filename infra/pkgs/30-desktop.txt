@@ -1,15 +1,30 @@
-# Tier 3 (desktop) — KDE Plasma graphical fallback session + GUI apps
+# Tier 3 (desktop) — GUI apps layered on the KDE Plasma archinstall baseline
 #
-# Goal: a fully working graphical desktop using KDE Plasma. This is the
-# "robust baseline GUI" — entirely from official repos, no AUR, no DMS.
-# If T4 (DMS) ever breaks, the user logs into Plasma from SDDM and has a
-# functional daily-driver desktop.
+# CONTEXT: archway assumes the system was installed via archinstall using the
+# **KDE Plasma** desktop profile. That profile ships:
+#   - plasma-meta  (pulls the full `plasma` group: bluedevil, plasma-desktop,
+#                   plasma-nm, plasma-pa, plasma-workspace, kscreen, sddm-kcm,
+#                   kwallet*, polkit-kde-agent, xdg-desktop-portal-kde, …)
+#   - konsole, dolphin, sddm
+#   - pipewire stack (already in T2)
+# These provide the "robust baseline GUI" — if T4 (DMS / niri) breaks, the
+# user logs into Plasma from SDDM and has a fully functional daily driver.
+#
+# This file therefore lists only what archway *adds* on top of plasma-meta:
+# additional GUI apps, alternative file managers, the LaTeX/PDF stack, the
+# polkit-gnome agent (used by non-KDE sessions like niri), and so on.
+#
+# Anything provided by `plasma-meta` is intentionally OMITTED — pacman -S
+# --needed in bootstrap.sh would be a no-op for those, but listing them here
+# would blur the line between "archinstall baseline" and "archway additions"
+# and confuse the package audit.
 #
 # Keep packages grouped by section; keep entries alphabetized within a section.
 
 # =============================================================================
 # TERMINAL EMULATOR (graphical)
 # =============================================================================
+# konsole is provided by the archinstall KDE profile; ghostty is the daily driver.
 ghostty
 
 # =============================================================================
@@ -43,24 +58,22 @@ qutebrowser
 # =============================================================================
 # KDE PLASMA (fallback graphical session)
 # =============================================================================
-# Minimal Plasma — enough for a working daily-driver desktop without DMS.
-bluedevil
-kde-gtk-config
-kscreen
-plasma-desktop
-plasma-nm
-plasma-pa
+# Provided by the archinstall `kde` profile via `plasma-meta` — listed here as
+# documentation only, NOT installed from this file. See header.
+#   plasma-meta, bluedevil, kde-gtk-config, kscreen, plasma-desktop,
+#   plasma-nm, plasma-pa, sddm, sddm-kcm, kwallet (disabled via
+#   dots/autostart/kwalletd6.desktop), konsole, dolphin, …
 
 # =============================================================================
-# DISPLAY MANAGER + BOOT SPLASH
+# BOOT SPLASH
 # =============================================================================
+# sddm itself is provided by the archinstall KDE profile.
 plymouth
-sddm
 
 # =============================================================================
 # FILE MANAGERS (graphical)
 # =============================================================================
-dolphin
+# dolphin is provided by the archinstall KDE profile.
 gnome-disk-utility
 nautilus
 nautilus-python
@@ -79,13 +92,16 @@ system-config-printer
 # =============================================================================
 # XDG PORTALS (file dialogs, screen sharing)
 # =============================================================================
+# xdg-desktop-portal-kde is provided by plasma-meta (used by Plasma session).
+# We add the gnome/gtk portals for non-KDE sessions (niri, GTK apps).
 xdg-desktop-portal
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 
 # =============================================================================
-# POLKIT GUI AGENT (auth prompts under non-DMS sessions like Plasma)
+# POLKIT GUI AGENT (auth prompts under non-KDE sessions like niri)
 # =============================================================================
+# polkit-kde-agent is provided by plasma-meta and used by the Plasma session.
 polkit-gnome
 
 # =============================================================================

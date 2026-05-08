@@ -631,21 +631,32 @@ audit_packages() {
 	# Build union of all tier package lists.
 	# Native: pkgs/{10-base,20-shell,30-desktop,40-extras}.txt
 	# Foreign (AUR): pkgs/*.aur.txt
+	# Baseline (NOT installed by archway, but expected because the user
+	# selected the KDE Plasma desktop profile in archinstall — see
+	# docs/SETUP.md §1.7): pkgs/baseline.*.txt — counted only as an
+	# allowlist for the "untracked native" check, not as something to install.
 	: >"${tmpdir}/repo-native.raw"
 	: >"${tmpdir}/repo-foreign.raw"
+	: >"${tmpdir}/repo-baseline.raw"
 	local f
 	for f in "${SCRIPT_DIR}/pkgs"/*.txt; do
 		[[ -f "$f" ]] || continue
-		case "$f" in
+		case "$(basename "$f")" in
+		baseline.*) cat "$f" >>"${tmpdir}/repo-baseline.raw" ;;
 		*.aur.txt) cat "$f" >>"${tmpdir}/repo-foreign.raw" ;;
 		*) cat "$f" >>"${tmpdir}/repo-native.raw" ;;
 		esac
 	done
 	grep -v '^[[:space:]]*#' "${tmpdir}/repo-native.raw" | grep -v '^[[:space:]]*$' | sort -u >"${tmpdir}/repo-native.txt"
 	grep -v '^[[:space:]]*#' "${tmpdir}/repo-foreign.raw" | grep -v '^[[:space:]]*$' | sort -u >"${tmpdir}/repo-foreign.txt"
+	grep -v '^[[:space:]]*#' "${tmpdir}/repo-baseline.raw" | grep -v '^[[:space:]]*$' | sort -u >"${tmpdir}/repo-baseline.txt"
+
+	# Allowlist for the audit = repo-native ∪ repo-baseline.
+	# (Baseline packages are tolerated as "installed but not driven by archway".)
+	sort -u "${tmpdir}/repo-native.txt" "${tmpdir}/repo-baseline.txt" >"${tmpdir}/allowed-native.txt"
 
 	# Compare
-	comm -23 "${tmpdir}/explicit-native.txt" "${tmpdir}/repo-native.txt" >"${tmpdir}/untracked-native.txt"
+	comm -23 "${tmpdir}/explicit-native.txt" "${tmpdir}/allowed-native.txt" >"${tmpdir}/untracked-native.txt"
 	comm -23 "${tmpdir}/explicit-foreign.txt" "${tmpdir}/repo-foreign.txt" >"${tmpdir}/untracked-foreign.txt"
 	comm -13 "${tmpdir}/explicit-native.txt" "${tmpdir}/repo-native.txt" >"${tmpdir}/missing-native.txt"
 	comm -13 "${tmpdir}/explicit-foreign.txt" "${tmpdir}/repo-foreign.txt" >"${tmpdir}/missing-foreign.txt"
