@@ -5,9 +5,7 @@
 # Putting them in T4 means a failure here NEVER blocks T1/T2/T3 from
 # completing — the system remains fully usable on Plasma + CLI tools.
 #
-# A few packages here (snapper-rollback) are logically T1, but since they are
-# only convenience wrappers (the underlying tools work without them), the
-# resilience benefit of "AUR can't break the baseline" wins.
+# AUR packages stay out of the baseline so failures here cannot break T1-T3.
 
 # =============================================================================
 # BROWSERS
@@ -45,8 +43,3 @@ pacseek
 # =============================================================================
 ltex-ls-plus-bin
 vale-bin
-
-# =============================================================================
-# SNAPSHOTS (convenience wrapper for snapper rollback flow)
-# =============================================================================
-snapper-rollback

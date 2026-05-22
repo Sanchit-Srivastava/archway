@@ -62,12 +62,7 @@ declare -A CHECK_IDS=(
 	[ripgrep]="check_ripgrep"
 	[lazygit]="check_lazygit"
 	["environment-d"]="check_environment_d"
-	[btrfs]="check_btrfs_root"
-	[snapper]="check_snapper_configured"
-	["snapper-timers"]="check_snapper_timers"
-	["btrfs-default-subvol"]="check_btrfs_default_subvol"
 	["systemd-boot"]="check_systemd_boot"
-	["snapper-rollback"]="check_snapper_rollback"
 	[plasma]="check_plasma_fallback"
 	[keyd]="check_keyd"
 	[dms]="check_dms_installed"
@@ -76,7 +71,7 @@ declare -A CHECK_IDS=(
 )
 
 # Tier assignment for each check ID, mirroring infra/pkgs/ tier files.
-#   T1 base    - core OS (audio, network, polkit, btrfs, boot)
+#   T1 base    - core OS (audio, network, polkit, boot)
 #   T2 shell   - CLI tools, dotfiles, headless services
 #   T3 desktop - GUI baseline (Plasma fallback, portals, terminal/file-manager)
 #   T4 extras  - DMS, niri, AUR-only stuff (zotero plugins, etc.)
@@ -91,12 +86,7 @@ declare -A CHECK_TIERS=(
 	[polkit]=1
 	["accounts-daemon"]=1
 	[keyd]=1
-	[btrfs]=1
-	[snapper]=1
-	["snapper-timers"]=1
-	["btrfs-default-subvol"]=1
 	["systemd-boot"]=1
-	["snapper-rollback"]=1
 	# T2 shell / CLI
 	["user-services"]=2
 	[yay]=2
@@ -479,108 +469,6 @@ check_environment_d() {
 		"Run: ./infra/dotfiles.sh"
 }
 
-# Btrfs checks
-check_btrfs_root() {
-	local fstype
-	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
-
-	if [[ "$fstype" != "btrfs" ]]; then
-		run_check \
-			"Root filesystem is Btrfs (skipped - not Btrfs)" \
-			"true" \
-			""
-		return 0
-	fi
-
-	run_check \
-		"Root filesystem is Btrfs" \
-		"true" \
-		""
-}
-
-check_snapper_configured() {
-	local fstype
-	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
-
-	if [[ "$fstype" != "btrfs" ]]; then
-		run_check \
-			"Snapper configured (skipped - not Btrfs)" \
-			"true" \
-			""
-		return 0
-	fi
-
-	run_check \
-		"Snapper 'root' config exists" \
-		"snapper -c root list >/dev/null 2>&1" \
-		"Run bootstrap.sh to configure snapper"
-}
-
-check_snapper_timers() {
-	local fstype
-	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
-
-	if [[ "$fstype" != "btrfs" ]]; then
-		run_check \
-			"Snapper timers enabled (skipped - not Btrfs)" \
-			"true" \
-			""
-		return 0
-	fi
-
-	run_check \
-		"Snapper timeline timer enabled" \
-		"systemctl is-enabled snapper-timeline.timer >/dev/null 2>&1" \
-		"Enable: sudo systemctl enable --now snapper-timeline.timer"
-}
-
-check_limine_snapper() {
-	# Deprecated: kept for backward compatibility; delegates to new checks.
-	check_systemd_boot
-	check_snapper_rollback
-}
-
-# Verifies the Btrfs default subvolume matches the subvolume `/` is mounted
-# from. Required for `snapper rollback` (it reads the default to determine the
-# rollback ambit). archinstall often leaves this as ID 5 (top-level), which
-# breaks rollback even though the @/@home/@snapshots layout is otherwise fine.
-# Read-only check; the fix lives in bootstrap.sh:configure_btrfs_default_subvolume.
-check_btrfs_default_subvol() {
-	local fstype root_subvol default_id root_id
-	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
-	if [[ "$fstype" != "btrfs" ]]; then
-		run_check "Btrfs default subvolume matches root (skipped - not Btrfs)" "true" ""
-		return 0
-	fi
-
-	root_subvol=$(findmnt -n -o FSROOT / 2>/dev/null)
-	root_subvol="${root_subvol#/}"
-	if [[ -z "$root_subvol" ]]; then
-		# Root mounted from top-level (FSROOT == "/"); rollback layout impossible.
-		run_check \
-			"Btrfs default subvolume matches root" \
-			"false" \
-			"Root is mounted from Btrfs top-level (ID 5). Rollback requires / to live in a named subvolume (e.g. @). Restructure needed; can't fix in-place."
-		return 0
-	fi
-
-	default_id=$(sudo btrfs subvolume get-default / 2>/dev/null | awk '{print $2}')
-	root_id=$(sudo btrfs subvolume list / 2>/dev/null | awk -v sv="$root_subvol" '$NF == sv {print $2; exit}')
-
-	if [[ -z "$default_id" || -z "$root_id" ]]; then
-		run_check \
-			"Btrfs default subvolume matches root" \
-			"false" \
-			"Could not read default/root subvolume IDs (need sudo). Re-run with: sudo ./infra/doctor.sh --only btrfs-default-subvol"
-		return 0
-	fi
-
-	run_check \
-		"Btrfs default subvolume matches root (ID ${root_id} = ${root_subvol})" \
-		"[[ '$default_id' == '$root_id' ]]" \
-		"Default is ID ${default_id}, expected ${root_id}. Fix: sudo btrfs subvolume set-default ${root_id} /  (or re-run ./infra/bootstrap.sh --tier 1)"
-}
-
 check_systemd_boot() {
 	# Skip on non-UEFI systems
 	if [[ ! -d /sys/firmware/efi ]]; then
@@ -591,19 +479,6 @@ check_systemd_boot() {
 		"systemd-boot installed in ESP" \
 		"bootctl is-installed 2>/dev/null | grep -q '^yes'" \
 		"Install: sudo bootctl install (or re-run bootstrap.sh)"
-}
-
-check_snapper_rollback() {
-	local fstype
-	fstype=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
-	if [[ "$fstype" != "btrfs" ]]; then
-		run_check "snapper-rollback (skipped - not Btrfs)" "true" ""
-		return 0
-	fi
-	run_check \
-		"snapper-rollback installed" \
-		"pacman -Q snapper-rollback >/dev/null 2>&1" \
-		"Install: yay -S snapper-rollback"
 }
 
 check_plasma_fallback() {
@@ -675,27 +550,27 @@ audit_packages() {
 	echo ""
 
 	if [[ "$untracked_native_count" -gt 0 ]]; then
-		printf "${YELLOW}Untracked native packages (%s):${NC}\n" "$untracked_native_count"
+		printf "%bUntracked native packages (%s):%b\n" "$YELLOW" "$untracked_native_count" "$NC"
 		sed 's/^/  - /' "${tmpdir}/untracked-native.txt"
 		echo ""
 		echo "  Action: Add to a tier file under infra/pkgs/ or remove"
 		echo ""
 	else
-		printf "${GREEN}No untracked native packages${NC}\n"
+		printf "%bNo untracked native packages%b\n" "$GREEN" "$NC"
 	fi
 
 	if [[ "$untracked_foreign_count" -gt 0 ]]; then
-		printf "${YELLOW}Untracked AUR packages (%s):${NC}\n" "$untracked_foreign_count"
+		printf "%bUntracked AUR packages (%s):%b\n" "$YELLOW" "$untracked_foreign_count" "$NC"
 		sed 's/^/  - /' "${tmpdir}/untracked-foreign.txt"
 		echo ""
 		echo "  Action: Add to infra/pkgs/40-extras.aur.txt or remove"
 		echo ""
 	else
-		printf "${GREEN}No untracked AUR packages${NC}\n"
+		printf "%bNo untracked AUR packages%b\n" "$GREEN" "$NC"
 	fi
 
 	if [[ "$missing_native_count" -gt 0 ]]; then
-		printf "${YELLOW}Missing native packages (%s):${NC}\n" "$missing_native_count"
+		printf "%bMissing native packages (%s):%b\n" "$YELLOW" "$missing_native_count" "$NC"
 		sed 's/^/  - /' "${tmpdir}/missing-native.txt"
 		echo ""
 		echo "  Action: Run ./infra/bootstrap.sh to install"
@@ -703,7 +578,7 @@ audit_packages() {
 	fi
 
 	if [[ "$missing_foreign_count" -gt 0 ]]; then
-		printf "${YELLOW}Missing AUR packages (%s):${NC}\n" "$missing_foreign_count"
+		printf "%bMissing AUR packages (%s):%b\n" "$YELLOW" "$missing_foreign_count" "$NC"
 		sed 's/^/  - /' "${tmpdir}/missing-foreign.txt"
 		echo ""
 		echo "  Action: Run ./infra/bootstrap.sh to install"
@@ -716,11 +591,11 @@ audit_packages() {
 
 	echo "========================================"
 	if [[ "$total_untracked" -eq 0 && "$total_missing" -eq 0 ]]; then
-		printf "${GREEN}System is in sync with repository${NC}\n"
+		printf "%bSystem is in sync with repository%b\n" "$GREEN" "$NC"
 		rm -rf "$tmpdir"
 		return 0
 	else
-		printf "${YELLOW}Found %s untracked and %s missing packages${NC}\n" "$total_untracked" "$total_missing"
+		printf "%bFound %s untracked and %s missing packages%b\n" "$YELLOW" "$total_untracked" "$total_missing" "$NC"
 		rm -rf "$tmpdir"
 		return 1
 	fi
@@ -806,13 +681,8 @@ main() {
 			echo "  lazygit          Lazygit (git TUI) installed"
 			echo "  environment-d    Environment.d config linked"
 			echo ""
-			echo "  # Btrfs & Snapshots (conditional)"
-			echo "  btrfs            Root filesystem is Btrfs"
-			echo "  snapper          Snapper config exists"
-			echo "  snapper-timers   Snapper timeline timer enabled"
-			echo "  btrfs-default-subvol  Btrfs default subvol = root subvol (snapper rollback prereq)"
+			echo "  # Boot"
 			echo "  systemd-boot     systemd-boot installed in ESP"
-			echo "  snapper-rollback snapper-rollback CLI installed"
 			echo ""
 			echo "  # Fallback Session"
 			echo "  plasma           KDE Plasma fallback installed"
@@ -943,13 +813,8 @@ main() {
 		gated_check lazygit
 		gated_check environment-d
 
-		# Btrfs checks
-		gated_check btrfs
-		gated_check snapper
-		gated_check snapper-timers
-		gated_check btrfs-default-subvol
+		# Boot
 		gated_check systemd-boot
-		gated_check snapper-rollback
 
 		# Fallback
 		gated_check plasma

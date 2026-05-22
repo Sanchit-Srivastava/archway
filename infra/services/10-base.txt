@@ -45,10 +45,3 @@ tailscaled
 
 # keyd: kernel-level key remapping (caps/escape swap on internal keyboard)
 keyd
-
-# =============================================================================
-# BTRFS SNAPSHOTS
-# =============================================================================
-# Note: snapper-timeline.timer / snapper-cleanup.timer are enabled
-# conditionally by bootstrap.sh configure_snapper() when on Btrfs.
-# Do not list them here.

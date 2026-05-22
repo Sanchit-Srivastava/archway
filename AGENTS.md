@@ -76,7 +76,7 @@ just check <check-id>
 ```
 
 Available check IDs: `pipewire`, `wireplumber`, `xdg-portal`, `hyprland`, `bluetooth`,
-`networkmanager`, `dotfiles`, `snapper`, etc. Run `just checks` for full list.
+`networkmanager`, `dotfiles`, etc. Run `just checks` for full list.
 
 ### Linting and Formatting
 
@@ -95,7 +95,6 @@ archway/
 │   ├── bootstrap-mac.sh      # macOS bootstrap (Homebrew + shell)
 │   ├── dotfiles.sh           # User dotfile symlinker (cross-platform)
 │   ├── doctor.sh             # System validation/health checks
-│   ├── pre-bootstrap.sh      # Btrfs snapshot creator
 │   ├── pkgs/                 # Per-tier package lists (Arch)
 │   │   ├── 10-base.txt       # T1 native (core OS)
 │   │   ├── 20-shell.txt      # T2 native (CLI/shell)

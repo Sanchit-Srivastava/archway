@@ -56,15 +56,19 @@ lower-tier completion markers intact.
 
 | Tier | Name    | Contents                                                              | Failure tolerance |
 |------|---------|-----------------------------------------------------------------------|-------------------|
-| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit, PAM, snapper, systemd-boot, keyd, firewall | Must succeed — bricks system if it fails |
+| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit, PAM, systemd-boot, keyd, firewall | Must succeed — bricks system if it fails |
 | 2    | shell   | CLI tools, editors, dotfile prerequisites, secrets, zsh as default shell | Must succeed for usable headless system |
 | 3    | desktop | KDE Plasma + SDDM + portals + browsers + GUI apps (zathura, latex, …) | Optional — system remains usable headless if it fails |
 | 4    | extras  | All AUR packages (yay), DMS, niri, messaging apps, obsidian            | Always non-fatal — falls back to Plasma |
 
 **Why AUR is strictly tier 4:** AUR is by far the most common failure mode
-(builds break, upstream URLs rot, signatures change). Even packages that are
-logically tier 1 (e.g. `snapper-rollback`) live in tier 4 if they come from
-AUR. Resilience wins over logical grouping.
+(builds break, upstream URLs rot, signatures change). Resilience wins over
+logical grouping.
+
+**Recovery model:** archway does not configure filesystem snapshots by default.
+The expected recovery path is a fresh Arch install, re-running this repo, and
+restoring user data from backups. This keeps the baseline independent of Btrfs
+subvolume, fstab, and rollback state.
 
 **Per-tier markers:** each successful tier writes
 `~/.config/archway/bootstrap.tier{N}.complete`. The aggregate
@@ -127,7 +131,7 @@ package/dotfile tier model. Filter the same way:
 ```
 ./infra/doctor.sh --up-to 2   # core + CLI checks (no GUI/DMS)
 ./infra/doctor.sh --up-to 3   # add GUI baseline
-./infra/doctor.sh --tier 1    # only T1 (audio, network, btrfs, …)
+./infra/doctor.sh --tier 1    # only T1 (audio, network, boot, …)
 ./infra/doctor.sh --only ID   # single check (see --list)
 ```
 

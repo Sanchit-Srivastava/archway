@@ -78,22 +78,19 @@ See the **[Complete Setup Guide](docs/SETUP.md)** for step-by-step instructions 
 git clone https://github.com/Sanchit-Srivastava/archway.git
 cd archway
 
-# 2. (Optional) Create a safety snapshot if on Btrfs
-sudo ./infra/pre-bootstrap.sh create
-
-# 3. Run the bootstrap script (installs packages, enables services)
+# 2. Run the bootstrap script (installs packages, enables services)
 ./infra/bootstrap.sh
 
-# 4. Reboot to start SDDM (graphical login)
+# 3. Reboot to start SDDM (graphical login)
 reboot
 
-# 5. After login, apply user dotfiles
+# 4. After login, apply user dotfiles
 ./infra/dotfiles.sh
 
-# 6. (Optional) Install DankMaterialShell for full desktop experience
+# 5. (Optional) Install DankMaterialShell for full desktop experience
 ./install-dms.sh
 
-# 7. Validate the system
+# 6. Validate the system
 ./infra/doctor.sh
 ```
 
@@ -105,7 +102,6 @@ archway/
 │   ├── bootstrap.sh          # Tiered installer (--tier/--up-to/--tiers)
 │   ├── dotfiles.sh           # User dotfile symlinker
 │   ├── doctor.sh             # System validation
-│   ├── pre-bootstrap.sh      # Btrfs snapshot creator
 │   ├── pkgs/                 # Per-tier package lists
 │   │   ├── 10-base.txt       # T1 native (core OS)
 │   │   ├── 20-shell.txt      # T2 native (CLI/shell)
@@ -243,21 +239,7 @@ just doctor     # Run validation checks
 | Polkit prompts missing | DMS provides polkit agent; ensure DMS is running |
 | SSH keys not found | Unlock Bitwarden Desktop, check `SSH_AUTH_SOCK` |
 
-## Rollback (Btrfs)
+## Recovery
 
-If something breaks after bootstrap:
-
-```bash
-# List snapshots
-snapper list
-
-# Rollback to a snapshot from the running system, then reboot:
-sudo snapper rollback <snapshot-number>
-reboot
-
-# If the system is unbootable, boot a live USB and either:
-#   - chroot in and run snapper rollback, or
-#   - swap the @ subvolume manually with btrfs subvolume snapshot
-# (archway uses systemd-boot; there is no in-menu snapshot picker.)
-```
-
+archway does not configure filesystem snapshots by default. If the OS breaks,
+reinstall Arch, redeploy this repo, and restore user data from backups.

@@ -1,7 +1,7 @@
 # Tier 1 (base) — Core OS plumbing
 #
 # Goal: a bootable, networked, secure system with audio, bluetooth, fonts,
-# snapshot safety, and bootloader management. No GUI, no shell QoL, no editors.
+# and bootloader management. No GUI, no shell QoL, no editors.
 # After T1, the system can be administered from a TTY and recovered.
 #
 # Keep packages grouped by section; keep entries alphabetized within a section.
@@ -10,13 +10,6 @@
 # BASE SYSTEM
 # =============================================================================
 base-devel
-
-# =============================================================================
-# BTRFS & SNAPSHOTS
-# =============================================================================
-btrfs-progs
-snap-pac
-snapper
 
 # =============================================================================
 # AUDIO SYSTEM (PipeWire stack)

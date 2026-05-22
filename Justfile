@@ -77,10 +77,6 @@ update:
     sudo pacman -Syu
     yay -Syu
 
-# Create pre-bootstrap snapshot (Btrfs only)
-snapshot:
-    sudo ./infra/pre-bootstrap.sh create
-
 # =============================================================================
 # OPT-IN: CACHYOS EXTRAS
 # =============================================================================

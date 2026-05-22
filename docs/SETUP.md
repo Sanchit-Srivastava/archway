@@ -41,7 +41,6 @@ Examples:
 - niri compositor + DankMaterialShell desktop
 - Modern CLI tools (zsh, starship, eza, bat, fzf, etc.)
 - PipeWire audio, Bluetooth, NetworkManager
-- Btrfs snapshots with `snapper` rollback (if using Btrfs)
 - Fingerprint authentication (if hardware supports it)
 
 ---
@@ -71,20 +70,13 @@ Boot from the Arch ISO and run `archinstall`. Configure these settings:
 | Setting | Recommended Value |
 |---------|-------------------|
 | Partitioning | **Best effort default** or manual |
-| Filesystem | **btrfs** (required for snapshots, highly recommended) |
+| Filesystem | **ext4** |
 | Encryption | **LUKS** (full disk encryption - strongly recommended) |
-| Compression | **zstd** (if prompted) |
+| Compression | Not applicable |
 
-**Important for Btrfs**: archinstall creates subvolumes automatically. The default layout works with archway's snapper configuration.
-
-If using **manual partitioning** with Btrfs, create these subvolumes:
-```
-@           → /           (root)
-@home       → /home       (user data)
-@var_log    → /var/log    (logs)
-```
-
-archway's bootstrap will create `@snapshots` automatically if missing.
+archway no longer configures Btrfs snapshots by default. The recommended
+recovery model is: reinstall Arch with the same simple ext4 + LUKS defaults,
+redeploy this repo, then restore user data from backups.
 
 ### 1.3 Bootloader
 
@@ -101,11 +93,6 @@ hook that auto-runs `bootctl update` on systemd upgrades.
 - Auto-detects Windows Boot Manager for dual-boot
 - Default and recommended bootloader on CachyOS
 - Trivial to make idempotent in scripts
-
-**Snapshot rollback:** systemd-boot has no in-menu snapshot picker. archway
-installs `snapper-rollback` (AUR) for command-line rollback from a running
-system. If the system is unbootable, recover via a live USB. See
-[Section 8.5](#85-rollback-btrfs).
 
 If you previously used Limine on this machine, `bootctl install` will write
 systemd-boot to the ESP without removing the Limine binary; you may need to
@@ -228,22 +215,7 @@ cd archway
 
 ## Part 3: System Bootstrap
 
-### 3.1 Create Safety Snapshot (Btrfs only)
-
-If your root filesystem is Btrfs, create a snapshot before making changes:
-
-```bash
-# Check if Btrfs
-findmnt -n -o FSTYPE /
-# Should output: btrfs
-
-# Create pre-bootstrap snapshot (if snapper is configured)
-# Skip this on first run - bootstrap will configure snapper
-# After first successful run, always do this before major changes:
-# sudo ./infra/pre-bootstrap.sh create
-```
-
-### 3.2 Run Bootstrap
+### 3.1 Run Bootstrap
 
 This installs all packages, enables services, and configures the system:
 
@@ -253,21 +225,18 @@ This installs all packages, enables services, and configures the system:
 
 **What it does**:
 - Installs yay (AUR helper)
-- Installs ~100 packages from official repos
-- Installs 3 packages from AUR
+- Installs baseline packages from official repos
+- Installs configured AUR packages when using the full profile
 - Enables system services (NetworkManager, Bluetooth, SDDM, etc.)
 - Configures PAM for gnome-keyring auto-unlock
 - Configures PAM for fingerprint authentication
 - Creates PAM config for DMS lock screen
 - Configures XDG portals for niri/Wayland
 - Configures SDDM autologin
-- Sets up Btrfs snapshots with snapper (if Btrfs)
 
 **Duration**: 10-30 minutes depending on internet speed.
 
-If prompted about pre-bootstrap snapshot, type `y` to continue (first run only).
-
-### 3.3 Reboot
+### 3.2 Reboot
 
 ```bash
 reboot
@@ -568,38 +537,15 @@ just audit
 # Or: ./infra/doctor.sh --audit-packages
 ```
 
-### 8.4 Create Snapshot Before Major Changes
+### 8.4 Recovery Model
 
-```bash
-sudo ./infra/pre-bootstrap.sh create
-```
+archway does not configure filesystem snapshots by default. If the OS breaks,
+the intended recovery path is a fresh Arch install, redeploying this repo, and
+restoring user data from backups.
 
-### 8.5 Rollback (Btrfs)
-
-If something breaks:
-
-```bash
-# List snapshots
-snapper list
-
-# Option 1: Rollback from a running system (preferred)
-sudo snapper rollback <snapshot-number>
-reboot
-
-# Option 2: Use the snapper-rollback CLI wrapper (AUR, configured by bootstrap)
-sudo snapper-rollback <snapshot-number>
-reboot
-
-# Option 3: System unbootable -> boot a live USB (Arch/CachyOS), then either
-#   a) chroot in and run snapper rollback, or
-#   b) manually swap the @ subvolume:
-#        mount -o subvolid=5 /dev/<dev> /mnt
-#        mv /mnt/@ /mnt/@.broken
-#        btrfs subvolume snapshot /mnt/@snapshots/<N>/snapshot /mnt/@
-#        reboot
-#
-# (systemd-boot has no in-menu snapshot picker, by design.)
-```
+Keep personal data backed up outside the root filesystem. A future optional
+backup/snapshot script can be added without making it part of the baseline boot
+path.
 
 ---
 
@@ -694,8 +640,6 @@ If niri/DMS completely breaks:
 | Sync archway | `just sync` |
 | Validate system | `just doctor` or `./infra/doctor.sh` |
 | Audit packages | `just audit` |
-| Create snapshot | `sudo ./infra/pre-bootstrap.sh create` |
-| List snapshots | `snapper list` |
 
 ### Key Files
 
@@ -715,7 +659,6 @@ If niri/DMS completely breaks:
 | `~/archway/infra/` | System scripts and package lists |
 | `~/archway/dots/` | User dotfiles (source of symlinks) |
 | `~/.config/` | User configuration (mostly symlinks) |
-| `/.snapshots/` | Btrfs snapshots (if using Btrfs) |
 
 ---
 
