@@ -1,14 +1,15 @@
 # archway
+
 Configuration-as-code for a reproducible Arch Linux setup.
 
-Since this a personal setup, it is intentionally and heavily opinionated. 
+Since this a personal setup, it is intentionally and heavily opinionated.
 
 This repo has not been developed or maintained with a general user in mind. Use it as-is or fork and customize.
 
 Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop workstation.
 Design: layered system baseline + user configs, with an optional desktop shell layer.
 
-### Automated installation:
+### Automated installation
 
 On a fresh Arch/CachyOS install, ensure `curl` and `git` are available first:
 
@@ -22,6 +23,9 @@ Then run one of the following:
 # Default: full install (all 4 tiers, including AUR + DankMaterialShell)
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
 
+```
+
+```bash
 # Safe: T1+T2+T3 only (skip AUR/DMS/niri — KDE Plasma fallback works)
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) safe
 
@@ -61,7 +65,6 @@ that fixes — doctor only reports. Recommended filesystem layout for
 archinstall: **ext4, single root partition, LUKS, systemd-boot**. archway's
 bootstrap handles Unified Kernel Image (UKI) layouts produced by archinstall
 automatically.
-
 
 ## Overview
 
