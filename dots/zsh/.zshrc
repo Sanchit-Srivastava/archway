@@ -12,35 +12,24 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 # =============================================================================
-# OH-MY-ZSH SETUP (auto-install if missing)
+# OH-MY-ZSH SETUP
 # =============================================================================
+# Oh-my-zsh and its plugins are installed by `just dotfiles` (see
+# infra/dotfiles.sh :: install_oh_my_zsh). We do NOT clone them lazily here:
+# that approach silently failed on fresh installs when the very first shell
+# launched before network/git were ready, leaving the user with a broken
+# shell. If you see the error below on a fresh machine, run:
+#     just dotfiles
 export ZSH="${HOME}/.oh-my-zsh"
 
-if [[ ! -d "$ZSH" ]]; then
-    echo "Installing oh-my-zsh..."
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$ZSH"
+if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
+    print -ru2 -- "[zshrc] oh-my-zsh not found at $ZSH"
+    print -ru2 -- "[zshrc] Run: just dotfiles    (from your archway repo)"
+    print -ru2 -- "[zshrc] Skipping oh-my-zsh load; prompt + plugins will be unavailable."
+    return 0
 fi
 
-# Plugins (auto-install if missing)
 ZSH_CUSTOM="${ZSH_CUSTOM:-$ZSH/custom}"
-
-if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]]; then
-    echo "Installing zsh-autosuggestions..."
-    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions \
-        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-fi
-
-if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]]; then
-    echo "Installing zsh-syntax-highlighting..."
-    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting \
-        "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-fi
-
-if [[ ! -d "$ZSH_CUSTOM/plugins/fzf-tab" ]]; then
-    echo "Installing fzf-tab..."
-    git clone --depth=1 https://github.com/Aloxaf/fzf-tab \
-        "$ZSH_CUSTOM/plugins/fzf-tab"
-fi
 
 # Oh-my-zsh configuration
 plugins=(

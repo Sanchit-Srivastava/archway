@@ -13,6 +13,19 @@ This document provides instructions for AI coding agents working in the archway 
 
 When asked to verify changes, use static analysis (shellcheck, shfmt) rather than execution.
 
+### Deployment order (target laptop, post-archinstall)
+
+The scripts must run in this order on a fresh archinstall (ext4 + LUKS +
+systemd-boot is the supported layout):
+
+1. `just bootstrap` — installs packages, fixes systemd-boot/UKI layout,
+   writes loader.conf, enables services. **Must run first.**
+2. `just dotfiles` — symlinks configs, installs oh-my-zsh + plugins
+   synchronously (NOT lazily from `.zshrc`).
+3. `just doctor` — validates. Failures here on a fresh system usually mean
+   step 1 was skipped.
+
+
 ## Project Overview
 
 **archway** is a configuration-as-code repository for a reproducible Arch Linux laptop setup.

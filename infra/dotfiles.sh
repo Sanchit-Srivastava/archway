@@ -97,6 +97,55 @@ link_dotfile() {
 	log_info "Linked: $dst -> $src"
 }
 
+# Clone a git repo idempotently. Skip if the target dir already exists and
+# looks like a valid clone (has .git). On failure (no network, git missing,
+# etc.) returns non-zero so the caller can decide whether to abort.
+# Usage: clone_if_missing <repo_url> <target_dir>
+clone_if_missing() {
+	local url="$1"
+	local target="$2"
+
+	if [[ -d "${target}/.git" ]]; then
+		log_info "Already cloned: $target"
+		return 0
+	fi
+	if [[ -e "$target" && ! -d "${target}/.git" ]]; then
+		log_warn "Path exists but is not a git clone: $target — backing up"
+		mv "$target" "${target}.bak.$(date +%s)"
+	fi
+
+	log_info "Cloning $url -> $target"
+	if ! git clone --depth=1 "$url" "$target"; then
+		log_error "Failed to clone $url"
+		return 1
+	fi
+}
+
+# Install oh-my-zsh + the plugins referenced by dots/zsh/.zshrc.
+# Runs synchronously during `just dotfiles` (NOT lazily at shell startup) so
+# that a fresh login terminal never lands in a half-broken state if the very
+# first `zsh` invocation happens before networking is up or git is installed.
+install_oh_my_zsh() {
+	log_info "--- Oh-my-zsh + plugins ---"
+
+	if ! command -v git >/dev/null 2>&1; then
+		log_error "git is not installed — cannot bootstrap oh-my-zsh"
+		log_error "Run 'just bootstrap' first (tier 1 installs git), then re-run dotfiles"
+		return 1
+	fi
+
+	local omz="${HOME}/.oh-my-zsh"
+	local custom="${omz}/custom"
+
+	clone_if_missing "https://github.com/ohmyzsh/ohmyzsh.git" "$omz" || return 1
+	clone_if_missing "https://github.com/zsh-users/zsh-autosuggestions" \
+		"${custom}/plugins/zsh-autosuggestions" || return 1
+	clone_if_missing "https://github.com/zsh-users/zsh-syntax-highlighting" \
+		"${custom}/plugins/zsh-syntax-highlighting" || return 1
+	clone_if_missing "https://github.com/Aloxaf/fzf-tab" \
+		"${custom}/plugins/fzf-tab" || return 1
+}
+
 # Main dotfile linking
 main() {
 	log_info "Installing dotfiles from ${DOTS_DIR}"
@@ -115,6 +164,13 @@ main() {
 	# ZSH
 	# ==========================================================================
 	log_info "--- Zsh ---"
+	# Bootstrap oh-my-zsh + plugins synchronously BEFORE linking .zshrc so the
+	# first interactive shell always finds $ZSH/oh-my-zsh.sh present. Doing it
+	# lazily in .zshrc (the old approach) failed silently on fresh installs
+	# whenever network or git wasn't ready yet, leaving the user with a
+	# broken shell ("no such file or directory: ~/.oh-my-zsh/oh-my-zsh.sh").
+	install_oh_my_zsh
+
 	link_dotfile "${DOTS_DIR}/zsh/.zshrc" "${HOME}/.zshrc"
 	link_dotfile "${DOTS_DIR}/zsh/.zshenv" "${HOME}/.zshenv"
 
@@ -498,7 +554,7 @@ TMPL
 	log_info ""
 	log_info "Notes:"
 	log_info "  - Restart your shell or run: source ~/.zshrc"
-	log_info "  - Oh-my-zsh and plugins will auto-install on first shell start"
+	log_info "  - Oh-my-zsh + plugins installed by dotfiles (see install_oh_my_zsh)"
 	log_info "  - Edit dots/git/.gitconfig to set your name and email"
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
 	if can_decrypt_secrets; then

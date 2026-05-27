@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Script metadata
-SCRIPT_VERSION="2026-05-08-1"
+SCRIPT_VERSION="2026-05-27-1"
 
 # Colors for output
 RED='\033[0;31m'
@@ -662,6 +662,53 @@ detect_esp_mount() {
 	return 1
 }
 
+# Return 0 if a bootable systemd-boot entry exists on this ESP.
+# systemd-boot discovers two entry types:
+#   Type #1 — text config in loader/entries/*.conf  (classic kernel + initrd)
+#   Type #2 — Unified Kernel Images in EFI/Linux/*.efi  (default for archinstall
+#            with systemd-boot + LUKS in current releases)
+# We accept either. archinstall ships UKIs and leaves loader/entries/ empty,
+# so requiring Type #1 would produce false-negatives on every fresh install.
+has_boot_entry() {
+	local esp="$1"
+	# Type #1 entries
+	if compgen -G "${esp}/loader/entries/*.conf" >/dev/null; then
+		return 0
+	fi
+	# Type #2 UKIs (auto-discovered by systemd-boot)
+	if compgen -G "${esp}/EFI/Linux/*.efi" >/dev/null; then
+		return 0
+	fi
+	return 1
+}
+
+# Write /loader/loader.conf with sensible defaults if missing or empty.
+# Uses `arch-linux*.efi` as the default glob so the newest UKI wins
+# automatically after kernel rebuilds. Safe to re-run: only writes when
+# the file is absent or empty (we don't clobber user-customised configs).
+ensure_loader_conf() {
+	local esp="$1"
+	local conf="${esp}/loader/loader.conf"
+
+	sudo mkdir -p "${esp}/loader"
+
+	if [[ -s "$conf" ]] && grep -qE '^[[:space:]]*default[[:space:]]' "$conf"; then
+		log_info "loader.conf already configured ($conf)"
+		return 0
+	fi
+
+	log_info "Writing default loader.conf to $conf"
+	sudo tee "$conf" >/dev/null <<'EOF'
+# Managed by archway bootstrap.sh
+# Auto-selects the newest discovered UKI (Type #2 entry).
+default  arch-linux*.efi
+timeout  3
+console-mode max
+editor   no
+EOF
+	sudo chmod 644 "$conf"
+}
+
 configure_systemd_boot() {
 	log_info "Checking systemd-boot installation..."
 
@@ -684,17 +731,37 @@ configure_systemd_boot() {
 	fi
 	log_info "ESP detected at: $esp"
 
-	# Idempotent install. bootctl install is safe to skip if already installed;
-	# bootctl update will only update if the on-disk binary is older.
-	if sudo bootctl --esp-path="$esp" is-installed 2>/dev/null | grep -q '^yes'; then
-		log_info "systemd-boot already installed in ESP - running update (no-op if current)"
-		sudo bootctl --esp-path="$esp" update || true
+	# Trust the on-disk binary, not `bootctl is-installed`. The latter has
+	# returned "no" on fresh archinstall systems where systemd-boot was NOT
+	# actually deployed (archinstall registered an EFI variable pointing
+	# directly at the UKI instead), even though everything else looks fine.
+	# Checking for the file is the reliable source of truth.
+	local sd_boot_bin="${esp}/EFI/systemd/systemd-bootx64.efi"
+	if [[ -f "$sd_boot_bin" ]]; then
+		log_info "systemd-boot binary present in ESP - running update (no-op if current)"
+		sudo bootctl --esp-path="$esp" update 2>/dev/null || true
 	else
-		log_info "Installing systemd-boot to $esp ..."
+		log_info "systemd-boot binary missing from ESP - installing..."
 		if ! sudo bootctl --esp-path="$esp" install; then
 			log_error "bootctl install failed - leaving existing bootloader in place"
 			return 0
 		fi
+	fi
+
+	# Ensure loader.conf exists with a sensible default UKI glob. archinstall
+	# ships an empty loader.conf when it deploys UKIs, which leaves
+	# systemd-boot with no default entry on next install/update.
+	ensure_loader_conf "$esp"
+
+	# Sanity-check that something is actually bootable. UKIs in EFI/Linux/
+	# count as Type #2 auto-discovered entries — we don't need Type #1
+	# configs in loader/entries/.
+	if has_boot_entry "$esp"; then
+		log_info "Bootable entry found (Type #1 .conf or Type #2 UKI)"
+	else
+		log_warn "No bootable entry found in $esp"
+		log_warn "  Expected: ${esp}/loader/entries/*.conf  OR  ${esp}/EFI/Linux/*.efi"
+		log_warn "  If you use UKIs, run: sudo mkinitcpio -P"
 	fi
 
 	# Ensure pacman hook exists so bootctl update runs on systemd upgrades.

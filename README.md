@@ -44,6 +44,24 @@ The installer runs in two stages with one reboot. If it doesn't resume automatic
 ~/archway/install.sh resume
 ```
 
+### Manual install (after archinstall)
+
+If you set up the base system via `archinstall` and want to apply archway by
+hand instead of the remote installer, the order matters:
+
+```bash
+just bootstrap   # MUST run first — installs packages, systemd-boot, services
+just dotfiles    # then symlink user configs and install oh-my-zsh + plugins
+just doctor      # finally, verify
+```
+
+Running `just doctor` first on a fresh archinstall will report failures
+(notably `systemd-boot installed in ESP`) that `just bootstrap` is the one
+that fixes — doctor only reports. Recommended filesystem layout for
+archinstall: **ext4, single root partition, LUKS, systemd-boot**. archway's
+bootstrap handles Unified Kernel Image (UKI) layouts produced by archinstall
+automatically.
+
 
 ## Overview
 

@@ -475,10 +475,34 @@ check_systemd_boot() {
 		run_check "systemd-boot installed (skipped - not UEFI)" "true" ""
 		return 0
 	fi
+
+	# Locate the ESP. Mirrors detect_esp_mount() in bootstrap.sh.
+	local esp=""
+	local mp
+	for mp in /efi /boot /boot/efi; do
+		if findmnt -n -o FSTYPE "$mp" 2>/dev/null | grep -q '^vfat$'; then
+			esp="$mp"
+			break
+		fi
+	done
+
+	if [[ -z "$esp" ]]; then
+		run_check \
+			"systemd-boot installed in ESP" \
+			"false" \
+			"No ESP detected at /efi, /boot, or /boot/efi. Mount the EFI System Partition and re-run: just bootstrap"
+		return
+	fi
+
+	# Pass if BOTH conditions hold:
+	#   1. systemd-boot binary deployed to ESP
+	#   2. At least one bootable entry exists (Type #1 .conf OR Type #2 UKI)
+	# archinstall with systemd-boot + LUKS ships UKIs in EFI/Linux/ and leaves
+	# loader/entries/ empty by design, so we must accept Type #2 entries.
 	run_check \
 		"systemd-boot installed in ESP" \
-		"bootctl is-installed 2>/dev/null | grep -q '^yes'" \
-		"Install: sudo bootctl install (or re-run bootstrap.sh)"
+		"test -f ${esp}/EFI/systemd/systemd-bootx64.efi && { compgen -G '${esp}/loader/entries/*.conf' >/dev/null || compgen -G '${esp}/EFI/Linux/*.efi' >/dev/null; }" \
+		"Run: just bootstrap (tier 1 will install systemd-boot and write loader.conf)"
 }
 
 check_plasma_fallback() {
