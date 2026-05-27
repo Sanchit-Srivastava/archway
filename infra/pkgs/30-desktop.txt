@@ -25,6 +25,7 @@
 # TERMINAL EMULATOR (graphical)
 # =============================================================================
 # konsole is provided by the archinstall KDE profile; ghostty is the daily driver.
+alacritty
 ghostty
 
 # =============================================================================
@@ -43,6 +44,7 @@ pamixer
 pavucontrol
 slurp
 wl-clipboard
+wtype
 
 # =============================================================================
 # BLUETOOTH TUI (works headless too, but pairs with desktop)
@@ -54,6 +56,11 @@ bluetui
 # =============================================================================
 chromium
 qutebrowser
+
+# =============================================================================
+# PHONE INTEGRATION
+# =============================================================================
+kdeconnect
 
 # =============================================================================
 # KDE PLASMA (fallback graphical session)

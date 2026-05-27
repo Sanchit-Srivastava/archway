@@ -53,6 +53,7 @@ exfatprogs
 gvfs-mtp
 gvfs-nfs
 gvfs-smb
+sshfs
 trash-cli
 udisks2
 
