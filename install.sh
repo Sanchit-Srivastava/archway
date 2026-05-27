@@ -161,8 +161,16 @@ install_dms() {
 	# Wrap in `timeout 600` (10 min): the upstream installer occasionally
 	# hangs forever if its CDN is misbehaving, which would otherwise block
 	# Stage 1 indefinitely and require a manual SIGINT.
+	#
+	# `--foreground` is REQUIRED: install-dms.sh is interactive (`read -p`)
+	# and the upstream curl|sh may also prompt. Without --foreground,
+	# `timeout` puts the child in a new process group that is NOT the
+	# terminal's foreground group, so the child is stopped with SIGTTIN
+	# the moment it touches the TTY (symptom: typing y<enter> does nothing,
+	# Ctrl+C is ignored). --foreground also makes SIGINT from the terminal
+	# propagate to the child as expected.
 	local rc=0
-	timeout 600 "$ARCHWAY_REPO_DIR/install-dms.sh" || rc=$?
+	timeout --foreground 600 "$ARCHWAY_REPO_DIR/install-dms.sh" || rc=$?
 	if [[ $rc -ne 0 ]]; then
 		if [[ $rc -eq 124 ]]; then
 			log_warn "DMS installer exceeded 10-minute timeout — aborted."
