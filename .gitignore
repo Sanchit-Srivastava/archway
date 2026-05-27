@@ -32,3 +32,9 @@ dots/opencode/.env
 
 # Reference repos (for development only)
 reference/
+
+# Neovim plugin lockfile: deliberately untracked so each fresh install
+# pulls the latest plugin commits via `:Lazy sync` on first launch.
+# Committing the lockfile would freeze plugins to whatever the dev machine
+# happened to have, which is rarely what we want.
+dots/nvim/lazy-lock.json

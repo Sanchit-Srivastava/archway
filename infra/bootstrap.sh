@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Script metadata
-SCRIPT_VERSION="2026-05-27-1"
+SCRIPT_VERSION="2026-05-27-2"
 
 # Colors for output
 RED='\033[0;31m'
@@ -112,6 +112,25 @@ check_prerequisites() {
 		die "Insufficient disk space. Need at least 5GB free, found ${available_gb}GB"
 	fi
 
+	# Confirm the ESP is mounted somewhere systemd-boot will find it. If
+	# archinstall left it unmounted (rare but possible if /etc/fstab is
+	# missing the entry), configure_systemd_boot would silently no-op and
+	# you'd only learn about it at first reboot. Fail loudly here instead.
+	local esp_mp=""
+	local mp
+	for mp in /efi /boot /boot/efi; do
+		if findmnt -n -o FSTYPE "$mp" 2>/dev/null | grep -q '^vfat$'; then
+			esp_mp="$mp"
+			break
+		fi
+	done
+	if [[ -z "$esp_mp" ]]; then
+		die "No EFI System Partition mounted at /efi, /boot, or /boot/efi.
+Check 'lsblk -f' for a vfat partition and ensure /etc/fstab mounts it.
+systemd-boot cannot be installed without a mounted ESP."
+	fi
+	log_info "ESP detected at $esp_mp"
+
 	log_info "Pre-flight checks passed"
 }
 
@@ -125,6 +144,47 @@ check_prerequisites() {
 # bootstrap. They were previously auto-enabled but caused more friction
 # (keyserver flakiness, upstream installer changes, mirror outages) than
 # benefit. To opt in, run `just setup-repos` (see infra/setup-repos.sh).
+
+# Refresh the pacman mirrorlist before doing any package work. archinstall
+# sometimes leaves a stale or slow mirrorlist, which manifests as multi-minute
+# hangs or signature failures during the big first-run upgrade. reflector
+# rewrites /etc/pacman.d/mirrorlist with the 20 fastest HTTPS mirrors.
+# Idempotent: re-running just re-sorts. Safe to skip if reflector itself
+# can't be installed (we fall back to whatever's already on disk).
+refresh_mirrors() {
+	log_info "Refreshing pacman mirrorlist via reflector..."
+	if ! command -v reflector >/dev/null 2>&1; then
+		if ! sudo pacman -S --noconfirm --needed reflector 2>/dev/null; then
+			log_warn "Could not install reflector — keeping existing mirrorlist"
+			return 0
+		fi
+	fi
+	if ! sudo reflector --latest 20 --protocol https --sort rate \
+		--save /etc/pacman.d/mirrorlist 2>/dev/null; then
+		log_warn "reflector failed — keeping existing mirrorlist"
+		return 0
+	fi
+	log_info "Mirrorlist refreshed (top 20 HTTPS mirrors by rate)"
+}
+
+# Refresh archlinux-keyring and then upgrade the system *once*. If the
+# install media is even a few weeks old, master keys may have rotated since
+# its ISO build, and `pacman -Syu` will fail with "marginal trust" or
+# "invalid or corrupted package" errors before anything gets installed.
+# Refreshing the keyring first sidesteps the most common cold-start failure.
+#
+# This replaces the per-tier `pacman -Syu` that install_pacman_packages used
+# to run (which fired four times on a full install, redundantly). With this
+# function called once from main(), each tier only installs its own delta.
+refresh_keyring_and_upgrade() {
+	log_info "Refreshing archlinux-keyring (avoids stale-key failures on fresh ISOs)..."
+	sudo pacman -Sy --noconfirm --needed archlinux-keyring
+
+	log_info "Performing initial full-system upgrade (runs once, not per-tier)..."
+	# --ask 4: auto-confirm replacement of conflicting packages (e.g.
+	# nodejs vs nodejs-lts-jod) without prompting.
+	sudo pacman -Syu --noconfirm --ask 4
+}
 
 enable_multilib() {
 	local pacman_conf="/etc/pacman.conf"
@@ -271,14 +331,10 @@ install_pacman_packages() {
 		fi
 	fi
 
-	# Upgrade existing packages first, separately from installing new ones.
-	# Combining -Syu with a package list causes pacman to refuse non-interactively
-	# when an installed package conflicts with a newly-requested one (e.g. nodejs
-	# vs nodejs-lts-jod). Splitting into two steps lets pacman resolve conflicts
-	# cleanly at install time without hardcoding workarounds.
-	log_info "Upgrading existing packages..."
-	sudo pacman -Syu --noconfirm --ask 4
-
+	# NOTE: the full-system upgrade (`pacman -Syu`) is NOT performed here.
+	# It runs exactly once at bootstrap startup (refresh_keyring_and_upgrade
+	# in main()) so a 4-tier full install doesn't redundantly re-upgrade the
+	# whole system four times. Each tier only installs its own delta.
 	log_info "Installing ${#packages[@]} pacman packages..."
 	if sudo pacman -S --needed --noconfirm "${packages[@]}"; then
 		log_info "All pacman packages installed successfully"
@@ -1126,8 +1182,14 @@ main() {
 	CURRENT_PHASE="pre-flight checks"
 	check_prerequisites
 
+	CURRENT_PHASE="refreshing pacman mirrorlist"
+	refresh_mirrors
+
 	CURRENT_PHASE="enabling multilib repo"
 	enable_multilib
+
+	CURRENT_PHASE="refreshing keyring + initial system upgrade"
+	refresh_keyring_and_upgrade
 
 	# yay is required only when an AUR tier is requested (currently T4)
 	if array_contains 4 "${TIERS_TO_RUN[@]}"; then

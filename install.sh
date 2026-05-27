@@ -7,7 +7,7 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
 
-SCRIPT_VERSION="2026-05-03-1"
+SCRIPT_VERSION="2026-05-27-1"
 
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
 STATE_FILE="${STATE_DIR}/install.state"
@@ -157,8 +157,18 @@ install_dms() {
 	# DMS is the most fragile component (curl|sh from a third-party domain).
 	# Failure here must NOT brick the install: the system remains usable on
 	# the Plasma fallback session installed by tier 3.
-	if ! "$ARCHWAY_REPO_DIR/install-dms.sh"; then
-		log_warn "DMS install failed."
+	#
+	# Wrap in `timeout 600` (10 min): the upstream installer occasionally
+	# hangs forever if its CDN is misbehaving, which would otherwise block
+	# Stage 1 indefinitely and require a manual SIGINT.
+	local rc=0
+	timeout 600 "$ARCHWAY_REPO_DIR/install-dms.sh" || rc=$?
+	if [[ $rc -ne 0 ]]; then
+		if [[ $rc -eq 124 ]]; then
+			log_warn "DMS installer exceeded 10-minute timeout — aborted."
+		else
+			log_warn "DMS install failed (exit code: $rc)."
+		fi
 		log_warn "System remains usable; log in to KDE Plasma at SDDM."
 		log_warn "Retry later with: $ARCHWAY_REPO_DIR/install-dms.sh"
 		return 0
