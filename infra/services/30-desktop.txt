@@ -4,8 +4,11 @@
 # =============================================================================
 # DISPLAY MANAGER
 # =============================================================================
-# SDDM provides graphical login. Disable to prefer TTY login.
-sddm
+# Intentionally NOT listed. archinstall's KDE profile already enables a display
+# manager (SDDM, or Plasma Login Manager on newer releases). archway accepts
+# whichever one archinstall enabled rather than enabling/swapping it here.
+# To change your DM, do it deliberately (enable the new one, disable the old),
+# not via bootstrap.
 
 # =============================================================================
 # PRINTING (Optional - uncomment if you use printers)

@@ -70,12 +70,23 @@ kdeconnect
 #   plasma-meta, bluedevil, kde-gtk-config, kscreen, plasma-desktop,
 #   plasma-nm, plasma-pa, sddm, sddm-kcm, kwallet (disabled via
 #   dots/autostart/kwalletd6.desktop), konsole, dolphin, …
+#
+# X11 Plasma session: archinstall ships a Wayland-only Plasma session. On NVIDIA,
+# Plasma-on-Wayland (KWin) can hit driver/compositor bugs (e.g. the KWin
+# FormatInfo crash with recent nvidia + multi-monitor). The X11 session sidesteps
+# that path entirely and is the reliable fallback for presenting/eduroam.
+plasma-x11-session
 
 # =============================================================================
 # BOOT SPLASH
 # =============================================================================
-# sddm itself is provided by the archinstall KDE profile.
-plymouth
+# Intentionally NOT installed. plymouth was previously listed here but never
+# wired into the boot process (no mkinitcpio hook, no `splash` kernel param),
+# so it added a moving part to early boot for zero benefit. On NVIDIA it also
+# made GPU-handoff stalls look like "stuck" boots (the last splash message,
+# e.g. "Starting CUPS scheduler", stayed frozen on screen). archway shows the
+# plain systemd boot log instead — louder, but diagnosable. If you want a
+# splash later, add it via a dedicated, properly-configured script.
 
 # =============================================================================
 # FILE MANAGERS (graphical)
