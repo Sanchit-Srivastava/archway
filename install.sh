@@ -363,9 +363,10 @@ stage2() {
 	fi
 
 	if [[ "$SKIP_DOCTOR" == "0" ]]; then
-		# shellcheck disable=SC2046  # word splitting on tier args is intended
-		"$ARCHWAY_REPO_DIR/infra/doctor.sh" \
-			$(profile_bootstrap_args "$ARCHWAY_PROFILE")
+		# doctor.sh validates runtime/config/boot state for the whole system
+		# (it no longer takes tier flags — those were removed in the
+		# simplification; package presence is covered by --audit-packages).
+		"$ARCHWAY_REPO_DIR/infra/doctor.sh"
 	else
 		log_info "Skipping infra/doctor.sh"
 	fi
