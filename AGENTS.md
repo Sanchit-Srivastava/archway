@@ -105,8 +105,8 @@ Available check IDs: `pipewire`, `wireplumber`, `xdg-portal`, `hyprland`, `bluet
 ### Linting and Formatting
 
 ```bash
-shellcheck infra/*.sh   # Static analysis for shell scripts
-shfmt -w infra/*.sh     # Format shell scripts (writes in place)
+shellcheck infra/lib/*.sh infra/*.sh install.sh   # Static analysis (includes shared helpers)
+shfmt -w infra/lib/*.sh infra/*.sh install.sh          # Format shell scripts (writes in place)
 shfmt -d infra/*.sh     # Show diff without writing (for CI)
 ```
 

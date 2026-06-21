@@ -38,18 +38,14 @@ set -eEuo pipefail
 
 SCRIPT_VERSION="2026-06-21-1"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BOLD='\033[1m'
-NC='\033[0m'
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
+# shellcheck source=lib/common.sh
+. "${SCRIPT_DIR}/lib/common.sh"
+
+# Colors from common (BOLD is provided). Keep local rich error handling.
 CURRENT_PHASE="initialization"
-
-log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
-log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
-log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
-log_fatal() { printf "${RED}[FATAL]${NC} %s\n" "$1" >&2; }
 
 die() {
 	log_fatal "$1"

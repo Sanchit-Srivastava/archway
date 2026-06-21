@@ -21,15 +21,13 @@ set -eEuo pipefail
 
 SCRIPT_VERSION="2026-05-07-1"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
-log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
-log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
-log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
+# shellcheck source=lib/common.sh
+. "${SCRIPT_DIR}/lib/common.sh"
 
+# log_* + colors from lib/common.sh
 die() {
 	log_error "$1"
 	exit 1

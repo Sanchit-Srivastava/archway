@@ -2,12 +2,18 @@
 set -euo pipefail
 
 # Single-entry installer with staged reboot + resume flow
+# (autostart is best-effort; users reliably run "install.sh resume" manually)
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
 
-SCRIPT_VERSION="2026-05-27-1"
+# shellcheck source=infra/lib/common.sh
+. "${SCRIPT_DIR}/infra/lib/common.sh"
+# shellcheck source=infra/lib/autologin.sh
+. "${SCRIPT_DIR}/infra/lib/autologin.sh"
+
+SCRIPT_VERSION="2026-06-21-1"
 
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
 STATE_FILE="${STATE_DIR}/install.state"
@@ -19,14 +25,8 @@ if [[ -d "${REPO_ROOT}/.git" ]]; then
 	DEFAULT_REPO_DIR="${REPO_ROOT}"
 fi
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
-log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
-log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
+# Colors + log_* provided by infra/lib/common.sh
+# Local die kept for install.sh style (simpler message).
 
 die() {
 	log_error "$1"
@@ -40,6 +40,9 @@ archway installer (v${SCRIPT_VERSION})
 Usage:
   ./install.sh [options]
   ./install.sh resume [options]
+
+NOTE: The autostart desktop entry is best-effort only. After reboot you will
+usually need to run "./install.sh resume" manually from a graphical terminal.
 
 For remote installation, use remote-install.sh:
   bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
@@ -202,25 +205,8 @@ maybe_auth_github() {
 	fi
 }
 
-detect_sddm_session() {
-	if [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
-		echo "niri"
-		return 0
-	fi
-	# Plasma 6 ships a Wayland session at wayland-sessions/plasma.desktop.
-	# Older installs / X11 fallback use xsessions/plasma.desktop.
-	if [[ -f "/usr/share/wayland-sessions/plasma.desktop" ]] ||
-		[[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
-		echo "plasma"
-		return 0
-	fi
-	if [[ -f "/usr/share/wayland-sessions/plasmawayland.desktop" ]]; then
-		echo "plasmawayland"
-		return 0
-	fi
-
-	echo ""
-}
+# detect_sddm_session and configure_sddm_autologin now come from lib/autologin.sh
+# The local wrapper below keeps install.sh-specific sudo prompting + user policy.
 
 configure_sddm_autologin() {
 	local autologin_conf="/etc/sddm.conf.d/autologin.conf"
@@ -239,29 +225,8 @@ configure_sddm_autologin() {
 		sudo -v
 	fi
 
-	sudo mkdir -p /etc/sddm.conf.d
-	if [[ -f "$autologin_conf" ]]; then
-		local current_user
-		local current_session
-		current_user=$(grep -E '^User=' "$autologin_conf" 2>/dev/null | cut -d= -f2- | head -n 1 || true)
-		current_session=$(grep -E '^Session=' "$autologin_conf" 2>/dev/null | cut -d= -f2- | head -n 1 || true)
-		if [[ "$current_user" == "$autologin_user" && "$current_session" == "$autologin_session" ]]; then
-			log_info "SDDM autologin already configured for $autologin_user"
-			return 0
-		fi
-		log_warn "Updating SDDM autologin (User: ${current_user:-unknown}, Session: ${current_session:-unknown})"
-	fi
-
-	sudo tee "$autologin_conf" >/dev/null <<EOF
-# SDDM Autologin Configuration
-# Created by archway install.sh
-
-[Autologin]
-User=$autologin_user
-Session=$autologin_session
-EOF
-
-	log_info "SDDM autologin configured"
+	# Delegate write + idempotency to shared helper (with "sudo" priv)
+	configure_sddm_autologin "$autologin_user" "$autologin_session" "$autologin_conf" "sudo"
 }
 
 write_autostart_resume() {
@@ -270,7 +235,7 @@ write_autostart_resume() {
 [Desktop Entry]
 Type=Application
 Name=Archway Resume
-Comment=Resume archway installer after reboot
+Comment=Resume archway installer after reboot (best-effort; you will likely need to run install.sh resume manually)
 Exec=bash -lc "${ARCHWAY_REPO_DIR}/install.sh resume"
 Terminal=true
 X-GNOME-Autostart-enabled=true
@@ -283,7 +248,7 @@ remove_autostart_resume() {
 
 stage1() {
 	if [[ "${ARCHWAY_STAGE:-}" == "stage2" && "$FORCE" == "0" ]]; then
-		log_info "Stage 1 already completed. Use --force to re-run."
+		log_info "Stage 1 already completed. Use --force to re-run (or just run 'install.sh resume' after reboot)."
 		return 0
 	fi
 
@@ -322,13 +287,17 @@ stage1() {
 	write_state
 	write_autostart_resume
 
-	log_info "Stage 1 complete. Reboot to continue."
-	log_info "After reboot, the installer should resume automatically."
-	log_info "If autostart doesn't run, execute: ${ARCHWAY_REPO_DIR}/install.sh resume"
+	log_info "Stage 1 complete."
+	log_warn "==========================================================================="
+	log_warn "REBOOT NOW, then run this command to continue:"
+	log_warn "  ${ARCHWAY_REPO_DIR}/install.sh resume"
+	log_warn "Autostart resume is best-effort and often does not trigger (known)."
+	log_warn "Always run the resume command manually after reboot."
+	log_warn "==========================================================================="
 	if prompt_yes_no "Reboot now?" "y"; then
 		sudo reboot
 	else
-		log_info "Reboot when ready to continue Stage 2."
+		log_info "Reboot when ready. Then run: ${ARCHWAY_REPO_DIR}/install.sh resume"
 	fi
 }
 
@@ -350,8 +319,9 @@ stage2() {
 	# For minimal (T1+T2 headless), skip session check and post-DMS hooks.
 	if profile_includes_tier "$ARCHWAY_PROFILE" 3; then
 		if ! is_graphical_session; then
-			log_warn "Stage 2 should run in a graphical session after first DMS start"
-			log_warn "If you're in a TTY, log into DMS and run: ${ARCHWAY_REPO_DIR}/install.sh resume"
+			log_warn "Stage 2 expects a graphical session (after login to DMS or Plasma)."
+			log_warn "From a graphical terminal run: ${ARCHWAY_REPO_DIR}/install.sh resume"
+			log_warn "If you just rebooted, make sure you are logged into a graphical session."
 			return 1
 		fi
 
@@ -447,7 +417,7 @@ main() {
 	fi
 
 	if [[ "${ARCHWAY_STAGE:-}" == "stage2" ]]; then
-		log_info "Stage 1 completed previously. Running Stage 2."
+		log_info "Stage 1 completed previously (state file present). Running Stage 2."
 		stage2
 	else
 		log_info "Running Stage 1."

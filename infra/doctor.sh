@@ -7,12 +7,10 @@ set -euo pipefail
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
-# Colors for human-readable output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# shellcheck source=lib/common.sh
+. "${SCRIPT_DIR}/lib/common.sh"
+
+# Colors + log_* are provided by common.sh (BLUE included)
 
 # Test counters
 TOTAL_TESTS=0
@@ -53,6 +51,8 @@ declare -A CHECK_IDS=(
 	["environment-d"]="check_environment_d"
 	# Boot safety net
 	["boot-entry"]="check_boot_entry"
+	# Evidence that the archinstall KDE baseline (the contract) is present
+	["display-manager"]="check_display_manager"
 )
 
 # Print TAP header
@@ -250,6 +250,17 @@ check_boot_entry() {
 	fi
 }
 
+# Verifies (lightly) that the archinstall KDE Plasma profile baseline is present.
+# This is the documented contract: archway layers on top; it does not create the DM/Plasma stack.
+check_display_manager() {
+	# Accept common DM units enabled by the archinstall KDE profile.
+	# The command succeeds (exit 0) if at least one plausible DM is enabled.
+	run_check \
+		"Display manager enabled (sddm or plasma login manager)" \
+		"for u in sddm sddm.service plasmalogin plasmalogin.service; do systemctl is-enabled \"\$u\" >/dev/null 2>&1 && exit 0; done; exit 1" \
+		"Expected a display manager (sddm/plasmalogin) from the archinstall KDE profile. Inspect with 'systemctl status sddm' and ensure you selected the KDE desktop profile in archinstall."
+}
+
 # =============================================================================
 # PACKAGE AUDIT
 # =============================================================================
@@ -415,6 +426,8 @@ main() {
 			echo "Note: doctor checks runtime state, config/symlink drift, and boot"
 			echo "safety. To verify packages are installed, use --audit-packages."
 			echo ""
+			echo "The 'display-manager' check verifies the archinstall KDE baseline contract."
+			echo ""
 			echo "Other modes:"
 			echo "  --audit-packages   Compare installed packages to repo lists"
 			exit 0
@@ -493,6 +506,7 @@ main() {
 	check_dotfiles_linked
 	check_starship_config
 	check_environment_d
+	check_display_manager
 	check_boot_entry
 
 	print_summary

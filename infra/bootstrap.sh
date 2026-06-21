@@ -8,41 +8,24 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=lib/common.sh
+. "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/autologin.sh
+. "${SCRIPT_DIR}/lib/autologin.sh"
+
 # Script metadata
-SCRIPT_VERSION="2026-05-27-2"
+SCRIPT_VERSION="2026-06-21-1"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Current phase tracking for error messages
+# Current phase tracking for error messages (used by custom on_error/die)
 CURRENT_PHASE="initialization"
 
-log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$1"; }
-log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1" >&2; }
-log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
-log_fatal() { printf "${RED}[FATAL]${NC} %s\n" "$1" >&2; }
-
-# Helper to exit with a clear error message
+# Note: log_* and array_contains come from lib/common.sh
+# We keep a bootstrap-specific die() for richer messaging.
 die() {
 	log_fatal "$1"
 	log_fatal "Phase: ${CURRENT_PHASE}"
 	log_fatal "Bootstrap did NOT complete. Fix the error above and re-run."
 	exit 1
-}
-
-array_contains() {
-	local needle="$1"
-	shift
-	local item
-	for item in "$@"; do
-		if [[ "$item" == "$needle" ]]; then
-			return 0
-		fi
-	done
-	return 1
 }
 
 on_error() {
@@ -263,17 +246,23 @@ install_pacman_packages() {
 	done
 	packages=("${unique_packages[@]}")
 
-	# Pre-validate: check which packages actually exist in the repos
+	# Pre-validate: check which packages actually exist in the repos.
+	# Fast path: single pacman -Si call when everything is present (common case).
+	# Only falls back to per-pkg enumeration on problems.
 	log_info "Validating ${#packages[@]} packages against repos..."
-	local valid_packages=()
+	local valid_packages=("${packages[@]}")
 	local invalid_packages=()
-	for pkg in "${packages[@]}"; do
-		if pacman -Si "$pkg" &>/dev/null; then
-			valid_packages+=("$pkg")
-		else
-			invalid_packages+=("$pkg")
-		fi
-	done
+	if ! pacman -Si "${packages[@]}" &>/dev/null; then
+		valid_packages=()
+		invalid_packages=()
+		for pkg in "${packages[@]}"; do
+			if pacman -Si "$pkg" &>/dev/null; then
+				valid_packages+=("$pkg")
+			else
+				invalid_packages+=("$pkg")
+			fi
+		done
+	fi
 
 	if [[ ${#invalid_packages[@]} -gt 0 ]]; then
 		if [[ "$skip_unavailable" -eq 1 ]]; then
@@ -484,30 +473,20 @@ configure_sddm_autologin() {
 		return 0
 	fi
 
-	log_info "Configuring SDDM autologin..."
-
 	local autologin_conf="/etc/sddm.conf.d/autologin.conf"
 	local autologin_user="${SUDO_USER:-$USER}"
 	local autologin_session=""
 
-	# Session selection order:
-	#   1. ARCHWAY_AUTOLOGIN_SESSION env var (explicit user override)
-	#      e.g. ARCHWAY_AUTOLOGIN_SESSION=plasma ./infra/bootstrap.sh
-	#   2. niri (preferred primary session on archway laptops; installed via
-	#      DMS in T4 — if it's present on disk the user has opted into it)
-	#   3. plasma (canonical archinstall baseline — fallback when niri is
-	#      not installed, e.g. fresh KDE-only baseline before DMS install)
-	#   4. plasmawayland (older Plasma session name)
+	# Session selection order (policy local to bootstrap):
+	#   1. ARCHWAY_AUTOLOGIN_SESSION env var (explicit override)
+	#   2. niri (if present — user opted into DMS)
+	#   3. plasma (archinstall baseline)
+	#   4. plasmawayland
 	if [[ -n "${ARCHWAY_AUTOLOGIN_SESSION:-}" ]]; then
 		autologin_session="$ARCHWAY_AUTOLOGIN_SESSION"
 		log_info "Using ARCHWAY_AUTOLOGIN_SESSION override: $autologin_session"
-	elif [[ -f "/usr/share/wayland-sessions/niri.desktop" ]]; then
-		autologin_session="niri"
-	elif [[ -f "/usr/share/wayland-sessions/plasma.desktop" ]] ||
-		[[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
-		autologin_session="plasma"
-	elif [[ -f "/usr/share/wayland-sessions/plasmawayland.desktop" ]]; then
-		autologin_session="plasmawayland"
+	else
+		autologin_session="$(detect_sddm_session)"
 	fi
 
 	if [[ -z "$autologin_session" ]]; then
@@ -525,32 +504,14 @@ configure_sddm_autologin() {
 		return 0
 	fi
 
-	# Check if already configured for this user AND session (re-run safe;
-	# also reapplies if the user changed ARCHWAY_AUTOLOGIN_SESSION).
-	if [[ -f "$autologin_conf" ]] &&
-		grep -q "User=$autologin_user" "$autologin_conf" 2>/dev/null &&
-		grep -q "Session=$autologin_session" "$autologin_conf" 2>/dev/null; then
-		log_info "SDDM autologin already configured for $autologin_user → $autologin_session"
-		return 0
+	# Delegate the idempotent write (and its internal "already configured" check)
+	# to the shared helper. Pass "sudo" as the privilege command.
+	configure_sddm_autologin "$autologin_user" "$autologin_session" "$autologin_conf" "sudo"
+
+	# Extra bootstrap-specific note
+	if [[ -f "$autologin_conf" ]]; then
+		log_info "Note: Autologin is secure when using full disk encryption"
 	fi
-
-	log_info "Enabling SDDM autologin for user: $autologin_user"
-	log_info "Session: $autologin_session"
-
-	sudo mkdir -p /etc/sddm.conf.d
-
-	sudo tee "$autologin_conf" >/dev/null <<EOF
-# SDDM Autologin Configuration
-# Created by archway bootstrap.sh
-# Safe with full disk encryption (FDE) - machine is protected at boot
-
-[Autologin]
-User=$autologin_user
-Session=$autologin_session
-EOF
-
-	log_info "SDDM autologin configured"
-	log_info "Note: Autologin is secure when using full disk encryption"
 }
 
 # =============================================================================
