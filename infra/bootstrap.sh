@@ -15,7 +15,6 @@ SCRIPT_VERSION="2026-05-27-2"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Current phase tracking for error messages
@@ -51,19 +50,12 @@ on_error() {
 	local cmd="$2"
 	local code="$3"
 	echo "" >&2
-	printf "%s╔══════════════════════════════════════════════════════════════════╗%s\n" "${RED}${BOLD}" "${NC}" >&2
-	printf "%s║                      BOOTSTRAP FAILED                            ║%s\n" "${RED}${BOLD}" "${NC}" >&2
-	printf "%s╚══════════════════════════════════════════════════════════════════╝%s\n" "${RED}${BOLD}" "${NC}" >&2
-	echo "" >&2
+	log_fatal "BOOTSTRAP FAILED"
 	log_fatal "Phase: ${CURRENT_PHASE}"
 	log_fatal "Exit code: ${code}"
 	log_fatal "Line ${line}: ${cmd}"
-	echo "" >&2
-	log_fatal "Bootstrap did NOT complete successfully."
 	log_fatal "Not all system configuration was applied."
-	log_fatal ""
 	log_fatal "To retry: ./infra/bootstrap.sh"
-	log_fatal "To debug: Run the failed command manually and check its output"
 }
 
 on_exit() {
@@ -111,25 +103,6 @@ check_prerequisites() {
 	if [[ "$available_gb" -lt 5 ]]; then
 		die "Insufficient disk space. Need at least 5GB free, found ${available_gb}GB"
 	fi
-
-	# Confirm the ESP is mounted somewhere systemd-boot will find it. If
-	# archinstall left it unmounted (rare but possible if /etc/fstab is
-	# missing the entry), configure_systemd_boot would silently no-op and
-	# you'd only learn about it at first reboot. Fail loudly here instead.
-	local esp_mp=""
-	local mp
-	for mp in /efi /boot /boot/efi; do
-		if findmnt -n -o FSTYPE "$mp" 2>/dev/null | grep -q '^vfat$'; then
-			esp_mp="$mp"
-			break
-		fi
-	done
-	if [[ -z "$esp_mp" ]]; then
-		die "No EFI System Partition mounted at /efi, /boot, or /boot/efi.
-Check 'lsblk -f' for a vfat partition and ensure /etc/fstab mounts it.
-systemd-boot cannot be installed without a mounted ESP."
-	fi
-	log_info "ESP detected at $esp_mp"
 
 	log_info "Pre-flight checks passed"
 }
@@ -336,41 +309,13 @@ install_pacman_packages() {
 	# in main()) so a 4-tier full install doesn't redundantly re-upgrade the
 	# whole system four times. Each tier only installs its own delta.
 	log_info "Installing ${#packages[@]} pacman packages..."
-	if sudo pacman -S --needed --noconfirm "${packages[@]}"; then
-		log_info "All pacman packages installed successfully"
-		return 0
-	fi
-
-	# Bulk install failed — fall back to one-by-one to identify the culprit(s)
-	log_warn "Bulk install failed. Installing packages individually to identify failures..."
-	local failed_packages=()
-	local succeeded=0
-	for pkg in "${packages[@]}"; do
-		if sudo pacman -S --needed --noconfirm "$pkg" &>/dev/null; then
-			succeeded=$((succeeded + 1))
-		else
-			log_error "Failed to install: $pkg"
-			failed_packages+=("$pkg")
-		fi
-	done
-
-	if [[ ${#failed_packages[@]} -gt 0 ]]; then
-		log_error ""
-		log_error "═══════════════════════════════════════════════════════════════════"
-		log_error "PACMAN INSTALL SUMMARY: ${#failed_packages[@]} package(s) failed"
-		log_error "═══════════════════════════════════════════════════════════════════"
-		for pkg in "${failed_packages[@]}"; do
-			log_error "  FAILED: $pkg"
-		done
-		log_error ""
-		log_error "Succeeded: ${succeeded}  |  Failed: ${#failed_packages[@]}  |  Total: ${#packages[@]}"
-		log_error ""
-		log_error "To debug a failure, run manually:"
+	if ! sudo pacman -S --needed --noconfirm "${packages[@]}"; then
+		log_error "pacman failed to install one or more packages from ${pkg_file}."
+		log_error "pacman prints the offending package(s) above. To debug:"
 		log_error "  sudo pacman -S <package-name>"
 		return 1
 	fi
-
-	log_info "All pacman packages installed successfully (via individual fallback)"
+	log_info "All pacman packages installed successfully"
 }
 
 install_aur_packages() {
@@ -395,84 +340,25 @@ install_aur_packages() {
 	fi
 
 	log_info "Installing ${#packages[@]} AUR packages..."
-	if yay -S --needed --noconfirm "${packages[@]}"; then
-		log_info "All AUR packages installed successfully"
-		return 0
-	fi
-
-	# Bulk install failed — fall back to one-by-one to identify the culprit(s)
-	log_warn "Bulk AUR install failed. Installing packages individually to identify failures..."
-	local failed_packages=()
-	local succeeded=0
-	local pkg
-	for pkg in "${packages[@]}"; do
-		if yay -S --needed --noconfirm "$pkg" &>/dev/null; then
-			succeeded=$((succeeded + 1))
-		else
-			log_error "Failed to install AUR package: $pkg"
-			failed_packages+=("$pkg")
-		fi
-	done
-
-	if [[ ${#failed_packages[@]} -gt 0 ]]; then
-		log_error ""
-		log_error "═══════════════════════════════════════════════════════════════════"
-		log_error "AUR INSTALL SUMMARY: ${#failed_packages[@]} package(s) failed"
-		log_error "═══════════════════════════════════════════════════════════════════"
-		for pkg in "${failed_packages[@]}"; do
-			log_error "  FAILED: $pkg"
-		done
-		log_error ""
-		log_error "Succeeded: ${succeeded}  |  Failed: ${#failed_packages[@]}  |  Total: ${#packages[@]}"
-		log_error ""
-		log_error "To debug a failure, run manually:"
-		log_error "  yay -S <package-name>"
+	if ! yay -S --needed --noconfirm "${packages[@]}"; then
+		log_warn "yay failed to build/install one or more AUR packages from ${pkg_file}."
+		log_warn "AUR (T4) is allowed to fail without bricking the system. yay prints the"
+		log_warn "offending package(s) above. To debug: yay -S <package-name>"
 		return 1
 	fi
-
-	log_info "All AUR packages installed successfully (via individual fallback)"
+	log_info "All AUR packages installed successfully"
 }
 
 # =============================================================================
 # SYSTEMD SERVICES
 # =============================================================================
 
-# Known display manager service names
-DISPLAY_MANAGERS=(sddm lightdm gdm lxdm ly greetd plasmalogin)
-
-is_display_manager() {
-	local svc="$1"
-	local dm
-	for dm in "${DISPLAY_MANAGERS[@]}"; do
-		if [[ "$svc" == "$dm" || "$svc" == "${dm}.service" ]]; then
-			return 0
-		fi
-	done
-	return 1
-}
-
-# Swap in the desired display manager, disabling any existing one first.
-enable_display_manager() {
-	local desired="$1"
-	local dm_link="/etc/systemd/system/display-manager.service"
-
-	if systemctl is-enabled "$desired" >/dev/null 2>&1; then
-		log_info "Display manager $desired already enabled"
-		return 0
-	fi
-
-	# If another DM holds the display-manager.service slot, disable it first
-	if [[ -L "$dm_link" ]]; then
-		local current
-		current="$(basename "$(readlink -f "$dm_link")")"
-		log_warn "Replacing display manager ${current} with ${desired}"
-		sudo systemctl disable "${current}" 2>/dev/null || true
-	fi
-
-	log_info "Enabling display manager: $desired"
-	sudo systemctl enable "$desired"
-}
-
+# Enable the system services listed in a tier's services file.
+#
+# Note: we do NOT special-case display managers. archinstall enables one
+# (SDDM, or Plasma Login Manager on newer releases) and archway accepts that
+# choice rather than swapping it. Don't list a display manager in the services
+# files — if you ever want to change it, do so deliberately, not via bootstrap.
 enable_services() {
 	local svc_file="${1:?enable_services requires a services list path}"
 
@@ -497,9 +383,7 @@ enable_services() {
 	log_info "Enabling ${#services[@]} systemd services..."
 
 	for service in "${services[@]}"; do
-		if is_display_manager "$service"; then
-			enable_display_manager "$service"
-		elif systemctl is-enabled "$service" >/dev/null 2>&1; then
+		if systemctl is-enabled "$service" >/dev/null 2>&1; then
 			log_info "Service $service already enabled"
 		else
 			log_info "Enabling service: $service"
@@ -508,14 +392,13 @@ enable_services() {
 	done
 }
 
+# Enable user-level services that archway specifically owns. The PipeWire stack
+# and xdg-desktop-portal are enabled by their own packages under Plasma, so we
+# only manage the repo-specific timer here.
 enable_user_services() {
 	log_info "Enabling user-level systemd services..."
 
 	local user_services=(
-		"pipewire"
-		"pipewire-pulse"
-		"wireplumber"
-		"xdg-desktop-portal"
 		"vdirsyncer.timer"
 	)
 
@@ -530,309 +413,28 @@ enable_user_services() {
 }
 
 # =============================================================================
-# PAM CONFIGURATION
+# PAM & PORTALS — intentionally NOT configured here
 # =============================================================================
-
-configure_pam_keyring() {
-	log_info "Configuring PAM for gnome-keyring..."
-
-	local pam_files=(
-		"/etc/pam.d/login"
-		"/etc/pam.d/sddm"
-	)
-
-	local auth_line="auth       optional     pam_gnome_keyring.so"
-	local session_line="session    optional     pam_gnome_keyring.so auto_start"
-
-	for pam_file in "${pam_files[@]}"; do
-		if [[ ! -f "$pam_file" ]]; then
-			log_warn "PAM file not found: $pam_file (skipping)"
-			continue
-		fi
-
-		if grep -q "pam_gnome_keyring.so" "$pam_file" 2>/dev/null; then
-			log_info "PAM already configured for $pam_file"
-			continue
-		fi
-
-		log_info "Configuring $pam_file for gnome-keyring..."
-
-		sudo cp "$pam_file" "${pam_file}.backup.$(date +%Y%m%d)"
-
-		if grep -q "^auth.*pam_unix.so" "$pam_file"; then
-			sudo awk -v line="$auth_line" '
-                /^auth.*pam_unix\.so/ { print; print line; next }
-                { print }
-            ' "$pam_file" | sudo tee "$pam_file.new" >/dev/null
-			sudo mv "$pam_file.new" "$pam_file"
-			sudo chmod 644 "$pam_file"
-		fi
-
-		if grep -q "^session" "$pam_file"; then
-			sudo awk -v line="$session_line" '
-                /^session/ && !found { last=NR }
-                { lines[NR]=$0 }
-                END {
-                    for (i=1; i<=NR; i++) {
-                        print lines[i]
-                        if (i==last) print line
-                    }
-                }
-            ' "$pam_file" | sudo tee "$pam_file.new" >/dev/null
-			sudo mv "$pam_file.new" "$pam_file"
-			sudo chmod 644 "$pam_file"
-		fi
-
-		log_info "Configured $pam_file"
-	done
-}
-
-configure_pam_fingerprint() {
-	log_info "Configuring PAM for fprintd (fingerprint auth)..."
-
-	local pam_files=(
-		"/etc/pam.d/system-auth"
-		"/etc/pam.d/system-local-login"
-	)
-
-	local auth_line="auth       sufficient   pam_fprintd.so"
-
-	for pam_file in "${pam_files[@]}"; do
-		if [[ ! -f "$pam_file" ]]; then
-			log_warn "PAM file not found: $pam_file (skipping)"
-			continue
-		fi
-
-		if grep -q "pam_fprintd.so" "$pam_file" 2>/dev/null; then
-			log_info "PAM already configured for fingerprint auth: $pam_file"
-			continue
-		fi
-
-		log_info "Configuring $pam_file for fingerprint auth..."
-
-		sudo cp "$pam_file" "${pam_file}.backup.$(date +%Y%m%d)"
-
-		if grep -q "^auth.*pam_unix.so" "$pam_file"; then
-			sudo awk -v line="$auth_line" '
-                /^auth.*pam_unix\.so/ { print line; print; next }
-                { print }
-            ' "$pam_file" | sudo tee "$pam_file.new" >/dev/null
-			sudo mv "$pam_file.new" "$pam_file"
-			sudo chmod 644 "$pam_file"
-		else
-			log_warn "No pam_unix.so auth line found in $pam_file (skipping)"
-			continue
-		fi
-
-		log_info "Configured $pam_file"
-	done
-}
-
-configure_pam_dms() {
-	log_info "Configuring PAM for DMS lock screen..."
-
-	local pam_file="/etc/pam.d/dankshell"
-
-	# Check if already exists with correct order (pam_unix before pam_fprintd)
-	if [[ -f "$pam_file" ]] && grep -q "pam_fprintd.so" "$pam_file" 2>/dev/null; then
-		if awk '/^auth/ {print; exit}' "$pam_file" | grep -q "pam_unix.so"; then
-			log_info "PAM config for DMS lock screen already configured: $pam_file"
-			return 0
-		fi
-	fi
-
-	log_info "Creating $pam_file for DMS lock screen with fingerprint support..."
-
-	# Create PAM config for DMS lock screen
-	# - pam_unix.so: password auth (sufficient = succeeds without checking more)
-	# - pam_fprintd.so: fingerprint fallback if password fails
-	# - pam_deny.so: deny if all auth methods fail
-	# Note: pam_unix must come first - if fprintd runs first it blocks waiting
-	# for fingerprint and the password input has nowhere to go
-	sudo install -m 0644 /dev/null "$pam_file"
-	sudo tee "$pam_file" >/dev/null <<'EOF'
-# PAM configuration for DankMaterialShell lock screen
-# Supports password and fingerprint unlock
-
-# Auth: password first, then fingerprint fallback
-auth        sufficient    pam_unix.so nullok
-auth        sufficient    pam_fprintd.so
-auth        required      pam_deny.so
-
-# Account: use system defaults
-account     required      pam_unix.so
-
-# Session: minimal (user already has a session)
-session     required      pam_unix.so
-EOF
-	sudo chmod 644 "$pam_file"
-
-	log_info "Created $pam_file"
-}
+# Earlier versions of this script used awk/sed to surgically insert lines into
+# /etc/pam.d/{login,sddm,system-auth,system-local-login} for gnome-keyring and
+# fprintd, and wrote a system-wide xdg portals.conf. Those in-place edits to
+# auth files are fragile on a rolling release (a pambase update can shift the
+# format and lock you out) and mostly duplicated what the desktop already does:
+#   - KDE Plasma ships a working keyring/wallet and a ready /etc/pam.d/
+#     kde-fingerprint for the lock screen.
+#   - niri's portal needs are handled per-session, not system-wide.
+# These are now one-time, documented manual steps. See docs/STABILITY.md
+# ("Fingerprint, keyring, and portals") for the exact commands.
 
 # =============================================================================
-# PORTAL CONFIGURATION
+# BOOTLOADER — intentionally NOT configured here
 # =============================================================================
-
-configure_portals() {
-	log_info "Configuring XDG portals for niri/Wayland..."
-
-	sudo mkdir -p /etc/xdg/xdg-desktop-portal
-
-	local portal_conf="/etc/xdg/xdg-desktop-portal/portals.conf"
-
-	# Check if already configured for gnome/gtk (niri setup)
-	if [[ -f "$portal_conf" ]] && grep -q "default=gnome" "$portal_conf"; then
-		log_info "Portal configuration already set for niri"
-		return 0
-	fi
-
-	log_info "Creating portal configuration..."
-
-	# niri uses GNOME portal for screen sharing, GTK for file dialogs
-	sudo tee "$portal_conf" >/dev/null <<'EOF'
-[preferred]
-default=gnome;gtk
-org.freedesktop.impl.portal.FileChooser=gtk
-org.freedesktop.impl.portal.AppChooser=gtk
-org.freedesktop.impl.portal.Screenshot=gnome
-org.freedesktop.impl.portal.ScreenCast=gnome
-EOF
-
-	log_info "Portal configuration created"
-}
-
-# =============================================================================
-# SYSTEMD-BOOT CONFIGURATION
-# =============================================================================
-
-# Detect mounted ESP. Returns mount path on stdout, or empty on stdout + rc=1.
-detect_esp_mount() {
-	local mp
-	for mp in /efi /boot /boot/efi; do
-		if findmnt -n -o FSTYPE "$mp" 2>/dev/null | grep -q '^vfat$'; then
-			echo "$mp"
-			return 0
-		fi
-	done
-	return 1
-}
-
-# Return 0 if a bootable systemd-boot entry exists on this ESP.
-# systemd-boot discovers two entry types:
-#   Type #1 — text config in loader/entries/*.conf  (classic kernel + initrd)
-#   Type #2 — Unified Kernel Images in EFI/Linux/*.efi  (default for archinstall
-#            with systemd-boot + LUKS in current releases)
-# We accept either. archinstall ships UKIs and leaves loader/entries/ empty,
-# so requiring Type #1 would produce false-negatives on every fresh install.
-has_boot_entry() {
-	local esp="$1"
-	# Type #1 entries
-	if compgen -G "${esp}/loader/entries/*.conf" >/dev/null; then
-		return 0
-	fi
-	# Type #2 UKIs (auto-discovered by systemd-boot)
-	if compgen -G "${esp}/EFI/Linux/*.efi" >/dev/null; then
-		return 0
-	fi
-	return 1
-}
-
-# Write /loader/loader.conf with sensible defaults if missing or empty.
-# Uses `arch-linux*.efi` as the default glob so the newest UKI wins
-# automatically after kernel rebuilds. Safe to re-run: only writes when
-# the file is absent or empty (we don't clobber user-customised configs).
-ensure_loader_conf() {
-	local esp="$1"
-	local conf="${esp}/loader/loader.conf"
-
-	sudo mkdir -p "${esp}/loader"
-
-	if [[ -s "$conf" ]] && grep -qE '^[[:space:]]*default[[:space:]]' "$conf"; then
-		log_info "loader.conf already configured ($conf)"
-		return 0
-	fi
-
-	log_info "Writing default loader.conf to $conf"
-	sudo tee "$conf" >/dev/null <<'EOF'
-# Managed by archway bootstrap.sh
-# Auto-selects the newest discovered UKI (Type #2 entry).
-default  arch-linux*.efi
-timeout  3
-console-mode max
-editor   no
-EOF
-	sudo chmod 644 "$conf"
-}
-
-configure_systemd_boot() {
-	log_info "Checking systemd-boot installation..."
-
-	# Only relevant on UEFI systems
-	if [[ ! -d /sys/firmware/efi ]]; then
-		log_warn "System is not booted in UEFI mode - skipping systemd-boot setup"
-		return 0
-	fi
-
-	if ! command -v bootctl >/dev/null 2>&1; then
-		log_error "bootctl not found (expected from systemd) - skipping"
-		return 0
-	fi
-
-	local esp
-	if ! esp=$(detect_esp_mount); then
-		log_warn "Could not detect ESP mount (looked at /efi, /boot, /boot/efi)"
-		log_warn "Mount your EFI System Partition first, then re-run bootstrap"
-		return 0
-	fi
-	log_info "ESP detected at: $esp"
-
-	# Trust the on-disk binary, not `bootctl is-installed`. The latter has
-	# returned "no" on fresh archinstall systems where systemd-boot was NOT
-	# actually deployed (archinstall registered an EFI variable pointing
-	# directly at the UKI instead), even though everything else looks fine.
-	# Checking for the file is the reliable source of truth.
-	local sd_boot_bin="${esp}/EFI/systemd/systemd-bootx64.efi"
-	if [[ -f "$sd_boot_bin" ]]; then
-		log_info "systemd-boot binary present in ESP - running update (no-op if current)"
-		sudo bootctl --esp-path="$esp" update 2>/dev/null || true
-	else
-		log_info "systemd-boot binary missing from ESP - installing..."
-		if ! sudo bootctl --esp-path="$esp" install; then
-			log_error "bootctl install failed - leaving existing bootloader in place"
-			return 0
-		fi
-	fi
-
-	# Ensure loader.conf exists with a sensible default UKI glob. archinstall
-	# ships an empty loader.conf when it deploys UKIs, which leaves
-	# systemd-boot with no default entry on next install/update.
-	ensure_loader_conf "$esp"
-
-	# Sanity-check that something is actually bootable. UKIs in EFI/Linux/
-	# count as Type #2 auto-discovered entries — we don't need Type #1
-	# configs in loader/entries/.
-	if has_boot_entry "$esp"; then
-		log_info "Bootable entry found (Type #1 .conf or Type #2 UKI)"
-	else
-		log_warn "No bootable entry found in $esp"
-		log_warn "  Expected: ${esp}/loader/entries/*.conf  OR  ${esp}/EFI/Linux/*.efi"
-		log_warn "  If you use UKIs, run: sudo mkinitcpio -P"
-	fi
-
-	# Ensure pacman hook exists so bootctl update runs on systemd upgrades.
-	# Arch ships /usr/share/libalpm/hooks/95-systemd-boot.hook out of the box;
-	# warn if absent.
-	if [[ ! -f /usr/share/libalpm/hooks/95-systemd-boot.hook ]] &&
-		[[ ! -f /etc/pacman.d/hooks/95-systemd-boot.hook ]]; then
-		log_warn "systemd-boot pacman update hook not found"
-		log_warn "Run 'sudo bootctl update' manually after systemd package updates"
-	fi
-
-	# Sanity report
-	log_info "systemd-boot status:"
-	sudo bootctl --esp-path="$esp" status 2>/dev/null | head -20 || true
-}
+# archinstall installs systemd-boot, registers the EFI boot entry, and ships
+# auto-discovered UKIs in EFI/Linux/. Re-running `bootctl install` / authoring
+# loader.conf from this script only duplicated that work and was the riskiest
+# code in the file (it writes to the ESP). If the firmware ever loses the boot
+# entry (e.g. a ThinkPad NVRAM wipe), that's a one-command recovery, not a
+# bootstrap concern — see docs/STABILITY.md and `infra/fix-boot.sh`.
 
 # =============================================================================
 # KEYD CONFIGURATION (keyboard remapping)
@@ -870,25 +472,6 @@ configure_keyd() {
 			log_info "Reloaded keyd daemon"
 		fi
 	fi
-}
-
-# =============================================================================
-# POLKIT CONFIGURATION
-# =============================================================================
-
-configure_polkit() {
-	log_info "Configuring polkit..."
-
-	if [[ -f /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]]; then
-		log_info "Polkit GNOME agent installed"
-	else
-		log_warn "Polkit GNOME agent not found - install polkit-gnome package"
-	fi
-
-	sudo mkdir -p /etc/polkit-1/rules.d
-
-	log_info "Note: DMS provides its own polkit authentication agent"
-	log_info "      polkit-gnome is installed as a fallback for non-DMS sessions (e.g., Plasma)"
 }
 
 # =============================================================================
@@ -1048,21 +631,8 @@ run_tier() {
 	1)
 		CURRENT_PHASE="tier 1: configuring keyd"
 		configure_keyd
-
-		CURRENT_PHASE="tier 1: configuring polkit"
-		configure_polkit
-
-		CURRENT_PHASE="tier 1: configuring systemd-boot"
-		configure_systemd_boot
-
 		;;
 	2)
-		CURRENT_PHASE="tier 2: configuring PAM for gnome-keyring"
-		configure_pam_keyring
-
-		CURRENT_PHASE="tier 2: configuring PAM for fingerprint auth"
-		configure_pam_fingerprint
-
 		# User-level setup (skip if running as root)
 		if [[ $EUID -ne 0 ]]; then
 			CURRENT_PHASE="tier 2: setting default shell to zsh"
@@ -1072,9 +642,6 @@ run_tier() {
 		fi
 		;;
 	3)
-		CURRENT_PHASE="tier 3: configuring XDG portals"
-		configure_portals
-
 		CURRENT_PHASE="tier 3: configuring SDDM autologin"
 		configure_sddm_autologin
 
@@ -1085,10 +652,6 @@ run_tier() {
 		else
 			log_warn "Running as root - skipping user service setup"
 		fi
-		;;
-	4)
-		CURRENT_PHASE="tier 4: configuring PAM for DMS lock screen"
-		configure_pam_dms
 		;;
 	esac
 
@@ -1105,12 +668,12 @@ usage() {
 Usage: $(basename "$0") [OPTIONS]
 
 Tiered system bootstrap. Runs tiers in order; a failed tier stops higher
-tiers but leaves lower-tier markers intact.
+tiers but lower tiers remain applied.
 
 Tiers:
   1 = base     Core OS plumbing (network, audio, bluetooth, fonts, polkit)
   2 = shell    CLI tools, editors, secrets, zsh
-  3 = desktop  KDE Plasma + SDDM (fallback graphical session)
+  3 = desktop  KDE Plasma fallback graphical session (DM from archinstall)
   4 = extras   AUR packages, DMS, niri, messaging apps (fragile)
 
 Options:
@@ -1203,14 +766,7 @@ main() {
 	local failed_tiers=()
 	for tier in "${TIERS_TO_RUN[@]}"; do
 		if run_tier "$tier"; then
-			local marker="${state_dir}/bootstrap.tier${tier}.complete"
-			cat >"$marker" <<EOF
-BOOTSTRAP_VERSION="${SCRIPT_VERSION}"
-BOOTSTRAP_TIER="${tier}"
-BOOTSTRAP_COMPLETED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-REPO_ROOT="${REPO_ROOT}"
-EOF
-			log_info "Wrote tier marker: $marker"
+			:
 		else
 			log_error "Tier ${tier} failed; lower tiers (if any) remain valid."
 			failed_tiers+=("$tier")
@@ -1220,8 +776,9 @@ EOF
 		fi
 	done
 
-	# Legacy aggregate marker: written only if all requested tiers succeeded
-	# AND tier 1 was included (i.e. a meaningful baseline run).
+	# Completion marker — gates install-dms.sh (it checks the system baseline is
+	# present before installing DMS). Written only if all requested tiers
+	# succeeded AND tier 1 was included (a meaningful baseline run).
 	if [[ ${#failed_tiers[@]} -eq 0 ]] && array_contains 1 "${TIERS_TO_RUN[@]}"; then
 		local state_file="${state_dir}/bootstrap.complete"
 		cat >"$state_file" <<EOF
@@ -1243,7 +800,7 @@ EOF
 	log_info "Bootstrap complete!"
 	log_info ""
 	log_info "Next steps:"
-	log_info "  1. Reboot to start SDDM (graphical login screen)"
+	log_info "  1. Reboot to start the graphical login screen"
 	log_info "  2. Apply dotfiles: ./infra/dotfiles.sh"
 	log_info "  3. Install DMS (optional): ./install-dms.sh"
 	log_info "  4. Validate: ./infra/doctor.sh"
