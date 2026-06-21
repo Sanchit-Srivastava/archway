@@ -84,7 +84,7 @@ components (AUR, DMS) cannot brick the system:
 |------|---------|---------------------------------------------------------------|
 | 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit |
 | 2    | shell   | CLI tools, editors, secrets, zsh as default shell             |
-| 3    | desktop | KDE Plasma + SDDM (fallback graphical session)                |
+| 3    | desktop | KDE Plasma fallback + additional GUI / tools (archinstall baseline + additions) |
 | 4    | extras  | AUR packages, DMS, niri, messaging apps (fragile)             |
 
 Tiers run in order; a failed tier stops higher tiers but preserves lower-tier

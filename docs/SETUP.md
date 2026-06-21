@@ -11,11 +11,15 @@ Design: layered system baseline + user dotfiles, with an optional desktop shell 
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
 ```
 
-The installer runs in two stages with one reboot. If it doesn't resume automatically, run:
+The installer runs in two stages with **one reboot**.
+
+**Autostart resume is unreliable.** After reboot and logging into a graphical session, **always run**:
 
 ```bash
 ~/archway/install.sh resume
 ```
+
+This is the reliable way to continue (you will see this reminder at the end of Stage 1).
 
 ### Install profiles
 
@@ -25,7 +29,7 @@ This maps directly to the [tier model](ARCHITECTURE.md#tier-model):
 | Profile   | Tiers   | Includes                                            |
 | --------- | ------- | --------------------------------------------------- |
 | `minimal` | T1+T2   | Headless: base + shell, no GUI                      |
-| `safe`    | T1+T2+T3 | Adds KDE Plasma fallback (no AUR/DMS)              |
+| `safe`    | T1+T2+T3 | Adds KDE Plasma fallback (no AUR/DMS). TeX is intentionally excluded from tiers — install later with `just tex` if needed. |
 | `full`    | T1-T4   | Adds AUR + DankMaterialShell (default)              |
 
 Examples:
@@ -168,13 +172,131 @@ Do NOT select any *additional* desktop environment alongside Plasma.
 |---------|-------|
 | Network | **NetworkManager** |
 
-### 1.10 Additional Packages
+### 1.10 Additional Packages and Reusing Configuration
 
-Add these packages in archinstall (optional but saves time):
+#### Additional packages during a fresh install
 
+Archinstall has an "**Additional packages**" (or "Write additional packages to install") step. This is a text input where you can paste a list of package names (space or newline separated). It also shows search results from the huge available list as you type.
+
+To get a ready-to-paste list for a **full working system without the heavy LaTeX parts** (recommended for your first fresh install):
+
+1. Have the `archway` repo available in the live environment (pre-copy it to your Ventoy data partition before booting the ISO — see guide below).
+2. Generate the list:
+   ```bash
+   ./infra/list-additional-packages.sh --up-to 3 > /tmp/archway-pkgs.txt
+   cat /tmp/archway-pkgs.txt
+   ```
+3. In archinstall's Additional packages prompt, paste the contents of the file.
+
+**LaTeX/TeX is intentionally excluded** from the main tiers and the default package list (see below).
+
+#### Saving and Reusing Your archinstall Configuration (Recommended for Ventoy Users)
+
+Your installs are nearly identical every time — only the target disk and hostname change. Archinstall supports saving a full declarative configuration so you don't repeat the menus.
+
+**During this fresh installation (first time):**
+
+1. **Before booting the ISO**: Copy the `archway` directory to the **data/persistent partition** of your Ventoy USB (this area survives boots and holds files alongside your ISOs).
+
+2. Boot the Arch ISO via Ventoy.
+
+3. In the live environment, mount the Ventoy data partition and enter the repo:
+   ```bash
+   lsblk -f                          # identify the Ventoy data partition
+   mount /dev/sdXN /mnt/ventoy       # replace sdXN with the correct device
+   cd /mnt/ventoy/archway
+   ```
+
+4. Generate the additional packages list for a full working system (no TeX):
+   ```bash
+   ./infra/list-additional-packages.sh --up-to 3 > /tmp/archway-pkgs.txt
+   cat /tmp/archway-pkgs.txt
+   ```
+
+5. Run the guided installer:
+   ```bash
+   archinstall
+   ```
+   - Choose your usual settings:
+     - Disk: Best effort default + ext4 + LUKS (full disk encryption, no separate `/home` recommended).
+     - Bootloader: systemd-boot.
+     - Profile: Desktop → KDE Plasma.
+     - Network: NetworkManager.
+   - At the **Additional packages** prompt: paste the list from `/tmp/archway-pkgs.txt`.
+   - Complete the rest of the wizard (users, timezone, etc.).
+
+6. **Save the configuration** (critical step):
+   - Near the end (before the final "Install" confirmation), archinstall offers a "Save configuration" option.
+   - First create the target directory on the Ventoy data partition:
+     ```bash
+     mkdir -p /mnt/ventoy/archway/configs
+     ```
+   - Save `user_configuration.json` (and `user_credentials.json` if it asks) directly there:
+     ```
+     /mnt/ventoy/archway/configs/user_configuration.json
+     /mnt/ventoy/archway/configs/user_credentials.json
+     ```
+   - Proceed with the installation.
+
+7. After the system is installed and you have rebooted (or from the live environment), ensure the two JSON files are on the Ventoy data partition in the `configs/` directory (copy them from the new installation if you saved them elsewhere).
+
+8. Continue with the normal post-install steps (`just bootstrap`, `just dotfiles`, etc.).
+
+**For all future reinstalls:**
+
+1. Boot the Arch ISO via Ventoy.
+
+2. Mount the Ventoy data partition:
+   ```bash
+   mount /dev/sdXN /mnt/ventoy
+   ```
+
+3. Reuse the saved configuration:
+   ```bash
+   archinstall --config /mnt/ventoy/archway/configs/user_configuration.json \
+               --creds   /mnt/ventoy/archway/configs/user_credentials.json
+   ```
+
+4. archinstall will pre-fill almost everything (disk layout style, LUKS, profile, packages, bootloader, etc.).
+
+5. You will still be prompted for the varying items:
+   - The specific target disk device.
+   - Hostname.
+   - Any user details not fully saved in the creds file.
+
+6. Review the summary and proceed with the install.
+
+7. After first boot into the new system:
+   - Connect to the network.
+   - Clone/update the archway repo if needed.
+   - Run `just bootstrap` (or your preferred profile). Many packages will already be present, so this step will be much faster.
+   - Run `just dotfiles`, etc.
+   - Add LaTeX later with `just tex` when convenient.
+
+**Keeping the additional packages list up to date**
+
+When the tier lists in the repo change (new packages added/removed):
+
+```bash
+cd /mnt/ventoy/archway
+./infra/list-additional-packages.sh --up-to 3 > /tmp/new-pkgs.txt
 ```
-git base-devel
+
+Edit the saved `user_configuration.json` and update the `"packages"` array with the new list (JSON array format). You can do this on any machine with the repo.
+
+**LaTeX / TeX parts**
+
+The heavy TeX Live packages (and biber, python-pynvim for vimtex) have been moved out of the main tier lists. A full working system installed via archinstall + bootstrap (or the reused config) will **not** include LaTeX by default.
+
+To add it on demand (after you have a working system and better connectivity):
+
+```bash
+just tex
+# or directly
+./infra/install-tex.sh
 ```
+
+This is exactly what you asked for: the whole working system without the LaTeX parts in the main installation.
 
 ### 1.11 Review and Install
 
@@ -230,12 +352,12 @@ This installs all packages, enables services, and configures the system:
 
 **What it does**:
 - Installs yay (AUR helper)
-- Installs baseline packages from official repos
+- Installs baseline packages from official repos (per tier lists)
 - Installs configured AUR packages when using the full profile
 - Enables system services (NetworkManager, Bluetooth, etc.)
 - Deploys the keyd keyboard remapping config
 - Sets zsh as the default shell
-- Configures SDDM autologin (into niri if installed, otherwise Plasma)
+- Configures SDDM autologin (into niri if present, otherwise Plasma) — best-effort; resume command always works
 
 **Duration**: 10-30 minutes depending on internet speed.
 

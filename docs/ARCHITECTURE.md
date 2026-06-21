@@ -56,9 +56,9 @@ lower-tier completion markers intact.
 
 | Tier | Name    | Contents                                                              | Failure tolerance |
 |------|---------|-----------------------------------------------------------------------|-------------------|
-| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit, PAM, systemd-boot, keyd, firewall | Must succeed — bricks system if it fails |
+| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit, keyd, firewall | Must succeed — bricks system if it fails |
 | 2    | shell   | CLI tools, editors, dotfile prerequisites, secrets, zsh as default shell | Must succeed for usable headless system |
-| 3    | desktop | KDE Plasma + SDDM + portals + browsers + GUI apps (zathura, latex, …) | Optional — system remains usable headless if it fails |
+| 3    | desktop | KDE Plasma fallback (from archinstall) + additional GUI apps, portals, latex, browsers | Optional — system remains usable headless if it fails |
 | 4    | extras  | All AUR packages (yay), DMS, niri, messaging apps, obsidian            | Always non-fatal — falls back to Plasma |
 
 **Why AUR is strictly tier 4:** AUR is by far the most common failure mode
@@ -110,7 +110,7 @@ Systemd units to enable system-wide are split per tier under `infra/services/`:
 
 - `infra/services/10-base.txt`    — polkit, NetworkManager, bluetooth, audio plumbing, keyd, …
 - `infra/services/20-shell.txt`   — (currently empty; user-level services live in dotfiles)
-- `infra/services/30-desktop.txt` — sddm
+- `infra/services/30-desktop.txt` — (empty by design; archinstall enables the DM)
 - `infra/services/40-extras.txt`  — (currently empty)
 
 ## Dotfiles
@@ -137,6 +137,24 @@ see. It deliberately does *not* re-verify "is package X installed"; that's what
 The tier-filtering flags (`--tier`/`--up-to`) were removed in the
 simplification: the check set is now small enough that subsetting added more
 maintenance than value.
+
+## Current Contract (post-simplification)
+
+archway is intentionally a **thin layer** on top of:
+
+- A fresh `archinstall` using the **KDE Plasma** desktop profile (systemd-boot, LUKS+ext4 recommended).
+- The packages and services that profile provides (see `infra/pkgs/baseline.archinstall-kde.txt` for the audit allowlist).
+
+archway adds packages, enables a few services, deploys keyd + autologin glue, sets zsh, symlinks dotfiles, and provides recovery tools (`fix-boot`).
+
+It deliberately **no longer** performs:
+- Bootloader (systemd-boot) configuration
+- PAM edits (fingerprint/keyring)
+- XDG portal system config
+- Display manager installation or swapping
+- NVIDIA initramfs surgery
+
+See `docs/STABILITY.md` and `docs/SIMPLIFICATION.md` for rationale and the recovery model.
 
 ## Secrets Management
 
@@ -196,10 +214,13 @@ forward/inverse search between source and PDF.
 
 The primary target of archway is Arch Linux. However, the **User Environment** layer
 (shell, editor, CLI tools, dotfiles) is also available on macOS so the terminal
-experience is identical across both machines.
+experience is identical across both machines (especially zsh + starship + nvim + tools).
 
 Only the User Environment layer is ported; the System Baseline and Desktop Shell
 layers remain Arch-only.
+
+`just bootstrap-mac` and `just setup-mac` (plus plain `just dotfiles`) work on macOS.
+Shared dotfiles use uname guards.
 
 macOS-specific files:
 
