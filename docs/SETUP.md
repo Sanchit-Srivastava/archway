@@ -785,6 +785,11 @@ If niri/DMS completely breaks:
 > If Plasma *itself* crashes (KWin crash loop) on **Wayland** with an NVIDIA
 > card, that's a known driver/compositor version bug — use the **Plasma (X11)**
 > session or set `KWIN_DRM_NO_AMS=1`. See [docs/STABILITY.md](STABILITY.md#2-kwin-crashes-on-plasma-wayland-nvidia).
+>
+> Archway keeps `~/.config/environment.d/50-archway.conf` free of
+> `QT_QPA_PLATFORM` / `SDL_VIDEODRIVER` etc. Those are set inside niri's
+> `environment {}` block instead, so Plasma (X11) and Plasma Wayland remain
+> usable fallbacks on both NVIDIA and non-NVIDIA machines after a full DMS install.
 
 ---
 
@@ -805,7 +810,7 @@ If niri/DMS completely breaks:
 |------|---------|
 | `~/.zshrc` | Shell configuration (symlink to archway) |
 | `~/.config/starship.toml` | Prompt configuration |
-| `~/.config/environment.d/50-archway.conf` | Session environment variables |
+| `~/.config/environment.d/50-archway.conf` | Common session env (editor, XDG, SSH etc.; *no* compositor platform vars) |
 | `~/.config/environment.d/90-dms.conf` | DMS environment (created by DMS) |
 | `/etc/sddm.conf.d/autologin.conf` | SDDM autologin settings |
 

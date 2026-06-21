@@ -111,6 +111,11 @@ dereferences an empty `std::optional`, and aborts in a loop. It clusters on
 **This only affects the KDE/Plasma fallback. niri (the daily driver) is
 unaffected** — which is why day-to-day use is fine.
 
+Archway ensures KDE Plasma (X11 in particular) remains a working fallback even
+after a full T4 + DMS/niri deployment (on NVIDIA and non-NVIDIA hardware) by
+keeping global `environment.d` free of Qt/Wayland platform variables. Those are
+scoped to the niri config instead.
+
 ### Fixes (simplest first)
 
 **A — use the Plasma (X11) session.** archway installs `plasma-x11-session`, so

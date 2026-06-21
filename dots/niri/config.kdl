@@ -163,7 +163,15 @@ overview {
 // See the binds section below for more spawn examples.
 // This line starts waybar, a commonly used bar for Wayland compositors.
 environment {
-  XDG_CURRENT_DESKTOP "niri"
+    // These make apps and toolkits launched from niri (and DMS) use native
+    // Wayland + good defaults. They are deliberately *not* set in the global
+    // ~/.config/environment.d/50-archway.conf so that KDE Plasma (X11) and
+    // Plasma Wayland remain fully functional fallbacks (on NVIDIA and non-NVIDIA).
+    XDG_CURRENT_DESKTOP "niri"
+    QT_QPA_PLATFORM "wayland"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+    MOZ_ENABLE_WAYLAND "1"
+    SDL_VIDEODRIVER "wayland"
 }
 hotkey-overlay {
     skip-at-startup
