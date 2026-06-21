@@ -76,7 +76,11 @@ ttf-jetbrains-mono-nerd
 # =============================================================================
 # NETWORKING
 # =============================================================================
-iwd
+# iwd is intentionally absent: archinstall uses NetworkManager's built-in
+# wifi stack (or wpa_supplicant). Adding iwd without configuring NM to use
+# it as a backend (wifi.backend=iwd in NetworkManager.conf) just installs
+# a daemon that never runs. If you want iwd as NM's backend, add that config
+# to dots/networkmanager/ and restore iwd here.
 networkmanager
 tailscale
 

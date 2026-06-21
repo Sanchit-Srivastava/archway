@@ -90,20 +90,15 @@ redeploy this repo, then restore user data from backups.
 |---------|-------|
 | Bootloader | **systemd-boot** (UEFI; ships with `systemd`, no extra package) |
 
-archway standardizes on systemd-boot. Bootstrap runs `bootctl install` (idempotent)
-against the detected ESP (`/efi`, `/boot`, or `/boot/efi`) and verifies the pacman
-hook that auto-runs `bootctl update` on systemd upgrades.
+archway standardizes on systemd-boot, which archinstall installs automatically
+when you select it above. Bootstrap does **not** re-run `bootctl` — archinstall
+already installed it and registered the EFI entry correctly.
 
 **Why systemd-boot:**
 - Zero AUR dependencies (no GraalVM/Gradle build chain)
 - Auto-detects Windows Boot Manager for dual-boot
 - Default and recommended bootloader on CachyOS
-- Trivial to make idempotent in scripts
-
-If you previously used Limine on this machine, `bootctl install` will write
-systemd-boot to the ESP without removing the Limine binary; you may need to
-delete `\EFI\limine\` and remove the Limine UEFI entry with `efibootmgr -b
-<id> -B` after confirming systemd-boot works.
+- Trivial to recover from scripts if NVRAM is wiped
 
 If the firmware ever "forgets" the boot entry (boots straight to BIOS), do not
 reinstall — run `just fix-boot` (from the system or the Arch ISO). See
@@ -237,12 +232,10 @@ This installs all packages, enables services, and configures the system:
 - Installs yay (AUR helper)
 - Installs baseline packages from official repos
 - Installs configured AUR packages when using the full profile
-- Enables system services (NetworkManager, Bluetooth, SDDM, etc.)
-- Configures PAM for gnome-keyring auto-unlock
-- Configures PAM for fingerprint authentication
-- Creates PAM config for DMS lock screen
-- Configures XDG portals for niri/Wayland
-- Configures SDDM autologin
+- Enables system services (NetworkManager, Bluetooth, etc.)
+- Deploys the keyd keyboard remapping config
+- Sets zsh as the default shell
+- Configures SDDM autologin (into niri if installed, otherwise Plasma)
 
 **Duration**: 10-30 minutes depending on internet speed.
 
@@ -454,7 +447,11 @@ Test fingerprint auth:
 fprintd-verify
 ```
 
-The DMS lock screen and sudo will now accept fingerprint.
+KDE's lock screen and DMS's lock screen will now accept fingerprint. To also
+unlock `sudo` and console login, add one line to `/etc/pam.d/system-auth` —
+see [docs/STABILITY.md](STABILITY.md#fingerprint-fprintd) for the exact
+one-time step and the safety warning about keeping a root shell open while
+testing.
 
 ### 7.2 Configure Bitwarden SSH Agent (Optional)
 

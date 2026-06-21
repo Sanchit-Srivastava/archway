@@ -289,6 +289,10 @@ Anything mentioning `kwin_wayland`, `nvidia`, `nouveau`, `drm`, `segfault`,
   to break the graphics stack or initramfs.
 - Keep `linux-lts` installed as a fallback kernel. If a new `linux` + nvidia
   combo ever fails to boot, pick the LTS entry in systemd-boot and recover.
+  (`linux-lts` is deliberately absent from the package lists — it's a
+  per-machine safety net, not a baseline requirement. `just audit` will show
+  it as "untracked"; that's expected. Install it once with
+  `sudo pacman -S linux-lts linux-lts-headers`.)
 - After updates, `just doctor` and `just audit` confirm runtime + package state.
 
 ---

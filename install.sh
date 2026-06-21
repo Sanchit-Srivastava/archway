@@ -207,7 +207,10 @@ detect_sddm_session() {
 		echo "niri"
 		return 0
 	fi
-	if [[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
+	# Plasma 6 ships a Wayland session at wayland-sessions/plasma.desktop.
+	# Older installs / X11 fallback use xsessions/plasma.desktop.
+	if [[ -f "/usr/share/wayland-sessions/plasma.desktop" ]] ||
+		[[ -f "/usr/share/xsessions/plasma.desktop" ]]; then
 		echo "plasma"
 		return 0
 	fi
