@@ -13,6 +13,12 @@ REPO_ROOT="$SCRIPT_DIR"
 # shellcheck source=infra/lib/autologin.sh
 . "${SCRIPT_DIR}/infra/lib/autologin.sh"
 
+# Preserve the shared implementation from the library under a different name,
+# because we override configure_sddm_autologin() with a local wrapper below.
+if declare -f configure_sddm_autologin >/dev/null 2>&1; then
+	eval "$(declare -f configure_sddm_autologin | sed 's/configure_sddm_autologin()/_shared_configure_sddm_autologin()/')"
+fi
+
 SCRIPT_VERSION="2026-06-21-1"
 
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
@@ -226,7 +232,7 @@ configure_sddm_autologin() {
 	fi
 
 	# Delegate write + idempotency to shared helper (with "sudo" priv)
-	configure_sddm_autologin "$autologin_user" "$autologin_session" "$autologin_conf" "sudo"
+	_shared_configure_sddm_autologin "$autologin_user" "$autologin_session" "$autologin_conf" "sudo"
 }
 
 write_autostart_resume() {

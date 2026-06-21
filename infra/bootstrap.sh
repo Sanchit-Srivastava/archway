@@ -13,6 +13,12 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=lib/autologin.sh
 . "${SCRIPT_DIR}/lib/autologin.sh"
 
+# Preserve the shared implementation from the library under a different name,
+# because we override configure_sddm_autologin() with a local wrapper below.
+if declare -f configure_sddm_autologin >/dev/null 2>&1; then
+	eval "$(declare -f configure_sddm_autologin | sed 's/configure_sddm_autologin()/_shared_configure_sddm_autologin()/')"
+fi
+
 # Script metadata
 SCRIPT_VERSION="2026-06-21-1"
 
@@ -506,7 +512,7 @@ configure_sddm_autologin() {
 
 	# Delegate the idempotent write (and its internal "already configured" check)
 	# to the shared helper. Pass "sudo" as the privilege command.
-	configure_sddm_autologin "$autologin_user" "$autologin_session" "$autologin_conf" "sudo"
+	_shared_configure_sddm_autologin "$autologin_user" "$autologin_session" "$autologin_conf" "sudo"
 
 	# Extra bootstrap-specific note
 	if [[ -f "$autologin_conf" ]]; then

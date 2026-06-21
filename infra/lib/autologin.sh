@@ -37,6 +37,9 @@ detect_sddm_session() {
 # Idempotent: skips if already set exactly to this user+session.
 # priv may be "sudo" (or "sudo ") to run privileged; empty for current user.
 # Returns 0 on success (or no-op).
+#
+# Note: callers that wrap this (install.sh, bootstrap.sh) preserve the original
+# under _shared_ name to avoid recursion due to name shadowing.
 configure_sddm_autologin() {
 	local autologin_user="${1:?configure_sddm_autologin requires user}"
 	local autologin_session="${2:?configure_sddm_autologin requires session}"
