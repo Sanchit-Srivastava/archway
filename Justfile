@@ -77,6 +77,12 @@ update:
     sudo pacman -Syu
     yay -Syu
 
+# Re-assert systemd-boot + firmware boot entry (recover a vanished boot entry).
+# Safe to re-run. Also works from the Arch ISO via arch-chroot — see the script
+# header and docs/STABILITY.md for the live-USB recovery steps.
+fix-boot:
+    ./infra/fix-boot.sh
+
 # =============================================================================
 # OPT-IN: CACHYOS EXTRAS
 # =============================================================================
@@ -95,8 +101,9 @@ setup-cachyos-extras:
     sudo pacman -S --needed --noconfirm cachyos-settings chwd
     @echo "Installed. Reboot to activate cachyos-settings, then run 'just hwdetect'."
 
-# Detect hardware and install matching driver profiles via chwd
-# (e.g. NVIDIA dkms stack). Run once after first boot, then reboot.
+# Detect hardware and install matching driver profiles via chwd.
+# NOTE: For NVIDIA, prefer selecting the nvidia-open driver in archinstall
+# (see docs/STABILITY.md §4). `chwd -a` is fine for other (non-NVIDIA) hardware.
 hwdetect:
     sudo chwd -a
 

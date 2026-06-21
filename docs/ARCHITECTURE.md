@@ -70,10 +70,9 @@ The expected recovery path is a fresh Arch install, re-running this repo, and
 restoring user data from backups. This keeps the baseline independent of Btrfs
 subvolume, fstab, and rollback state.
 
-**Per-tier markers:** each successful tier writes
-`~/.config/archway/bootstrap.tier{N}.complete`. The aggregate
-`bootstrap.complete` is written only when all requested tiers succeed and
-tier 1 was included.
+**Completion marker:** a successful run writes `~/.config/archway/bootstrap.complete`
+(only when all requested tiers succeed and tier 1 was included). `install-dms.sh`
+checks for it before installing DMS, to confirm the system baseline is present.
 
 **CLI usage:**
 
@@ -124,20 +123,20 @@ Systemd units to enable system-wide are split per tier under `infra/services/`:
 
 ## Doctor (validation)
 
-`infra/doctor.sh` runs system health checks. Each check is tagged with a
-tier in the `CHECK_TIERS` table at the top of the script, mirroring the
-package/dotfile tier model. Filter the same way:
+`infra/doctor.sh` runs system health checks focused on **runtime state,
+config/symlink drift, and boot safety** — i.e. things the package audit cannot
+see. It deliberately does *not* re-verify "is package X installed"; that's what
+`--audit-packages` (`just audit`) is for.
 
 ```
-./infra/doctor.sh --up-to 2   # core + CLI checks (no GUI/DMS)
-./infra/doctor.sh --up-to 3   # add GUI baseline
-./infra/doctor.sh --tier 1    # only T1 (audio, network, boot, …)
+./infra/doctor.sh             # all checks
 ./infra/doctor.sh --only ID   # single check (see --list)
+./infra/doctor.sh --audit-packages   # package drift vs repo lists
 ```
 
-`install.sh` automatically passes the profile-matching `--up-to` to doctor
-in stage 2, so a `safe`-profile install will not fail on missing T4
-checks (DMS, niri, AUR plugins).
+The tier-filtering flags (`--tier`/`--up-to`) were removed in the
+simplification: the check set is now small enough that subsetting added more
+maintenance than value.
 
 ## Secrets Management
 

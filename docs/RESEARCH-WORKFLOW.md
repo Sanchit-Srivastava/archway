@@ -138,8 +138,8 @@ Zotero must be installed and its database accessible at the default path
 
 The repo cannot automate Zotero plugin installation -- these must be installed
 manually inside Zotero via **Tools > Add-ons > gear icon > Install Add-on From
-File** (select the downloaded `.xpi`, then restart Zotero). Run `just check
-zotero` and `just check zotero-mcp` to verify installation.
+File** (select the downloaded `.xpi`, then restart Zotero). After installing,
+confirm the plugins appear in **Tools > Add-ons**.
 
 **1. Better BibTeX for Zotero** --
 <https://retorque.re/zotero-better-bibtex/installation/>

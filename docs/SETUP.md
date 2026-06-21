@@ -78,6 +78,12 @@ archway no longer configures Btrfs snapshots by default. The recommended
 recovery model is: reinstall Arch with the same simple ext4 + LUKS defaults,
 redeploy this repo, then restore user data from backups.
 
+> **Before reinstalling, check [docs/STABILITY.md](STABILITY.md).** The two
+> problems that look like "I must reinstall" — a **vanished boot entry** (drops
+> to BIOS) and a **graphics/KWin crash loop** — are both quick fixes
+> (`just fix-boot`; or use the Plasma X11 session) that do **not** require
+> reinstalling. Reinstall is the last resort, not the first.
+
 ### 1.3 Bootloader
 
 | Setting | Value |
@@ -98,6 +104,10 @@ If you previously used Limine on this machine, `bootctl install` will write
 systemd-boot to the ESP without removing the Limine binary; you may need to
 delete `\EFI\limine\` and remove the Limine UEFI entry with `efibootmgr -b
 <id> -B` after confirming systemd-boot works.
+
+If the firmware ever "forgets" the boot entry (boots straight to BIOS), do not
+reinstall — run `just fix-boot` (from the system or the Arch ISO). See
+[docs/STABILITY.md](STABILITY.md#1-boot-entry-vanished-drops-to-bios).
 
 ### 1.4 Hostname
 
@@ -476,6 +486,26 @@ sudo tailscale up
 # Follow the URL to authenticate
 ```
 
+### 7.3a NVIDIA GPU (if you have an NVIDIA card)
+
+archway's base install is GPU-agnostic. The driver is best selected **in
+archinstall**: for Turing (RTX 20) and newer, pick the **open kernel modules**
+(`nvidia-open`) option. With current drivers that's usually all that's needed —
+`nvidia-utils` blacklists nouveau, `nvidia_drm.modeset=1` is the default, and the
+`-dkms` package rebuilds the initramfs on updates.
+
+Verify after first boot:
+```bash
+nvidia-smi
+```
+
+If KDE Plasma-on-**Wayland** crashes (KWin `FormatInfo` crash loop), that's a
+known driver/compositor version bug, **not** a config problem — use the
+**Plasma (X11)** session (archway installs `plasma-x11-session`) or set
+`KWIN_DRM_NO_AMS=1`. niri is unaffected. See
+[docs/STABILITY.md](STABILITY.md#2-kwin-crashes-on-plasma-wayland-nvidia).
+(Intel/AMD machines: skip this entirely.)
+
 ### 7.4 Set Up Printing (Optional)
 
 Printing services are installed but not enabled by default:
@@ -539,13 +569,18 @@ just audit
 
 ### 8.4 Recovery Model
 
-archway does not configure filesystem snapshots by default. If the OS breaks,
-the intended recovery path is a fresh Arch install, redeploying this repo, and
-restoring user data from backups.
+archway does not configure filesystem snapshots by default. But most "broken"
+states do **not** need a reinstall — see [docs/STABILITY.md](STABILITY.md) for
+the full playbook. In short:
 
-Keep personal data backed up outside the root filesystem. A future optional
-backup/snapshot script can be added without making it part of the baseline boot
-path.
+- **Boot drops to BIOS / Arch entry gone:** `just fix-boot` (works from the
+  running system, or from the Arch ISO via `arch-chroot`). No reinstall.
+- **KWin crashes back to the greeter on Plasma-Wayland (NVIDIA):** use the
+  **Plasma (X11)** session, or set `KWIN_DRM_NO_AMS=1`. No reinstall.
+- **niri/DMS broken:** log into KDE Plasma from the greeter.
+
+If the OS is genuinely unrecoverable, the intended path is a fresh Arch install,
+redeploying this repo, and restoring user data from backups.
 
 ---
 
@@ -628,6 +663,10 @@ If niri/DMS completely breaks:
 4. Or disable autologin and select Plasma from SDDM manually
 5. Reboot
 
+> If Plasma *itself* crashes (KWin crash loop) on **Wayland** with an NVIDIA
+> card, that's a known driver/compositor version bug — use the **Plasma (X11)**
+> session or set `KWIN_DRM_NO_AMS=1`. See [docs/STABILITY.md](STABILITY.md#2-kwin-crashes-on-plasma-wayland-nvidia).
+
 ---
 
 ## Quick Reference
@@ -678,7 +717,8 @@ If niri/DMS completely breaks:
 - Run `./infra/doctor.sh` to validate
 - Paste age private key from Bitwarden into `~/.config/sops/age/keys.txt`
 - Re-run `just dotfiles` to decrypt secrets
-- Optional: Enroll fingerprints
+- **If NVIDIA GPU: pick nvidia-open in archinstall; verify with `nvidia-smi`** (see §7.3a)
+- Optional: Enroll fingerprints (see docs/STABILITY.md §5)
 - Optional: Configure Bitwarden SSH agent
 - Optional: Configure Tailscale
 - Optional: Enable printing services

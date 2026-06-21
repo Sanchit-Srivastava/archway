@@ -26,6 +26,17 @@ outages). It is now strictly opt-in.
 
 ## 1. Hardware detection (chwd)
 
+> **For NVIDIA, prefer selecting the driver in archinstall** (the `nvidia-open`
+> option for Turing+). With current drivers that's usually sufficient on its own
+> — `nvidia-utils` blacklists nouveau, modeset is on by default, and `-dkms`
+> rebuilds the initramfs. See
+> [docs/STABILITY.md](STABILITY.md#4-nvidia-driver-setup-fresh-install) for the
+> details and the rare manual mkinitcpio step. Note that the KWin-on-Wayland
+> crash is a *separate* software bug, fixed by the Plasma X11 session, not by any
+> driver config.
+>
+> `chwd` is still useful for *non-NVIDIA* hardware profiles, documented below.
+
 `chwd` (CachyOS Hardware Detection) is NOT installed by default. After
 running `just setup-repos`, install it:
 
@@ -44,8 +55,10 @@ sudo chwd -i pci nvidia-dkms   # install a specific profile
 ```
 
 For an NVIDIA GPU on Arch, `chwd` typically installs `nvidia-dkms`,
-`nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`, and configures
-`mkinitcpio` early-KMS plus the modprobe options needed for Wayland.
+`nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`, and touches
+`mkinitcpio`. For archway machines, selecting `nvidia-open` in archinstall is the
+preferred path (simpler and avoids `chwd`'s mkinitcpio edits); see
+[docs/STABILITY.md §4](STABILITY.md#4-nvidia-driver-setup-fresh-install).
 
 After driver install, reboot.
 

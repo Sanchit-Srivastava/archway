@@ -25,6 +25,17 @@ systemd-boot is the supported layout):
 3. `just doctor` — validates. Failures here on a fresh system usually mean
    step 1 was skipped.
 
+Per-machine, opt-in (NOT part of the above sequence):
+
+- **NVIDIA:** select the `nvidia-open` driver in archinstall (Turing+). archway
+  does NOT script GPU driver setup — current drivers self-configure (nouveau
+  blacklist, default modeset, dkms initramfs hook). The KWin-on-Wayland crash is
+  a separate driver/compositor bug fixed by the Plasma X11 session, not config.
+  See `docs/STABILITY.md` §2 and §4.
+- `just fix-boot` — recover a vanished UEFI boot entry (`bootctl install` +
+  fallback). Works from the running system or the Arch ISO via `arch-chroot`.
+  Never reinstall the OS just to restore a boot entry.
+
 
 ## Project Overview
 
@@ -244,9 +255,11 @@ Tier files: `infra/services/10-base.txt`, `20-shell.txt`, `30-desktop.txt`, `40-
 | File                          | Purpose                              |
 | ----------------------------- | ------------------------------------ |
 | `docs/ARCHITECTURE.md`        | Design decisions (READ FIRST)        |
+| `docs/STABILITY.md`           | Failure modes + recovery (boot, NVIDIA, logs) |
 | `infra/bootstrap.sh`          | Main system setup script (Arch)      |
 | `infra/bootstrap-mac.sh`     | macOS bootstrap (Homebrew)           |
 | `infra/doctor.sh`             | System validation                    |
+| `infra/fix-boot.sh`           | Boot-entry recovery (system or ISO)  |
 | `infra/pkgs/`                 | Tiered Arch package lists (10-base..40-extras) |
 | `infra/pkgs/40-extras.aur.txt`| AUR package list (always T4)         |
 | `infra/pkgs.brew.txt`         | Homebrew formulae (macOS)            |

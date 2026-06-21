@@ -20,6 +20,12 @@ ehthumbs.db
 *.tmp
 *.temp
 
+# JVM crash dumps (e.g. from the ltex-ls / LanguageTool language server crashing
+# inside an editor). These land in the CWD wherever the editor was launched and
+# are unrelated to the repo; never commit them.
+hs_err_pid*.log
+replay_pid*.log
+
 # Install scripts (one-time wrappers)
 # install-dms.sh  # Keep in repo for target laptop
 
