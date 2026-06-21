@@ -118,24 +118,24 @@ xdg-desktop-portal-gtk
 polkit-gnome
 
 # =============================================================================
-# PDF VIEWER + LATEX TOOLCHAIN (light)
-# =============================================================================
-biber
-zathura
-zathura-pdf-mupdf
-texlive-basic
-texlive-binextra
-texlive-bibtexextra
-texlive-fontsrecommended
-texlive-latex
-texlive-latexextra
-texlive-pictures
-texlive-plaingeneric
-texlive-publishers
-texlive-fontsextra
-python-pynvim
-
-# =============================================================================
 # VPN
 # =============================================================================
 proton-vpn-cli
+
+# PDF viewer (zathura is the preferred viewer for the LaTeX workflow via vimtex + SyncTeX)
+zathura
+zathura-pdf-mupdf
+
+# =============================================================================
+# LaTeX / TeX toolchain
+# =============================================================================
+# Moved to a separate install script because it is very large and slow.
+# Not needed during bandwidth-constrained or "emergency" reinstalls.
+#
+# Install later with:
+#     ./infra/install-tex.sh
+# or
+#     just tex
+#
+# See infra/pkgs/tex.txt for the list (biber + texlive-* groups + python-pynvim).
+# The script is intentionally standalone and easy to run post-bootstrap.

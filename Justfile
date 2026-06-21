@@ -29,6 +29,12 @@ bootstrap-minimal:
 bootstrap-safe:
     ./infra/bootstrap.sh --up-to 3
 
+# Install the LaTeX / TeX toolchain (heavy, intentionally not in main tiers).
+# Run this after a bandwidth-constrained or "emergency" install when you have
+# a usable system. See infra/install-tex.sh and infra/pkgs/tex.txt.
+tex:
+    ./infra/install-tex.sh
+
 # Install user dotfiles
 dotfiles:
     ./infra/dotfiles.sh
@@ -137,13 +143,13 @@ secrets-show file:
 # DEVELOPMENT
 # =============================================================================
 
-# Lint shell scripts
+# Lint shell scripts (includes shared lib/)
 lint:
-    shellcheck infra/*.sh
+    shellcheck infra/lib/*.sh infra/*.sh install.sh remote-install.sh bin/archway-install 2>/dev/null || shellcheck infra/lib/*.sh infra/*.sh install.sh remote-install.sh bin/archway-install
 
-# Format shell scripts
+# Format shell scripts (includes shared lib/)
 fmt:
-    shfmt -w infra/*.sh
+    shfmt -w infra/lib/*.sh infra/*.sh install.sh remote-install.sh bin/archway-install
 
 # =============================================================================
 # macOS
