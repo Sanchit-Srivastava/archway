@@ -1,19 +1,22 @@
-return {
-  {
-    "zbirenbaum/copilot.lua",
-    opts = {
-      suggestion = {
-        enabled = true,
-        auto_trigger = true,
-        keymap = {
-          accept = false, -- handled by <Tab> via LazyVim's ai_accept
-          accept_word = "<M-w>",
-          accept_line = "<M-e>",
-          next = "<M-]>",
-          prev = "<M-[>",
-          dismiss = "<C-]>",
-        },
-      },
-    },
-  },
-}
+-- Disabled for now because first launch gets stuck on install
+-- return {
+--   {
+--     "zbirenbaum/copilot.lua",
+--     opts = {
+--       suggestion = {
+--         enabled = true,
+--         auto_trigger = true,
+--         keymap = {
+--           accept = false, -- handled by <Tab> via LazyVim's ai_accept
+--           accept_word = "<M-w>",
+--           accept_line = "<M-e>",
+--           next = "<M-]>",
+--           prev = "<M-[>",
+--           dismiss = "<C-]>",
+--         },
+--       },
+--     },
+--   },
+-- }
+
+return {}
