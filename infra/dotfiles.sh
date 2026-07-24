@@ -299,67 +299,6 @@ EOF
 	fi
 
 	# ==========================================================================
-	# OPENCODE (AI coding agent config)
-	# ==========================================================================
-	log_info "--- OpenCode ---"
-	link_dotfile "${DOTS_DIR}/opencode/opencode.json" "${HOME}/.config/opencode/opencode.json"
-	link_dotfile "${DOTS_DIR}/opencode/latex_server.py" "${HOME}/.config/opencode/latex_server.py"
-
-	# Create API key env file — decrypted from repo if age key is available,
-	# otherwise falls back to an empty template for manual population.
-	local opencode_env="${HOME}/.config/opencode/.env"
-	local opencode_template
-	opencode_template="$(
-		cat <<'TMPL'
-# OpenCode MCP server API keys
-# Fill in the values below, then open a new shell (or: source this file).
-# This file is NOT tracked by git — keep your keys here, not in the repo.
-#
-# Get keys at:
-#   Brave Search:      https://brave.com/search/api
-#   Wolfram Alpha:     https://developer.wolframalpha.com
-#   Semantic Scholar:  https://www.semanticscholar.org/product/api (optional)
-
-export BRAVE_API_KEY=
-export WOLFRAM_APP_ID=
-export SEMANTIC_SCHOLAR_API_KEY=
-TMPL
-	)"
-	decrypt_secret "${SECRETS_DIR}/opencode.env" "$opencode_env" "$opencode_template"
-
-	# ==========================================================================
-	# RESEARCH-TOOLS (Zotero RAG server credentials)
-	# ==========================================================================
-	log_info "--- Research-tools ---"
-
-	# Deploy Zotero API credentials used by the research-tools RAG server.
-	# Target: ~/research-tools/.env (loaded by python-dotenv at server startup)
-	local rt_home="${RESEARCH_TOOLS_HOME:-${HOME}/research-tools}"
-	local rt_env="${rt_home}/.env"
-	local rt_template
-	rt_template="$(
-		cat <<'TMPL'
-# research-tools RAG server credentials
-# Used by ~/research-tools/server/research-rag-server.py for Zotero Web API access.
-#
-# Get your credentials at:
-#   User ID:  https://www.zotero.org/settings/keys  (your numeric user ID)
-#   API Key:  https://www.zotero.org/settings/keys  (create a new key with read access)
-#
-# To edit the encrypted source:  just secrets-edit research-tools.env  (in archway)
-
-ZOTERO_USER_ID=
-ZOTERO_API_KEY=
-TMPL
-	)"
-	if [[ -d "$rt_home" ]]; then
-		decrypt_secret "${SECRETS_DIR}/research-tools.env" "$rt_env" "$rt_template"
-	else
-		log_warn "research-tools not found at $rt_home — skipping .env deployment"
-		log_warn "  Clone the repo first, then re-run: just dotfiles"
-	fi
-
-	# ==========================================================================
 	# VALE (prose linter config)
 	# ==========================================================================
 	log_info "--- Vale ---"
@@ -553,8 +492,7 @@ TMPL
 	log_info "  - Edit dots/git/.gitconfig to set your name and email"
 	log_info "  - Edit dots/ssh/config to add your SSH hosts"
 	if can_decrypt_secrets; then
-		log_info "  - Secrets decrypted from repo (SOPS + age)"
-		log_info "  - Edit secrets: just secrets-edit opencode.env"
+		log_info "  - Available secrets decrypted from repo (SOPS + age)"
 	else
 		log_info "  - Secrets not decrypted (no age key found)"
 		log_info "    Paste your age private key into: $AGE_KEY_FILE"

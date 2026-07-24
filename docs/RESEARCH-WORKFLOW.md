@@ -148,15 +148,6 @@ Download the latest `.xpi` from the link above. Better BibTeX provides the
 JSON-RPC endpoint (`localhost:23119`) used by `zotero-search`, `doi2bib`, and
 the zotcite Neovim plugin. Without it these tools will not function.
 
-**2. Zotero MCP Plugin** --
-<https://github.com/cookjohn/zotero-mcp/releases>
-
-Download the latest `zotero-mcp-plugin-*.xpi` from the releases page. This
-plugin embeds an MCP server inside Zotero (`localhost:23120/mcp`) that gives
-OpenCode direct access to search, read, and annotate your library. After
-installation, enable the server in Zotero: **Preferences > Zotero MCP Plugin >
-Enable Server** (default port 23120).
-
 **Completion** -- type `@` in a markdown file to get citekey suggestions via
 zotcite's built-in LSP. In LaTeX files, `\cite{` triggers completion. Use
 `<C-X><C-B>` in insert mode for a telescope picker.

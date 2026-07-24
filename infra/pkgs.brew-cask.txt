@@ -3,6 +3,11 @@
 # Keep packages grouped by section; keep entries alphabetized within a section
 
 # =============================================================================
+# AI CODING CLIENT
+# =============================================================================
+codex-app
+
+# =============================================================================
 # FONTS (Nerd Fonts for terminal/editor icons)
 # =============================================================================
 font-caskaydia-mono-nerd-font

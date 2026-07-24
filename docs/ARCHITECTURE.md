@@ -165,7 +165,6 @@ using [SOPS](https://github.com/getsops/sops) with
 ### How it works
 
 ```
-secrets/opencode.env          ──decrypt──▶  ~/.config/opencode/.env
 secrets/vdirsyncer.env        ──decrypt──▶  ~/.config/vdirsyncer/secrets
 ```
 
@@ -186,8 +185,8 @@ secrets/vdirsyncer.env        ──decrypt──▶  ~/.config/vdirsyncer/secre
 ### Editing secrets
 
 ```bash
-sops secrets/opencode.env       # decrypts → $EDITOR → re-encrypts on save
-just secrets-edit opencode.env  # same thing via Justfile
+sops secrets/vdirsyncer.env       # decrypts → $EDITOR → re-encrypts on save
+just secrets-edit vdirsyncer.env  # same thing via Justfile
 ```
 
 ### For users without the age key

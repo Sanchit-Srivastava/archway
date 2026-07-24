@@ -55,25 +55,6 @@ if [[ -z "$SSH_CONNECTION" ]]; then
 fi
 
 # =============================================================================
-# RESEARCH API KEYS (loaded from ~/.config/opencode/.env)
-# =============================================================================
-# These keys are used by OpenCode MCP servers for academic research tools.
-# They are stored in a local env file (never committed to the repo).
-#
-# To set up: see docs/setup-research-mcp.md
-#
-# File format:
-#   BRAVE_API_KEY=your-key-here
-#   SEMANTIC_SCHOLAR_API_KEY=your-key-here
-#   WOLFRAM_APP_ID=your-app-id-here
-_research_env="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/.env"
-if [[ -f "$_research_env" ]]; then
-    # shellcheck source=/dev/null
-    source "$_research_env"
-fi
-unset _research_env
-
-# =============================================================================
 # XDG BASE DIRECTORIES
 # =============================================================================
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"

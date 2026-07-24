@@ -127,7 +127,7 @@ secrets-edit file:
 
 # Encrypt all plaintext secrets files in-place (first-time setup)
 secrets-encrypt:
-    @for f in secrets/opencode.env secrets/research-tools.env secrets/vdirsyncer.env secrets/ssh_config.local; do \
+    @for f in secrets/vdirsyncer.env secrets/ssh_config.local; do \
         if grep -q 'sops_version=' "$f" 2>/dev/null || grep -q '"sops"' "$f" 2>/dev/null; then \
             echo "Already encrypted: $f"; \
         else \

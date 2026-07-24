@@ -4,11 +4,10 @@
 # To set up:
 #   1. Generate a key:  age-keygen -o ~/.config/sops/age/keys.txt
 #   2. Replace the recipient below with YOUR public key (age1...)
-#   3. Encrypt files:   sops --encrypt --in-place secrets/opencode.env
-#                        sops --encrypt --in-place secrets/vdirsyncer.env
+#   3. Encrypt files:   sops --encrypt --in-place secrets/vdirsyncer.env
 #
-# To edit secrets later:  sops secrets/opencode.env
-# To decrypt to stdout:   sops --decrypt secrets/opencode.env
+# To edit secrets later:  sops secrets/vdirsyncer.env
+# To decrypt to stdout:   sops --decrypt secrets/vdirsyncer.env
 
 creation_rules:
   - path_regex: secrets/.*
