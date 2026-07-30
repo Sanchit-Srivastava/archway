@@ -1,5 +1,5 @@
 # Homebrew formulae (one per line)
-# macOS equivalent of pkgs/20-shell.txt — CLI tools and editor layer only
+# macOS CLI tools and editor layer
 # Keep packages grouped by section; keep entries alphabetized within a section
 
 # =============================================================================

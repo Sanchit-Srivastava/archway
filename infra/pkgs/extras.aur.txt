@@ -1,0 +1,7 @@
+# Optional AUR extras. Failure is reported but does not invalidate core.
+dsearch-bin
+ltex-ls-plus-bin
+vale-bin
+wayfreeze
+zen-browser-bin
+

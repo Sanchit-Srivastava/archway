@@ -1,0 +1,17 @@
+# Optional native extras. Failure here never invalidates the core install.
+
+# DMS + niri
+cava
+cliphist
+cups-pk-helper
+dms-shell-niri
+i2c-tools
+matugen
+qt6-multimedia
+xwayland-satellite
+
+# Applications
+discord
+obsidian
+telegram-desktop
+

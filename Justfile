@@ -1,164 +1,94 @@
-# archway Justfile
-# https://github.com/casey/just
+# archway command surface
 
-# Default recipe - show help
 default:
     @just --list
 
-# =============================================================================
-# INSTALLATION
-# =============================================================================
+# Complete first stage: core, dotfiles, secrets, and DMS.
+install:
+    ./install.sh install
 
-# Run full bootstrap (all tiers: base + shell + desktop + extras)
-bootstrap:
-    ./infra/bootstrap.sh
+# Panic/recovery mode: reliable core only; KDE remains available.
+install-safe:
+    ./install.sh install --safe
 
-# Run a single tier (1=base, 2=shell, 3=desktop, 4=extras)
-bootstrap-tier n:
-    ./infra/bootstrap.sh --tier {{n}}
+# Complete DMS preferences after logging into niri once.
+finish:
+    ./install.sh finish
 
-# Run tiers 1..N inclusive (e.g. just bootstrap-up-to 3 for a no-AUR install)
-bootstrap-up-to n:
-    ./infra/bootstrap.sh --up-to {{n}}
+# Reliable native package baseline.
+core:
+    ./infra/bootstrap.sh core
 
-# Minimal install: T1+T2 only (headless baseline, no GUI)
-bootstrap-minimal:
-    ./infra/bootstrap.sh --up-to 2
+# Optional native and AUR applications. Failures do not invalidate core.
+extras:
+    ./infra/bootstrap.sh extras
 
-# Safe install: T1+T2+T3 only (skips fragile AUR/DMS in T4)
-bootstrap-safe:
-    ./infra/bootstrap.sh --up-to 3
+# Install/retry DMS and generate its compositor defaults.
+dms:
+    ./install.sh dms
 
-# Install the LaTeX / TeX toolchain (heavy, intentionally not in main tiers).
-# Run this after a bandwidth-constrained or "emergency" install when you have
-# a usable system. See infra/install-tex.sh and infra/pkgs/tex.txt.
-tex:
-    ./infra/install-tex.sh
+# Apply portable DMS preferences after its first launch.
+dms-config:
+    ./install.sh dms-config
 
-# Install user dotfiles
+# Onboard/validate the age key and decrypt secret targets.
+secrets:
+    ./install.sh secrets
+
+# Reapply ordinary dotfiles.
 dotfiles:
     ./infra/dotfiles.sh
 
-# Full setup: bootstrap + dotfiles
-setup: bootstrap dotfiles
-    @echo "Setup complete! Run './infra/doctor.sh' to validate."
+# Heavy optional LaTeX toolchain.
+tex:
+    ./infra/install-tex.sh
 
-# =============================================================================
-# VALIDATION
-# =============================================================================
+# Heavy optional Zotero installation.
+zotero:
+    ./infra/bootstrap.sh zotero --no-upgrade
 
-# Run all system checks
-doctor:
-    ./infra/doctor.sh
-
-# Run specific check (e.g., just check pipewire)
-check id:
-    ./infra/doctor.sh --only {{id}}
-
-# List available checks
-checks:
-    ./infra/doctor.sh --list
-
-# Audit packages (detect drift)
-audit:
-    ./infra/doctor.sh --audit-packages
-
-# =============================================================================
-# MAINTENANCE
-# =============================================================================
-
-# Pull latest, run bootstrap, validate
-sync:
-    git pull
-    ./infra/bootstrap.sh
-    ./infra/dotfiles.sh
-    ./infra/doctor.sh
-
-# Pull live DMS/niri configs into repo (run after changing settings)
+# Pull live niri files into the repo (DMS runtime JSON stays DMS-owned).
 pull-dots:
     ./infra/pull-dots.sh
 
-# Update system packages
+# Update packages using the distro's existing repositories.
 update:
     sudo pacman -Syu
-    yay -Syu
+    @if command -v yay >/dev/null 2>&1; then yay -Sua; fi
 
-# Re-assert systemd-boot + firmware boot entry (recover a vanished boot entry).
-# Safe to re-run. Also works from the Arch ISO via arch-chroot — see the script
-# header and docs/STABILITY.md for the live-USB recovery steps.
+# Pull Archway, reapply core and dotfiles. Optional components are not forced.
+sync:
+    git pull --ff-only
+    ./infra/bootstrap.sh core
+    ./infra/dotfiles.sh
+
+# Arch/systemd-boot-specific recovery tool. Never part of installation.
 fix-boot:
     ./infra/fix-boot.sh
 
-# =============================================================================
-# OPT-IN: CACHYOS EXTRAS
-# =============================================================================
-# These recipes are NOT run by `just bootstrap`. They opt-in to the CachyOS
-# third-party repos and packages (optimized kernel, perf tweaks, hardware
-# detection, gaming meta). See docs/GAMING.md for details.
-
-# Configure third-party repos (CachyOS + chaotic-aur). Idempotent.
-# Multilib is enabled by `just bootstrap` directly and does NOT need this.
-setup-repos:
-    ./infra/setup-repos.sh
-
-# Install CachyOS perf tweaks + hardware detection tool (cachyos-settings, chwd).
-# Requires `just setup-repos` first.
-setup-cachyos-extras:
-    sudo pacman -S --needed --noconfirm cachyos-settings chwd
-    @echo "Installed. Reboot to activate cachyos-settings, then run 'just hwdetect'."
-
-# Detect hardware and install matching driver profiles via chwd.
-# NOTE: For NVIDIA, prefer selecting the nvidia-open driver in archinstall
-# (see docs/STABILITY.md §4). `chwd -a` is fine for other (non-NVIDIA) hardware.
-hwdetect:
-    sudo chwd -a
-
-# Show available chwd profiles for detected hardware (no install)
-hwdetect-list:
-    sudo chwd -l
-
-# =============================================================================
-# SECRETS (SOPS + age)
-# =============================================================================
-
-# Edit an encrypted secrets file (decrypts → $EDITOR → re-encrypts)
+# Edit an encrypted secret.
 secrets-edit file:
     sops secrets/{{file}}
 
-# Encrypt all plaintext secrets files in-place (first-time setup)
-secrets-encrypt:
-    @for f in secrets/vdirsyncer.env secrets/ssh_config.local; do \
-        if grep -q 'sops_version=' "$f" 2>/dev/null || grep -q '"sops"' "$f" 2>/dev/null; then \
-            echo "Already encrypted: $f"; \
-        else \
-            sops --encrypt --in-place "$f" && echo "Encrypted: $f"; \
-        fi; \
-    done
-
-# Show decrypted secrets (stdout only — does not write files)
+# Show a decrypted secret on stdout.
 secrets-show file:
     sops --decrypt secrets/{{file}}
 
-# =============================================================================
-# DEVELOPMENT
-# =============================================================================
-
-# Lint shell scripts (includes shared lib/)
-lint:
-    shellcheck infra/lib/*.sh infra/*.sh install.sh remote-install.sh bin/archway-install 2>/dev/null || shellcheck infra/lib/*.sh infra/*.sh install.sh remote-install.sh bin/archway-install
-
-# Format shell scripts (includes shared lib/)
-fmt:
-    shfmt -w infra/lib/*.sh infra/*.sh install.sh remote-install.sh bin/archway-install
-
-# =============================================================================
-# macOS
-# =============================================================================
-
-# Run macOS bootstrap (Homebrew packages + shell config)
+# macOS user-environment installation.
 bootstrap-mac:
     ./infra/bootstrap-mac.sh
 
-# Full macOS setup: bootstrap + dotfiles
+# macOS packages plus shared dotfiles.
 setup-mac: bootstrap-mac dotfiles
-    @echo "macOS setup complete!"
+
+# Static shell analysis; never executes target-machine infrastructure.
+lint:
+    shellcheck -x -P SCRIPTDIR infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh
+
+# Format shell files in place.
+fmt:
+    shfmt -w infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh
+
+# Check formatting without modifying files.
+check-fmt:
+    shfmt -d infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh

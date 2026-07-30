@@ -1,6 +1,6 @@
 # LaTeX / TeX toolchain + PDF viewer backend
 #
-# This is intentionally separated from the main tiers.
+# This is intentionally separated from the normal install.
 # TeX Live is very large and slow to install. It is not a priority
 # during a "desperate reinstall" on limited bandwidth.
 #
@@ -10,11 +10,9 @@
 
 # LaTeX / TeX toolchain + PDF viewer (heavy)
 #
-# This file is NOT included in the main tiered bootstrap by design.
+# This file is NOT included in the normal install by design.
 # Run `./infra/install-tex.sh` or `just tex` after you have a basic system.
 #
-# See the comment in infra/pkgs/30-desktop.txt.
-
 zathura
 zathura-pdf-mupdf
 biber

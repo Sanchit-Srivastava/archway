@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pull live DMS/niri configs back into the repo.
-# Run this on the target machine after changing settings via the DMS
-# settings app, niri config edits, etc.
-#
-# This is the inverse of post-dms-install.sh: that script copies
-# repo -> live, this script copies live -> repo.
+# Pull selected live niri configs back into the repo.
+# DMS runtime JSON is deliberately excluded because it is generated,
+# versioned, and may contain machine-specific identifiers.
 #
 # Safe to re-run (idempotent).
 
@@ -68,11 +65,8 @@ main() {
 		"${DOTS_DIR}/niri/dms/windowrules.kdl"
 
 	# DMS settings
-	pull_file "${HOME}/.config/DankMaterialShell/settings.json" \
-		"${DOTS_DIR}/DankMaterialShell/settings.json"
-
-	pull_file "${HOME}/.config/DankMaterialShell/plugin_settings.json" \
-		"${DOTS_DIR}/DankMaterialShell/plugin_settings.json"
+	log_info "DMS runtime JSON is intentionally not imported."
+	log_info "Edit the portable overlays in dots/DankMaterialShell/ instead."
 
 	log_info ""
 	log_info "Done. Run 'git diff' to review changes before committing."

@@ -1,3 +1,0 @@
-# Tier 4 (extras) systemd units to enable system-wide
-# AUR / DMS / niri / messaging tier currently has no system services.
-# DMS-related user services are configured by install-dms.sh.

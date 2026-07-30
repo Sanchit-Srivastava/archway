@@ -51,7 +51,15 @@ decrypt_secret() {
 	mkdir -p "$(dirname "$target")"
 
 	if can_decrypt_secrets && [[ -f "$src" ]]; then
-		SOPS_AGE_KEY_FILE="$AGE_KEY_FILE" sops --decrypt "$src" >"$target"
+		local tmp_target
+		tmp_target="$(mktemp "$(dirname "$target")/.archway-secret.XXXXXX")"
+		chmod 600 "$tmp_target"
+		if ! SOPS_AGE_KEY_FILE="$AGE_KEY_FILE" sops --decrypt "$src" >"$tmp_target"; then
+			rm -f "$tmp_target"
+			log_error "Failed to decrypt $src; existing $target was not changed"
+			return 1
+		fi
+		mv "$tmp_target" "$target"
 		chmod 600 "$target"
 		log_info "Decrypted: $target"
 	elif [[ -f "$target" ]]; then
@@ -125,7 +133,7 @@ install_oh_my_zsh() {
 
 	if ! command -v git >/dev/null 2>&1; then
 		log_error "git is not installed — cannot bootstrap oh-my-zsh"
-		log_error "Run 'just bootstrap' first (tier 1 installs git), then re-run dotfiles"
+		log_error "Run 'just core' first, then re-run dotfiles"
 		return 1
 	fi
 
@@ -467,18 +475,6 @@ TMPL
 			link_dotfile "$unit" "${HOME}/.config/systemd/user/${unit_name}"
 		done
 
-		# ==========================================================================
-		# LOCAL BIN
-		# ==========================================================================
-		log_info "--- Local bin ---"
-		mkdir -p "${HOME}/.local/bin"
-		if [[ -f "${REPO_ROOT}/bin/archway-install" ]]; then
-			chmod +x "${REPO_ROOT}/bin/archway-install"
-			ln -sf "${REPO_ROOT}/bin/archway-install" "${HOME}/.local/bin/archway-install"
-			log_info "Linked: ${HOME}/.local/bin/archway-install"
-		else
-			log_warn "archway-install wrapper not found, skipping"
-		fi
 	fi
 
 	log_info ""

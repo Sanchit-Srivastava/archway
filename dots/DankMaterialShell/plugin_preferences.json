@@ -3,8 +3,7 @@
     "enabled": false
   },
   "dankKDEConnect": {
-    "enabled": true,
-    "selectedDeviceId": "15ed05a3f2284c22a1530d56fc0f55b6"
+    "enabled": true
   },
   "dankBatteryAlerts": {
     "enabled": true
@@ -67,3 +66,4 @@
     "label": ""
   }
 }
+

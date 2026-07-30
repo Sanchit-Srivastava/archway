@@ -11,7 +11,6 @@
 # - Standard color variables (safe to source multiple times)
 # - log_info / log_warn / log_error / log_fatal
 # - A basic die() that honors CURRENT_PHASE when set
-# - array_contains (used by bootstrap)
 #
 # Keep this file minimal and portable (Arch + macOS for dotfiles/bootstrap-mac).
 # Scripts with rich error handling (banners, phase tracking) may still define
@@ -42,25 +41,4 @@ die() {
 		log_fatal "Phase: ${CURRENT_PHASE}"
 	fi
 	exit 1
-}
-
-# array_contains needle "${array[@]}"
-# Returns 0 if needle present.
-array_contains() {
-	local needle="$1"
-	shift
-	local item
-	for item in "$@"; do
-		if [[ "$item" == "$needle" ]]; then
-			return 0
-		fi
-	done
-	return 1
-}
-
-# Optional helper: ensure we are on Arch (used by several scripts)
-require_arch() {
-	if [[ ! -f /etc/arch-release ]]; then
-		die "This script must run on Arch Linux (no /etc/arch-release found)"
-	fi
 }

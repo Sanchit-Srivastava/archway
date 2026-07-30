@@ -1,0 +1,14 @@
+{
+  "clockFormat": "24h",
+  "showSeconds": false,
+  "weatherEnabled": true,
+  "showDock": false,
+  "notificationCompactMode": true,
+  "acLockTimeout": 3600,
+  "acSuspendTimeout": 0,
+  "lockBeforeSuspend": true,
+  "runUserMatugenTemplates": true,
+  "matugenTemplateFirefox": true,
+  "matugenTemplateZenBrowser": true,
+  "matugenTemplateGhostty": true
+}

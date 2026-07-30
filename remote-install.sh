@@ -1,16 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Remote bootstrap for archway - fetched via:
-#   bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) [profile]
-#
-# The fast path is a single positional arg: minimal | safe | full
-#   bash <(curl ...) safe         # T1+T2+T3 (KDE Plasma fallback, no AUR/DMS)
-#   bash <(curl ...) full         # T1-T4 (full install with DMS)
-#   bash <(curl ...)              # defaults to full
-#
-# This script clones the repo and hands off to install.sh.
-# All interactive prompts happen in install.sh, not here.
+# Pasteable first-stage launcher. It only clones/selects the repository and
+# hands off to install.sh; all target-machine work lives in the checked-out
+# version so it is reviewable and retryable.
 #
 # Options (consumed here, not passed to install.sh):
 #   --repo <url>   Override clone URL (default: github.com/Sanchit-Srivastava/archway)
@@ -19,9 +12,9 @@ set -euo pipefail
 #                  Use this for reproducible installs:
 #                    bash <(curl ...) --ref v2026.05.03 safe
 #
-# All other flags pass through to install.sh.
+# A bare `safe` argument is accepted as shorthand for `--safe`.
 
-SCRIPT_VERSION="2026-05-03-2"
+SCRIPT_VERSION="2026-07-29-1"
 
 REPO_URL="https://github.com/Sanchit-Srivastava/archway.git"
 REPO_DIR="${HOME}/archway"
@@ -42,25 +35,28 @@ die() {
 }
 
 # --- Parse arguments (pass-through to install.sh, except --repo/--dir/--ref) ---
-# Bare positional `safe`/`minimal`/`full` is sugar for `--profile <x>`.
+# Bare `safe` is sugar for `--safe`.
 
 PASSTHROUGH_ARGS=()
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	--repo)
+		[[ $# -ge 2 ]] || die "--repo requires a value"
 		REPO_URL="$2"
 		shift 2
 		;;
 	--dir)
+		[[ $# -ge 2 ]] || die "--dir requires a value"
 		REPO_DIR="$2"
 		shift 2
 		;;
 	--ref)
+		[[ $# -ge 2 ]] || die "--ref requires a value"
 		REPO_REF="$2"
 		shift 2
 		;;
-	minimal | safe | full)
-		PASSTHROUGH_ARGS+=(--profile "$1")
+	safe)
+		PASSTHROUGH_ARGS+=(--safe)
 		shift
 		;;
 	*)
@@ -87,12 +83,14 @@ if [[ -d "$REPO_DIR/.git" ]]; then
 	log_info "Repo already exists at $REPO_DIR"
 	if [[ -n "$REPO_REF" ]]; then
 		log_info "Fetching ref: $REPO_REF"
-		git -C "$REPO_DIR" fetch --tags origin || log_warn "Fetch failed - continuing with existing checkout"
+		git -C "$REPO_DIR" fetch --tags origin ||
+			die "Failed to fetch the requested ref."
 		git -C "$REPO_DIR" checkout --detach "$REPO_REF" ||
 			die "Failed to check out ref: $REPO_REF"
 	else
 		log_info "Pulling latest changes..."
-		git -C "$REPO_DIR" pull --ff-only || log_warn "Pull failed - continuing with existing checkout"
+		git -C "$REPO_DIR" pull --ff-only ||
+			die "Failed to fast-forward the existing checkout. Resolve it before installing."
 	fi
 else
 	if [[ -e "$REPO_DIR" ]]; then
@@ -102,14 +100,15 @@ else
 	git clone "$REPO_URL" "$REPO_DIR"
 	if [[ -n "$REPO_REF" ]]; then
 		log_info "Checking out ref: $REPO_REF"
-		git -C "$REPO_DIR" fetch --tags origin || true
+		git -C "$REPO_DIR" fetch --tags origin ||
+			die "Failed to fetch the requested ref."
 		git -C "$REPO_DIR" checkout --detach "$REPO_REF" ||
 			die "Failed to check out ref: $REPO_REF"
 	fi
 fi
 
 # --- Hand off to install.sh ---
-log_info "archway remote-install (v${SCRIPT_VERSION})"
+log_info "Archway remote installer v${SCRIPT_VERSION}"
 log_info "Repo dir: $REPO_DIR | Ref: ${REPO_REF:-main HEAD} | Forwarded args: ${PASSTHROUGH_ARGS[*]:-<none>}"
 
 # Ensure stdin is the terminal, not a pipe.

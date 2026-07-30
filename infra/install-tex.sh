@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Standalone installer for the LaTeX / TeX toolchain.
 #
-# This is deliberately *not* part of the main bootstrap tiers.
+# This is deliberately separate from the normal install.
 # TeX Live is large and time-consuming. During a desperate reinstall
 # on limited bandwidth (phone hotspot, etc.) you probably want a working
 # system first.
