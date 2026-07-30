@@ -280,3 +280,9 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 # =============================================================================
 # Source local config if it exists (for machine-specific settings)
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<
