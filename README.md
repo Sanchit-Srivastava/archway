@@ -1,266 +1,137 @@
 # archway
 
-Configuration-as-code for a reproducible Arch Linux setup.
+Personal configuration-as-code for a familiar Arch Linux, CachyOS, or macOS
+environment. The operating-system installer owns boot, filesystems, KDE, GPU
+drivers, networking, audio, repositories, and mirrors. Archway adds personal
+packages, dotfiles, secrets, and optional DMS/niri configuration.
 
-Since this a personal setup, it is intentionally and heavily opinionated.
+This is a public but heavily personal repository. It is intended to be cloned
+and run by its owner, not used as a general-purpose distribution installer.
 
-This repo has not been developed or maintained with a general user in mind. Use it as-is or fork and customize.
+## Fresh Linux installation
 
-Scope: fresh Arch Linux install using systemd, intended for a laptop/desktop workstation.
-Design: layered system baseline + user configs, with an optional desktop shell layer.
+First install either:
 
-### Automated installation
+- Arch Linux with `archinstall` and the KDE Plasma profile; or
+- CachyOS with KDE Plasma and its suggested defaults.
 
-On a fresh Arch/CachyOS install, ensure `curl` and `git` are available first:
-
-```bash
-sudo pacman -S --needed curl git
-```
-
-Then run one of the following:
+Boot into KDE, open a terminal, and run:
 
 ```bash
-# Default: full install (all 4 tiers, including AUR + DankMaterialShell)
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
-
 ```
 
+For a recovery install that skips DMS and all AUR extras:
+
 ```bash
-# Safe: T1+T2+T3 only (skip AUR/DMS/niri — KDE Plasma fallback works)
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) safe
-
-# Minimal: T1+T2 only (headless / CLI only, no GUI)
-bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) minimal
 ```
 
-**Recommended for a first run on unfamiliar hardware:** `safe`, verify
-boot + login work, then add T4 with `cd ~/archway && just bootstrap-tier 4 && ./install-dms.sh`.
-
-For reproducible installs, pin to a tag:
+For reproducibility, replace `main` with a known-good release tag or pass a
+specific ref:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) --ref v2026.05.03 safe
+bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) --ref vYYYY.MM.DD
 ```
 
-The installer runs in two stages with one reboot. If it doesn't resume automatically, run:
+The normal installer:
+
+1. installs the reliable native core;
+2. applies ordinary dotfiles;
+3. installs Bitwarden and prompts for the SOPS age key without echoing it;
+4. decrypts secrets when a valid key is provided;
+5. installs optional extras and DMS/niri from native packages;
+6. runs upstream's idempotent `dms setup`; and
+7. offers to reboot.
+
+After reboot, select **niri**, log in once, then run:
 
 ```bash
-~/archway/install.sh resume
+cd ~/archway
+just finish
 ```
 
-### Manual install (after archinstall)
+`just finish` reapplies secrets, merges portable preferences into DMS's
+current generated settings, installs plugins, and restarts DMS. It is safe to
+rerun.
 
-If you set up the base system via `archinstall` and want to apply archway by
-hand instead of the remote installer, the order matters:
+## Commands
+
+### Installation
 
 ```bash
-just bootstrap   # MUST run first — installs packages, systemd-boot, services
-just dotfiles    # then symlink user configs and install oh-my-zsh + plugins
-just doctor      # finally, verify
+just install       # normal first stage
+just install-safe  # core only; skip DMS and AUR extras
+just finish        # finish DMS/secrets after first niri login
+just core          # install/reapply reliable native packages and services
+just extras        # install/retry optional native and AUR extras
+just dms           # install/retry DMS and run `dms setup`
+just dms-config    # reapply portable DMS/niri preferences
+just secrets       # securely onboard/validate the age key and decrypt secrets
+just dotfiles      # reapply ordinary dotfiles
 ```
 
-Running `just doctor` first on a fresh archinstall will report failures
-(notably `systemd-boot installed in ESP`) that `just bootstrap` is the one
-that fixes — doctor only reports. Recommended filesystem layout for
-archinstall: **ext4, single root partition, LUKS, systemd-boot**. archway's
-bootstrap handles Unified Kernel Image (UKI) layouts produced by archinstall
-automatically.
+Core failure stops installation. Extras and DMS failure leave KDE and the
+Archway core usable; retry them later with `just extras` or `just dms`.
 
-## Overview
-
-archway uses a two-layer model with a tiered system baseline:
-
-| Layer | Tools | Purpose |
-|-------|-------|---------|
-| **System baseline** | pacman, AUR (yay), systemd | System packages, services, `/etc` config (split into 4 tiers) |
-| **User environment** | Shell scripts, dotfile symlinks | CLI tools, shell config, editor setup |
-
-A third optional layer (**DankMaterialShell**) provides the desktop shell experience.
-
-The system baseline is partitioned into four resilience tiers so fragile
-components (AUR, DMS) cannot brick the system:
-
-| Tier | Name    | What it installs                                              |
-|------|---------|---------------------------------------------------------------|
-| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit |
-| 2    | shell   | CLI tools, editors, secrets, zsh as default shell             |
-| 3    | desktop | KDE Plasma fallback + additional GUI / tools (archinstall baseline + additions) |
-| 4    | extras  | AUR packages, DMS, niri, messaging apps (fragile)             |
-
-Tiers run in order; a failed tier stops higher tiers but preserves lower-tier
-state. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#tier-model) for details.
-
-See the **[Complete Setup Guide](docs/SETUP.md)** for step-by-step instructions starting from a fresh Arch installation.
-
-## Quick Start (Manual)
+### Slow optional applications
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/Sanchit-Srivastava/archway.git
-cd archway
-
-# 2. Run the bootstrap script (installs packages, enables services)
-./infra/bootstrap.sh
-
-# 3. Reboot to start SDDM (graphical login)
-reboot
-
-# 4. After login, apply user dotfiles
-./infra/dotfiles.sh
-
-# 5. (Optional) Install DankMaterialShell for full desktop experience
-./install-dms.sh
-
-# 6. Validate the system
-./infra/doctor.sh
+just tex           # install the large TeX Live toolchain
+just zotero        # install Zotero separately through the AUR
 ```
 
-## Directory Structure
+These are deliberately excluded from the normal install because they can take
+a long time and are not required for an immediately usable machine.
 
-```
-archway/
-├── infra/                    # System baseline layer
-│   ├── bootstrap.sh          # Tiered installer (--tier/--up-to/--tiers)
-│   ├── dotfiles.sh           # User dotfile symlinker
-│   ├── doctor.sh             # System validation
-│   ├── pkgs/                 # Per-tier package lists
-│   │   ├── 10-base.txt       # T1 native (core OS)
-│   │   ├── 20-shell.txt      # T2 native (CLI/shell)
-│   │   ├── 30-desktop.txt    # T3 native (KDE Plasma)
-│   │   ├── 40-extras.txt     # T4 native (DMS deps, etc.)
-│   │   └── 40-extras.aur.txt # T4 AUR (the only AUR list)
-│   └── services/             # Per-tier systemd unit lists
-│       ├── 10-base.txt       # polkit, NetworkManager, bluetooth, …
-│       └── 30-desktop.txt    # sddm
-│
-├── dots/                     # User dotfiles (symlinked to ~)
-│   ├── zsh/                  # Zsh configuration
-│   │   ├── .zshrc
-│   │   └── .zshenv
-│   ├── starship/             # Starship prompt config
-│   │   └── starship.toml
-│   ├── tmux/                 # Tmux configuration
-│   │   └── tmux.conf
-│   ├── nvim/                 # Neovim (LazyVim) configuration
-│   ├── git/                  # Git configuration
-│   │   └── .gitconfig
-│   ├── ssh/                  # SSH client configuration
-│   │   └── config
-│   ├── fastfetch/            # System info display
-│   │   └── config.jsonc
-│   └── environment.d/        # systemd user session environment
-│       └── 50-archway.conf
-│
-├── docs/                     # Documentation
-│   ├── SETUP.md              # Complete setup guide (start here!)
-│   └── ARCHITECTURE.md       # Design decisions
-│
-├── Justfile                  # Task runner commands
-└── install-dms.sh            # DankMaterialShell installer
-```
-
-## What Gets Installed
-
-### System Packages (via pacman/AUR)
-
-- **Desktop**: niri compositor (via DMS), foot terminal, Nautilus file manager
-- **Audio**: PipeWire stack (pipewire, wireplumber, pipewire-pulse)
-- **Networking**: NetworkManager, Tailscale, iwd
-- **Bluetooth**: bluez, bluetui
-- **Authentication**: gnome-keyring, polkit, fprintd (fingerprint)
-- **CLI tools**: bat, eza, fd, ripgrep, fzf, zoxide, lazygit, yazi
-- **Editor**: Neovim with LSPs (lua, bash, typescript, nix)
-- **Fonts**: Noto fonts, Nerd Fonts (JetBrains Mono, Cascadia)
-- **Fallback**: KDE Plasma (emergency session if niri/DMS breaks)
-
-### User Configuration (via dotfiles)
-
-- **Shell**: Zsh with oh-my-zsh, autosuggestions, syntax highlighting
-- **Prompt**: Starship (minimal, git-aware)
-- **Terminal multiplexer**: tmux with vim bindings, TokyoNight theme
-- **Editor**: Neovim with LazyVim
-- **SSH**: ControlMaster multiplexing, Bitwarden SSH agent integration
-- **Git**: Sensible defaults, useful aliases
-
-## Configuration
-
-### Personalizing Git
-
-Edit `dots/git/.gitconfig` and update:
-
-```ini
-[user]
-    name = Your Name
-    email = your@email.com
-```
-
-### Personalizing SSH
-
-Edit `dots/ssh/config` to add your hosts.
-
-### Adding Packages
-
-1. Pick the tier:
-   - T1 base: core OS (networking, audio, bluetooth, fonts)
-   - T2 shell: CLI tools, editors
-   - T3 desktop: KDE Plasma, GUI apps
-   - T4 extras: AUR-only packages, DMS/niri ecosystem
-2. Edit the matching file under `infra/pkgs/` (use `40-extras.aur.txt` for AUR)
-3. Re-run `./infra/bootstrap.sh --tier N` (or the full `./infra/bootstrap.sh`)
-
-### Adding Services
-
-1. Edit the matching file under `infra/services/` (usually `10-base.txt`)
-2. Re-run `./infra/bootstrap.sh --tier N`
-
-## Maintenance
-
-### Regular Updates
+### Maintenance
 
 ```bash
-# Update system packages
-sudo pacman -Syu
-
-# Update AUR packages
-yay -Syu
-
-# Check for drift (packages installed but not tracked)
-./infra/doctor.sh --audit-packages
+just sync          # fast-forward pull, reapply core, reapply dotfiles
+just update        # update native packages, then AUR packages if yay exists
+just pull-dots     # import selected live niri files; never import DMS runtime JSON
+just fix-boot      # Arch/systemd-boot recovery only; not part of installation
 ```
 
-### Using just (task runner)
+### Secrets
 
 ```bash
-just sync       # Pull repo, run bootstrap, validate
-just audit      # Check package drift
-just doctor     # Run validation checks
+just secrets-edit vdirsyncer.env
+just secrets-show vdirsyncer.env
 ```
 
-## Troubleshooting
+Private values are SOPS-encrypted before being committed. The age private key
+must never enter this repository. See [docs/SECRETS.md](docs/SECRETS.md).
 
-### Validate System State
+### Development
+
+These are safe on a development machine:
 
 ```bash
-# Run all checks
-./infra/doctor.sh
-
-# Run specific check
-./infra/doctor.sh --only pipewire
-
-# List available checks
-./infra/doctor.sh --list
+just lint
+just check-fmt
+just fmt           # writes formatting changes
 ```
 
-### Common Issues
+Never run installation, bootstrap, or recovery infrastructure on a
+development machine. Target scripts assume a real Arch-family system.
 
-| Issue | Fix |
-|-------|-----|
-| No audio | `systemctl --user enable --now pipewire wireplumber` |
-| Screen share broken | Check portal: `./infra/doctor.sh --only xdg-portal` |
-| Polkit prompts missing | DMS provides polkit agent; ensure DMS is running |
-| SSH keys not found | Unlock Bitwarden Desktop, check `SSH_AUTH_SOCK` |
+### macOS
 
-## Recovery
+```bash
+just bootstrap-mac
+just setup-mac
+just dotfiles
+```
 
-archway does not configure filesystem snapshots by default. If the OS breaks,
-reinstall Arch, redeploy this repo, and restore user data from backups.
+Only the package-backed user environment is shared with macOS. Linux desktop
+and system configuration remain Linux-only.
+
+## Documentation
+
+- [Architecture and ownership](docs/ARCHITECTURE.md)
+- [Arch installation choices](docs/INSTALL-ARCH.md)
+- [CachyOS installation choices](docs/INSTALL-CACHYOS.md)
+- [DMS/niri lifecycle](docs/DMS.md)
+- [Secrets and age-key handling](docs/SECRETS.md)
+- [Recovery notes](docs/STABILITY.md)

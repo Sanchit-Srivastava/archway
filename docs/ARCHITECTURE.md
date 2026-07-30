@@ -1,241 +1,108 @@
 # Architecture
 
-archway is a configuration-as-code setup for a single Arch Linux workstation.
-It is intentionally opinionated and optimized for reproducibility over flexibility.
+Archway is a thin, idempotent personal layer over an already working operating
+system. It supports:
 
-## Scope
+- Arch Linux installed with `archinstall` and KDE Plasma;
+- CachyOS installed with KDE Plasma; and
+- a smaller shared user-environment layer on macOS.
 
-- Target: fresh Arch Linux install using systemd
-- Audience: single-user laptop/desktop workstation
-- Not a general-purpose distro installer
+It is not an OS installer.
 
-## Layered Model
+## Ownership boundary
 
-archway uses three logical layers with clear ownership boundaries:
+The operating system owns:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     DESKTOP SHELL                               │
-│  DankMaterialShell (installed by its installer)                 │
-│  Scope: Panel, launcher, notifications, lock screen, theming    │
-│  Installs: shell, compositor, terminal, theming stack           │
-├─────────────────────────────────────────────────────────────────┤
-│                     USER ENVIRONMENT                            │
-│  dots/* → ~/.config/*, ~/.zshrc, ~/.gitconfig, etc.             │
-│  Scope: Shell, editor, CLI tools, user preferences              │
-├─────────────────────────────────────────────────────────────────┤
-│                     SYSTEM BASELINE                             │
-│  pacman + AUR + systemd + /etc                                  │
-│  Scope: Packages, services, PAM, portals, D-Bus providers       │
-└─────────────────────────────────────────────────────────────────┘
-```
+- partitions, filesystems, encryption, and snapshots;
+- bootloader and kernel;
+- GPU and other hardware drivers;
+- repositories, signing keys, and mirrors;
+- networking and audio baseline;
+- KDE Plasma and the display manager.
 
-### System Baseline
+Archway owns:
 
-- Installs packages and enables services
-- Configures PAM, portals, and system-wide settings
-- Ensures D-Bus providers for desktop shell integrations
+- explicitly selected personal packages;
+- a small list of Archway-used services;
+- keyd configuration;
+- shell, editor, and application dotfiles;
+- SOPS-encrypted personal data;
+- optional DMS/niri preferences.
 
-### User Environment
+Archway must not duplicate or rewrite distro-owned state merely to make two
+platforms look identical.
 
-- Symlinks dotfiles into the home directory
-- Manages shell/editor/CLI defaults
+## Capability model
 
-### Desktop Shell (DMS)
+### Core
 
-- Installs the compositor and shell components
-- Owns its configuration and update flow
-- Provides the graphical shell experience
+`infra/pkgs/core.txt` contains reliable native packages available through the
+configured distro repositories. A core failure stops the install.
 
-## Tier Model
+KDE remains usable before Archway runs and after a core failure.
 
-Within the System Baseline layer, packages and services are partitioned into
-four **resilience tiers** so that fragile components cannot brick the system.
-Tiers run in numeric order; a failed tier stops higher tiers but leaves
-lower-tier completion markers intact.
+### Extras
 
-| Tier | Name    | Contents                                                              | Failure tolerance |
-|------|---------|-----------------------------------------------------------------------|-------------------|
-| 1    | base    | Core OS plumbing: networking, bluetooth, audio, fonts, polkit, keyd, firewall | Must succeed — bricks system if it fails |
-| 2    | shell   | CLI tools, editors, dotfile prerequisites, secrets, zsh as default shell | Must succeed for usable headless system |
-| 3    | desktop | KDE Plasma fallback (from archinstall) + additional GUI apps, portals, latex, browsers | Optional — system remains usable headless if it fails |
-| 4    | extras  | All AUR packages (yay), DMS, niri, messaging apps, obsidian            | Always non-fatal — falls back to Plasma |
+`infra/pkgs/extras.txt` and `infra/pkgs/extras.aur.txt` contain optional
+applications and DMS-related packages. Failures are reported without
+invalidating core.
 
-**Why AUR is strictly tier 4:** AUR is by far the most common failure mode
-(builds break, upstream URLs rot, signatures change). Resilience wins over
-logical grouping.
+### Slow optional tools
 
-**Recovery model:** archway does not configure filesystem snapshots by default.
-The expected recovery path is a fresh Arch install, re-running this repo, and
-restoring user data from backups. This keeps the baseline independent of Btrfs
-subvolume, fstab, and rollback state.
-
-**Completion marker:** a successful run writes `~/.config/archway/bootstrap.complete`
-(only when all requested tiers succeed and tier 1 was included). `install-dms.sh`
-checks for it before installing DMS, to confirm the system baseline is present.
-
-**CLI usage:**
+TeX and Zotero have independent commands because their installation can take a
+long time:
 
 ```bash
-./infra/bootstrap.sh                # all tiers (default)
-./infra/bootstrap.sh --tier 1       # just tier 1
-./infra/bootstrap.sh --up-to 3      # tiers 1..3 (no AUR/DMS)
-./infra/bootstrap.sh --tiers 1,2,4  # arbitrary subset
+just tex
+just zotero
 ```
 
-Or via the Justfile: `just bootstrap-minimal` (T1+T2),
-`just bootstrap-safe` (T1+T2+T3), `just bootstrap-tier 3`.
+Gaming is outside Archway's scope. CachyOS owns its gaming setup.
+
+## Installation phases
+
+The initial pasteable command clones the repository and hands off to the
+checked-out `install.sh`.
+
+Stage 1:
+
+1. detects Arch or CachyOS;
+2. installs core;
+3. applies dotfiles;
+4. offers secure age-key onboarding and secret decryption;
+5. installs optional extras and DMS;
+6. runs `dms setup`; and
+7. requests one reboot/session transition.
+
+After the user logs into niri/DMS once, `just finish`:
+
+1. retries secret configuration if needed;
+2. verifies DMS initialized its runtime state;
+3. applies Archway's niri files;
+4. merges small portable JSON overlays into the current DMS schema;
+5. installs DMS plugins; and
+6. restarts DMS.
+
+There is deliberately no autostart resume. Both commands are explicit and safe
+to repeat.
 
 ## Idempotency
 
-All scripts are safe to re-run. Package installs use `--needed`, services are checked before enabling,
-and dotfiles use symlink-with-backup behavior.
+- Native packages use `pacman -S --needed`.
+- Existing distro mirrors and repositories are never replaced.
+- Only Archway-owned services are enabled.
+- Dotfile linking preserves existing non-symlink data with backups.
+- DMS setup writes only missing or empty upstream files.
+- DMS runtime settings are generated by DMS; Archway merges a small overlay.
+- Secret keys and decrypted files use restrictive permissions.
+- State markers are advisory; commands verify real files and commands before
+  acting.
 
-## Package Lists
+## Public-repository boundary
 
-Native (pacman) and AUR packages are split per tier under `infra/pkgs/`:
+Encrypted SOPS documents, age recipients, and portable configuration may be
+public. Private age keys, decrypted data, machine addresses, device IDs, and
+session tokens must not be committed.
 
-- `infra/pkgs/10-base.txt`        — tier 1, native
-- `infra/pkgs/20-shell.txt`       — tier 2, native
-- `infra/pkgs/30-desktop.txt`     — tier 3, native
-- `infra/pkgs/40-extras.txt`      — tier 4, native
-- `infra/pkgs/40-extras.aur.txt`  — tier 4, AUR (the only AUR list)
-
-Add a package by editing the appropriate tier file and re-running
-`./infra/bootstrap.sh --tier N` (or the full bootstrap).
-
-## Services
-
-Systemd units to enable system-wide are split per tier under `infra/services/`:
-
-- `infra/services/10-base.txt`    — polkit, NetworkManager, bluetooth, audio plumbing, keyd, …
-- `infra/services/20-shell.txt`   — (currently empty; user-level services live in dotfiles)
-- `infra/services/30-desktop.txt` — (empty by design; archinstall enables the DM)
-- `infra/services/40-extras.txt`  — (currently empty)
-
-## Dotfiles
-
-- `infra/dotfiles.sh` symlinks all files from `dots/` into `~/`
-- Edits should be made in `dots/` and will reflect immediately
-- All dotfiles install on every run regardless of profile — symlinks are
-  inert when their target tool isn't installed (a dead `~/.config/niri/`
-  link is harmless if niri isn't on the system).
-
-## Doctor (validation)
-
-`infra/doctor.sh` runs system health checks focused on **runtime state,
-config/symlink drift, and boot safety** — i.e. things the package audit cannot
-see. It deliberately does *not* re-verify "is package X installed"; that's what
-`--audit-packages` (`just audit`) is for.
-
-```
-./infra/doctor.sh             # all checks
-./infra/doctor.sh --only ID   # single check (see --list)
-./infra/doctor.sh --audit-packages   # package drift vs repo lists
-```
-
-The tier-filtering flags (`--tier`/`--up-to`) were removed in the
-simplification: the check set is now small enough that subsetting added more
-maintenance than value.
-
-## Current Contract (post-simplification)
-
-archway is intentionally a **thin layer** on top of:
-
-- A fresh `archinstall` using the **KDE Plasma** desktop profile (systemd-boot, LUKS+ext4 recommended).
-- The packages and services that profile provides (see `infra/pkgs/baseline.archinstall-kde.txt` for the audit allowlist).
-
-archway adds packages, enables a few services, deploys keyd + autologin glue, sets zsh, symlinks dotfiles, and provides recovery tools (`fix-boot`).
-
-It deliberately **no longer** performs:
-- Bootloader (systemd-boot) configuration
-- PAM edits (fingerprint/keyring)
-- XDG portal system config
-- Display manager installation or swapping
-- NVIDIA initramfs surgery
-
-See `docs/STABILITY.md` and `docs/SIMPLIFICATION.md` for rationale and the recovery model.
-
-## Secrets Management
-
-Secrets (API keys, OAuth credentials, calendar IDs) are encrypted in the repo
-using [SOPS](https://github.com/getsops/sops) with
-[age](https://github.com/FiloSottile/age) encryption.
-
-### How it works
-
-```
-secrets/vdirsyncer.env        ──decrypt──▶  ~/.config/vdirsyncer/secrets
-```
-
-- Encrypted files live in `secrets/` — keys are visible, values are AES-256-GCM
-- `dotfiles.sh` decrypts them automatically if an age key is present
-- Without the key, `dotfiles.sh` falls back to creating empty templates
-- Decrypted files persist on disk — no re-decryption needed between reboots
-
-### Key management
-
-- One age keypair per user: `~/.config/sops/age/keys.txt`
-- The public key goes in `.sops.yaml` (committed to the repo)
-- The private key stays on the machine (backed up in Bitwarden as a secure note)
-- `dotfiles.sh` creates the empty key directory and file automatically on first run
-- On a fresh machine: run `just dotfiles` (creates empty key file + templates),
-  then paste the private key from Bitwarden, then `just dotfiles` again to decrypt
-
-### Editing secrets
-
-```bash
-sops secrets/vdirsyncer.env       # decrypts → $EDITOR → re-encrypts on save
-just secrets-edit vdirsyncer.env  # same thing via Justfile
-```
-
-### For users without the age key
-
-If you fork this repo and don't have the original age key, the secrets files
-are irrelevant to you. `dotfiles.sh` will create empty templates at the target
-paths, and you can fill in your own values manually — the same workflow as
-before SOPS was added.
-
-### LaTeX and PDF Viewing
-
-The LaTeX workflow uses **vimtex** in Neovim with LuaLaTeX and SyncTeX for
-forward/inverse search between source and PDF.
-
-- **PDF viewer**: zathura is the preferred viewer on **both** Linux and macOS.
-  On macOS, if zathura is not installed, vimtex falls back to Skim.
-- **Forward search** (source -> PDF): handled automatically by vimtex.
-- **Inverse search** (PDF -> source): vimtex passes `-x` to zathura automatically.
-  The `dots/zathura/zathurarc` also sets `synctex-editor-command` for standalone use.
-- **macOS zathura install**: `bootstrap-mac.sh` taps `zathura-macos/zathura` and
-  installs `zathura` + `zathura-pdf-mupdf` with the required plugin symlink.
-
-## macOS Support
-
-The primary target of archway is Arch Linux. However, the **User Environment** layer
-(shell, editor, CLI tools, dotfiles) is also available on macOS so the terminal
-experience is identical across both machines (especially zsh + starship + nvim + tools).
-
-Only the User Environment layer is ported; the System Baseline and Desktop Shell
-layers remain Arch-only.
-
-`just bootstrap-mac` and `just setup-mac` (plus plain `just dotfiles`) work on macOS.
-Shared dotfiles use uname guards.
-
-macOS-specific files:
-
-| File                          | Purpose                              |
-| ----------------------------- | ------------------------------------ |
-| `infra/bootstrap-mac.sh`     | Installs Homebrew, formulae, casks   |
-| `infra/pkgs.brew.txt`        | Homebrew formulae (CLI tools)        |
-| `infra/pkgs.brew-cask.txt`   | Homebrew casks (fonts, GUI apps)     |
-
-Shared dotfiles use `uname` guards for platform-specific behavior (e.g., Wayland
-env vars on Linux, Homebrew paths on macOS).
-
-Usage on macOS:
-```bash
-just setup-mac          # bootstrap + dotfiles
-# or individually:
-just bootstrap-mac      # install Homebrew packages
-just dotfiles           # symlink dotfiles
-```
+Generated DMS JSON is intentionally excluded because it contains schema noise
+and can include machine-specific identifiers.

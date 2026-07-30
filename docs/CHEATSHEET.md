@@ -69,11 +69,13 @@ Candidates for `x` come from your zoxide history (frecency-ranked), the same lis
 
 ### Archway
 
-| Alias | Description |
-|-------|-------------|
-| `archway-sync` | Pull and re-run bootstrap + dotfiles (+ doctor on Arch) |
-| `archway-doctor` | Run system health checks (Arch only) |
-| `archway-audit` | Audit installed packages against repo lists (Arch only) |
+Run commands from `~/archway`:
+
+| Command | Description |
+|---------|-------------|
+| `just sync` | Pull and reapply core + dotfiles |
+| `just finish` | Apply secrets and DMS preferences after first login |
+| `just extras` | Retry optional native/AUR packages |
 
 ---
 

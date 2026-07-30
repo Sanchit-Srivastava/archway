@@ -367,16 +367,15 @@ the clipboard and shows a notification.
 
 ## Packages added
 
-### Official repos (`infra/pkgs/20-shell.txt`)
+### Official repos (`infra/pkgs/core.txt`)
 
 - `difftastic` -- structural diffs
 - `git-delta` -- syntax-highlighted git pager
-- `python-todoman` -- terminal todo list (CalDAV)
 - `translate-shell` -- CLI translation
 - `vdirsyncer` -- CalDAV/CardDAV sync
 - `zk` -- already present
 
-### AUR (`infra/pkgs/40-extras.aur.txt`)
+### AUR (`infra/pkgs/extras.aur.txt`)
 
 - `ltex-ls-plus-bin` -- grammar/spell LSP
 - `vale-bin` -- prose linter
