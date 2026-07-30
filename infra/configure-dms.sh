@@ -38,10 +38,14 @@ merge_json_overlay() {
 	local overlay="$2"
 	local tmp
 	local backup
-	[[ -s "$target" ]] || die "DMS has not generated $target yet. Log into niri/DMS once, then rerun."
 	[[ -s "$overlay" ]] || die "Preference overlay not found: $overlay"
-	jq -e . "$target" >/dev/null || die "Invalid JSON in $target"
 	jq -e . "$overlay" >/dev/null || die "Invalid JSON in $overlay"
+	if [[ ! -s "$target" ]]; then
+		install -m 600 "$overlay" "$target"
+		log_info "Initialized $target with portable preferences."
+		return 0
+	fi
+	jq -e . "$target" >/dev/null || die "Invalid JSON in $target"
 
 	tmp="$(mktemp "$(dirname "$target")/.archway-merge.XXXXXX")"
 	backup="${target}.pre-archway.bak"
@@ -83,10 +87,10 @@ main() {
 	[[ -d "$DMS_DIR" ]] ||
 		die "DMS has not initialized $DMS_DIR. Log into niri/DMS once, then rerun."
 
-	apply_niri_files
 	merge_json_overlay \
 		"${DMS_DIR}/settings.json" \
 		"${DOTS_DIR}/DankMaterialShell/preferences.json"
+	apply_niri_files
 
 	install_plugins
 	if [[ -s "${DMS_DIR}/plugin_settings.json" ]]; then

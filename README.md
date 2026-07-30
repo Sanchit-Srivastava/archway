@@ -41,7 +41,7 @@ The normal installer:
 3. installs Bitwarden and prompts for the SOPS age key without echoing it;
 4. decrypts secrets when a valid key is provided;
 5. installs optional extras and DMS/niri from native packages;
-6. runs upstream's idempotent `dms setup`; and
+6. runs upstream's `dms setup` and binds DMS to niri's systemd session; and
 7. offers to reboot.
 
 After reboot, select **niri**, log in once, then run:

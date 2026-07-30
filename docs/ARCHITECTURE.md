@@ -71,13 +71,13 @@ Stage 1:
 3. applies dotfiles;
 4. offers secure age-key onboarding and secret decryption;
 5. installs optional extras and DMS;
-6. runs `dms setup`; and
+6. runs `dms setup` and binds DMS to niri's systemd user session; and
 7. requests one reboot/session transition.
 
 After the user logs into niri/DMS once, `just finish`:
 
 1. retries secret configuration if needed;
-2. verifies DMS initialized its runtime state;
+2. verifies DMS has initialized its configuration directory;
 3. applies Archway's niri files;
 4. merges small portable JSON overlays into the current DMS schema;
 5. installs DMS plugins; and

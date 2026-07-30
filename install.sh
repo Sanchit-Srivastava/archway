@@ -118,7 +118,7 @@ run_install() {
 	log_info "Stage 1 complete."
 	log_info "After reboot:"
 	log_info "  1. Select niri in the login manager."
-	log_info "  2. Log in once so DMS initializes its runtime settings."
+	log_info "  2. Log in once and confirm DMS starts with the niri session."
 	log_info "  3. Open a terminal and run: cd ${REPO_ROOT} && just finish"
 
 	if [[ "$no_reboot" -eq 0 ]]; then
