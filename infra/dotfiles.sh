@@ -78,6 +78,7 @@ decrypt_secret() {
 link_dotfile() {
 	local src="$1"
 	local dst="$2"
+	local backup
 
 	# Ensure parent directory exists
 	mkdir -p "$(dirname "$dst")"
@@ -92,8 +93,12 @@ link_dotfile() {
 		log_warn "Removing old symlink: $dst -> $current_target"
 		rm "$dst"
 	elif [[ -e "$dst" ]]; then
-		log_warn "Backing up existing: $dst -> ${dst}.bak"
-		mv "$dst" "${dst}.bak"
+		backup="${dst}.pre-archway.bak"
+		if [[ -e "$backup" || -L "$backup" ]]; then
+			backup="${backup}.$(date -u +%Y%m%dT%H%M%SZ)"
+		fi
+		log_warn "Backing up existing: $dst -> $backup"
+		mv "$dst" "$backup"
 	fi
 
 	ln -s "$src" "$dst"
@@ -351,20 +356,15 @@ EOF
 	# LINUX-ONLY SECTIONS
 	# ==========================================================================
 	if [[ "$(uname)" != "Darwin" ]]; then
-		# ==========================================================================
-		# XDG AUTOSTART OVERRIDES (mask system-level .desktop entries)
-		# ==========================================================================
-		# Per-user copies in ~/.config/autostart/ override /etc/xdg/autostart/
-		# entries with the same filename (Desktop Entry Spec). We use this to
-		# disable kwalletd6, which the KDE Plasma archinstall profile pulls in
-		# and which races gnome-keyring for the Secret Service D-Bus name.
-		log_info "--- XDG autostart overrides ---"
-		mkdir -p "${HOME}/.config/autostart"
-		for entry in "${DOTS_DIR}"/autostart/*.desktop; do
-			[[ -f "$entry" ]] || continue
-			entry_name="$(basename "$entry")"
-			link_dotfile "$entry" "${HOME}/.config/autostart/${entry_name}"
-		done
+		# Remove Archway's retired KWallet mask. KDE owns its credential service,
+		# and disabling it globally can break the otherwise-stable Plasma
+		# fallback. Never remove a user-owned file at this path.
+		local retired_kwallet_mask="${HOME}/.config/autostart/kwalletd6.desktop"
+		if [[ -L "$retired_kwallet_mask" ]] &&
+			[[ "$(readlink "$retired_kwallet_mask")" == "${DOTS_DIR}/autostart/kwalletd6.desktop" ]]; then
+			rm "$retired_kwallet_mask"
+			log_info "Removed retired Archway KWallet autostart mask."
+		fi
 
 		# ==========================================================================
 		# ENVIRONMENT.D (systemd user session environment)

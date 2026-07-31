@@ -72,9 +72,15 @@ if [[ $EUID -eq 0 ]]; then
 	die "Do not run as root. Run as your regular user."
 fi
 
+if command -v findmnt >/dev/null 2>&1; then
+	ROOT_OPTIONS="$(findmnt -n -o OPTIONS / 2>/dev/null || true)"
+	[[ ",${ROOT_OPTIONS}," == *,rw,* ]] ||
+		die "Root is not mounted read-write. Stop and investigate the filesystem before deploying."
+fi
+
 if ! command -v git >/dev/null 2>&1; then
-	log_info "Installing git..."
-	sudo pacman -S --needed --noconfirm git
+	log_info "Updating the system and installing git..."
+	sudo pacman -Syu --needed --noconfirm git
 fi
 
 # --- Clone or update repo ---

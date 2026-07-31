@@ -13,7 +13,6 @@ curl
 exfatprogs
 fprintd
 fontconfig
-gnome-keyring
 gvfs-mtp
 gvfs-nfs
 gvfs-smb
@@ -124,4 +123,3 @@ xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 zathura
 zathura-pdf-mupdf
-

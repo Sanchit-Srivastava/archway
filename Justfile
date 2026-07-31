@@ -59,7 +59,7 @@ update:
 # Pull Archway, reapply core and dotfiles. Optional components are not forced.
 sync:
     git pull --ff-only
-    ./infra/bootstrap.sh core
+    ./infra/bootstrap.sh core --no-upgrade
     ./infra/dotfiles.sh
 
 # Arch/systemd-boot-specific recovery tool. Never part of installation.
@@ -84,6 +84,10 @@ setup-mac: bootstrap-mac dotfiles
 # Static shell analysis; never executes target-machine infrastructure.
 lint:
     shellcheck -x -P SCRIPTDIR infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh
+
+# Read-only target-system filesystem and kernel-error report.
+health:
+    ./infra/system-health.sh
 
 # Format shell files in place.
 fmt:

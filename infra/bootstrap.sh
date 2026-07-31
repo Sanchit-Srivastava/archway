@@ -59,6 +59,9 @@ EOF
 }
 
 check_prerequisites() {
+	local root_fs
+	local root_options
+
 	PLATFORM="$(detect_platform)"
 	case "$PLATFORM" in
 	arch | cachyos) ;;
@@ -77,6 +80,18 @@ check_prerequisites() {
 		sudo -v
 	fi
 
+	root_fs="$(findmnt -n -o FSTYPE / 2>/dev/null || true)"
+	root_options="$(findmnt -n -o OPTIONS / 2>/dev/null || true)"
+	[[ ",${root_options}," == *,rw,* ]] ||
+		die "Root is not mounted read-write. Stop and investigate the filesystem before deploying."
+
+	if [[ "$root_fs" == "btrfs" ]] && command -v btrfs >/dev/null 2>&1; then
+		log_info "Checking persistent Btrfs device error counters..."
+		if ! sudo btrfs device stats -c /; then
+			die "Btrfs reports device errors. Run 'sudo just health' and investigate before deploying."
+		fi
+	fi
+
 	local available_gb
 	available_gb="$(df -BG / | awk 'NR == 2 { gsub(/G/, "", $4); print $4 }')"
 	[[ "${available_gb:-0}" -ge 5 ]] ||
@@ -93,7 +108,11 @@ upgrade_system() {
 	}
 
 	log_info "Performing one full system upgrade using existing distro repositories and mirrors..."
-	sudo pacman -Syu --noconfirm --ask 4
+	# Do not use pacman's undocumented `--ask` bitmask here. In particular,
+	# `--ask 4` inverts the answer to package-conflict removal and can silently
+	# replace a distro-owned package. A conflict must stop the bootstrap so the
+	# user can review it.
+	sudo pacman -Syu --noconfirm
 }
 
 read_list() {

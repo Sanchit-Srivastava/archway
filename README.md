@@ -87,8 +87,9 @@ a long time and are not required for an immediately usable machine.
 ### Maintenance
 
 ```bash
-just sync          # fast-forward pull, reapply core, reapply dotfiles
+just sync          # fast-forward pull and reapply config without a system upgrade
 just update        # update native packages, then AUR packages if yay exists
+sudo just health   # read-only filesystem/kernel-error deployment preflight
 just pull-dots     # import selected live niri files; never import DMS runtime JSON
 just fix-boot      # Arch/systemd-boot recovery only; not part of installation
 ```

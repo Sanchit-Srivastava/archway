@@ -16,10 +16,11 @@ export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 # PLATFORM-SPECIFIC
 # =============================================================================
 if [[ "$(uname)" != "Darwin" ]]; then
-    # Wayland (Linux only)
+    # Firefox can select Wayland when available and fall back under X11.
+    # Toolkit backends such as QT_QPA_PLATFORM and SDL_VIDEODRIVER must not be
+    # forced globally: niri scopes them in ~/.config/niri/config.kdl, while
+    # Plasma remains a working Wayland/X11 fallback.
     export MOZ_ENABLE_WAYLAND=1
-    export QT_QPA_PLATFORM=wayland
-    export SDL_VIDEODRIVER=wayland
 fi
 
 # =============================================================================

@@ -64,6 +64,15 @@ ensure_supported_platform() {
 
 enable_repo_user_services() {
 	systemctl --user daemon-reload
+	if [[ ! -s "${XDG_CONFIG_HOME:-${HOME}/.config}/vdirsyncer/config" ]]; then
+		if systemctl --user is-enabled vdirsyncer.timer >/dev/null 2>&1; then
+			systemctl --user disable --now vdirsyncer.timer
+			log_warn "Vdirsyncer is not configured; disabled vdirsyncer.timer."
+		else
+			log_warn "Vdirsyncer is not configured; leaving vdirsyncer.timer disabled."
+		fi
+		return 0
+	fi
 	if systemctl --user is-enabled vdirsyncer.timer >/dev/null 2>&1; then
 		log_info "User service already enabled: vdirsyncer.timer"
 	else
@@ -133,6 +142,7 @@ run_install() {
 run_secrets() {
 	ensure_interactive
 	"${REPO_ROOT}/infra/secrets.sh" --prompt
+	enable_repo_user_services
 }
 
 run_dms_config() {
