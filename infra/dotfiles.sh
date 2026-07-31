@@ -73,6 +73,67 @@ decrypt_secret() {
 	fi
 }
 
+# Install the public key used for SSH between Archway-managed machines.
+#
+# The committed public key serves two purposes:
+#   1. ~/.ssh/archway-access.pub selects the matching key from the SSH agent.
+#   2. ~/.ssh/authorized_keys permits that key to log into this account.
+#
+# Existing authorized_keys entries are preserved. Match on key type + key data
+# so changing a key's trailing comment does not append a duplicate.
+install_ssh_access_key() {
+	local src="${DOTS_DIR}/ssh/archway-access.pub"
+	local selector="${HOME}/.ssh/archway-access.pub"
+	local authorized_keys="${HOME}/.ssh/authorized_keys"
+	local key_type
+	local key_data
+
+	if [[ ! -f "$src" ]]; then
+		log_warn "No Archway SSH access key found: $src"
+		log_warn "  See dots/ssh/README.md to enable SSH access deployment."
+		return 0
+	fi
+
+	if [[ "$(awk 'NF { count++ } END { print count + 0 }' "$src")" -ne 1 ]]; then
+		log_error "SSH access key file must contain exactly one public key: $src"
+		return 1
+	fi
+
+	key_type="$(awk 'NF { print $1 }' "$src")"
+	key_data="$(awk 'NF { print $2 }' "$src")"
+	case "$key_type" in
+	ssh-ed25519 | ssh-rsa | ecdsa-sha2-* | sk-ssh-ed25519@openssh.com | sk-ecdsa-sha2-*@openssh.com) ;;
+	*)
+		log_error "SSH access key is not an OpenSSH public key: $src"
+		return 1
+		;;
+	esac
+
+	if ! ssh-keygen -l -f "$src" >/dev/null 2>&1; then
+		log_error "Invalid SSH public key: $src"
+		return 1
+	fi
+
+	if [[ -z "$key_type" || -z "$key_data" ]]; then
+		log_error "SSH public key must contain one OpenSSH public key: $src"
+		return 1
+	fi
+
+	install -m 644 "$src" "$selector"
+	log_info "Installed SSH identity selector: $selector"
+
+	touch "$authorized_keys"
+	chmod 600 "$authorized_keys"
+	if awk -v key_type="$key_type" -v key_data="$key_data" \
+		'$1 == key_type && $2 == key_data { found = 1 } END { exit !found }' \
+		"$authorized_keys"; then
+		log_info "SSH access key already authorized"
+	else
+		printf '%s\n' "$(cat "$src")" >>"$authorized_keys"
+		log_info "Added Archway SSH access key to: $authorized_keys"
+	fi
+}
+
 # Link a dotfile or directory
 # Usage: link_dotfile <source> <destination>
 link_dotfile() {
@@ -239,6 +300,7 @@ main() {
 	chmod 700 "${HOME}/.ssh"
 	link_dotfile "${DOTS_DIR}/ssh/config" "${HOME}/.ssh/config"
 	chmod 600 "${HOME}/.ssh/config" 2>/dev/null || true
+	install_ssh_access_key
 
 	# Decrypt machine-specific SSH host entries (config.local)
 	# The main config already includes config.local via: Include config.local
@@ -256,7 +318,8 @@ main() {
 #   Host my-server
 #       HostName 192.168.1.100
 #       User admin
-#       ForwardAgent yes
+#       IdentitiesOnly yes
+#       IdentityFile ~/.ssh/archway-access.pub
 TMPL
 	)"
 	decrypt_secret "${SECRETS_DIR}/ssh_config.local" "$ssh_config_local" "$ssh_config_local_template"

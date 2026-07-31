@@ -24,7 +24,8 @@
 #   Host my-server
 #       HostName 192.168.1.100
 #       User admin
-#       ForwardAgent yes
+#       IdentitiesOnly yes
+#       IdentityFile ~/.ssh/archway-access.pub
 
 # Include local overrides (must come before Host/Match blocks)
 Include config.local
