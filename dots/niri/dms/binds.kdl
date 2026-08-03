@@ -11,7 +11,6 @@ binds {
     Mod+Shift+W hotkey-overlay-title="Create window rule" { spawn "dms" "ipc" "call" "window-rules" "toggle"; }
     Mod+Space hotkey-overlay-title="Application Launcher" { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
     Mod+V hotkey-overlay-title="Clipboard Manager" { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
-    Mod+Y hotkey-overlay-title="Browse Wallpapers" { spawn "dms" "ipc" "call" "dankdash" "wallpaper"; }
     Super+O hotkey-overlay-title="Dashboard: Overview" { spawn "dms" "ipc" "call" "dash" "open" "overview"; }
     Super+X hotkey-overlay-title="Power Menu: Toggle" { spawn "dms" "ipc" "call" "powermenu" "toggle"; }
     XF86AudioLowerVolume allow-when-locked=true { spawn "dms" "ipc" "call" "audio" "decrement" "3"; }
@@ -133,11 +132,15 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
     Mod+Tab repeat=false { toggle-overview; }
 
+    // Application launchers
+    Mod+B hotkey-overlay-title="Open Browser" { spawn "zen-browser"; }
+    Mod+E hotkey-overlay-title="Open Files" { spawn "nautilus" "--new-window"; }
+    Mod+P hotkey-overlay-title="Open Bitwarden" { spawn "bitwarden"; }
+    Mod+Y hotkey-overlay-title="Open Yazi" { spawn "ghostty" "-e" "yazi"; }
+
     // Research launcher workflows
     Mod+A hotkey-overlay-title="arXiv Search" { spawn "arxiv-search"; }
-    Mod+B hotkey-overlay-title="DOI/arXiv to BibTeX" { spawn "doi2bib"; }
-    Mod+Z hotkey-overlay-title="Zotero Paper Search" { spawn "zotero-search"; }
+    Mod+Alt+B hotkey-overlay-title="DOI/arXiv to BibTeX" { spawn "doi2bib"; }
     Mod+G hotkey-overlay-title="Quick Research Note" { spawn "quick-note"; }
     Mod+Alt+T hotkey-overlay-title="Translate Clipboard" { spawn "translate-clip"; }
-    Mod+Alt+C hotkey-overlay-title="Calendar Menu" { spawn "calendar-menu"; }
 }
