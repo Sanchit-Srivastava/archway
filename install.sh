@@ -122,7 +122,6 @@ run_install() {
 run_secrets() {
 	ensure_interactive
 	"${REPO_ROOT}/infra/secrets.sh" --prompt
-	enable_repo_user_services
 }
 
 run_dms_config() {
