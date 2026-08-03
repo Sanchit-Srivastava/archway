@@ -8,6 +8,11 @@ set -euo pipefail
 
 NOTES_DIR="$HOME/notes"
 
+if [[ ! -d "${NOTES_DIR}/entries" || ! -f "${NOTES_DIR}/.zk/config.toml" ]]; then
+	notify-send -u critical "Notes" "Notebook not found at ${NOTES_DIR}; clone it before using this launcher" -t 5000
+	exit 1
+fi
+
 # ── spawn helper ──────────────────────────────────────────────────────────────
 
 # Spawn a ghostty terminal running a command inside the notes directory.
@@ -61,6 +66,10 @@ do_add() {
 
 	zk_args=(new --working-dir "$NOTES_DIR" --title "$title")
 	if [[ -n "$template" ]]; then
+		if [[ ! -f "${NOTES_DIR}/.zk/templates/${template}" ]]; then
+			notify-send -u critical "Notes" "Missing template: ${template}" -t 5000
+			exit 1
+		fi
 		zk_args+=(--template "$template")
 	fi
 	zk_args+=(entries)

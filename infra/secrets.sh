@@ -11,7 +11,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 . "${SCRIPT_DIR}/lib/common.sh"
 
 AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/sops/age/keys.txt}"
-VALIDATION_FILE="${REPO_ROOT}/secrets/vdirsyncer.env"
+VALIDATION_FILE="${REPO_ROOT}/secrets/ssh_config.local"
 
 usage() {
 	cat <<EOF

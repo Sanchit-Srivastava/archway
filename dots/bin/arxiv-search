@@ -12,23 +12,36 @@ query=$(echo "" | fuzzel --dmenu --prompt="arXiv: " --width=60)
 encoded=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))" "$query")
 
 # Fetch more results to give fuzzel a bigger pool for fuzzy filtering
-results=$(curl -sL "https://export.arxiv.org/api/query?search_query=all:${encoded}&start=0&max_results=30&sortBy=relevance")
+if ! results=$(curl --fail --show-error --silent --location \
+	--connect-timeout 5 --max-time 15 \
+	"https://export.arxiv.org/api/query?search_query=all:${encoded}&start=0&max_results=30&sortBy=relevance"); then
+	notify-send -u critical "arXiv" "Search failed; check the network connection" -t 5000
+	exit 1
+fi
 
-entries=$(echo "$results" | python3 -c "
+if ! entries=$(printf '%s' "$results" | python3 -c "
 import sys, xml.etree.ElementTree as ET
 root = ET.fromstring(sys.stdin.read())
 ns = {'a': 'http://www.w3.org/2005/Atom'}
 for e in root.findall('a:entry', ns):
-    title = ' '.join(e.find('a:title', ns).text.split())
-    aid = e.find('a:id', ns).text.split('/')[-1]
+    title_node = e.find('a:title', ns)
+    id_node = e.find('a:id', ns)
+    if title_node is None or id_node is None or not title_node.text or not id_node.text:
+        continue
+    title = ' '.join(title_node.text.split())
+    aid = id_node.text.split('/')[-1]
     authors = ', '.join(
-        a.find('a:name', ns).text
+        name.text
         for a in e.findall('a:author', ns)[:3]
+        if (name := a.find('a:name', ns)) is not None and name.text
     )
     if len(e.findall('a:author', ns)) > 3:
         authors += ' et al.'
     print(f'{aid} | {title} | {authors}')
-")
+"); then
+	notify-send -u critical "arXiv" "arXiv returned an unreadable response" -t 5000
+	exit 1
+fi
 
 [[ -z "$entries" ]] && notify-send "arXiv" "No results for: $query" -t 3000 && exit 0
 

@@ -58,7 +58,6 @@ glow
 imagemagick
 inxi
 jq
-khal
 lazygit
 less
 lua-language-server
@@ -83,7 +82,6 @@ systemctl-tui
 tmux
 translate-shell
 unzip
-vdirsyncer
 yazi
 zk
 zoxide

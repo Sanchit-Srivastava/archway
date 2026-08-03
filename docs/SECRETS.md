@@ -34,7 +34,6 @@ reopens the same onboarding flow later.
 ## Editing
 
 ```bash
-just secrets-edit vdirsyncer.env
 just secrets-edit ssh_config.local
 ```
 
@@ -46,4 +45,3 @@ every push.
 Generate or retrieve the replacement key outside the repository, update the
 recipient in `.sops.yaml`, and re-encrypt each SOPS document. Retain the old key
 until every committed file has been verified with the new key.
-

@@ -4,10 +4,10 @@
 # To set up:
 #   1. Generate a key:  age-keygen -o ~/.config/sops/age/keys.txt
 #   2. Replace the recipient below with YOUR public key (age1...)
-#   3. Encrypt files:   sops --encrypt --in-place secrets/vdirsyncer.env
+#   3. Encrypt files:   sops --encrypt --in-place secrets/ssh_config.local
 #
-# To edit secrets later:  sops secrets/vdirsyncer.env
-# To decrypt to stdout:   sops --decrypt secrets/vdirsyncer.env
+# To edit secrets later:  sops secrets/ssh_config.local
+# To decrypt to stdout:   sops --decrypt secrets/ssh_config.local
 
 creation_rules:
   - path_regex: secrets/.*

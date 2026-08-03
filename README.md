@@ -97,8 +97,8 @@ just fix-boot      # Arch/systemd-boot recovery only; not part of installation
 ### Secrets
 
 ```bash
-just secrets-edit vdirsyncer.env
-just secrets-show vdirsyncer.env
+just secrets-edit ssh_config.local
+just secrets-show ssh_config.local
 ```
 
 Private values are SOPS-encrypted before being committed. The age private key
@@ -134,5 +134,7 @@ and system configuration remain Linux-only.
 - [Arch installation choices](docs/INSTALL-ARCH.md)
 - [CachyOS installation choices](docs/INSTALL-CACHYOS.md)
 - [DMS/niri lifecycle](docs/DMS.md)
+- [Research workflow](docs/RESEARCH-WORKFLOW.md)
+- [Planned notes-system redesign](docs/NOTES-DESIGN.md)
 - [Secrets and age-key handling](docs/SECRETS.md)
 - [Recovery notes](docs/STABILITY.md)

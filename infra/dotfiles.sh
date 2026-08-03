@@ -436,108 +436,6 @@ EOF
 		mkdir -p "${HOME}/.config/environment.d"
 		link_dotfile "${DOTS_DIR}/environment.d/50-archway.conf" "${HOME}/.config/environment.d/50-archway.conf"
 
-		# ==========================================================================
-		# VDIRSYNCER (CalDAV/CardDAV sync — Google Calendar)
-		# ==========================================================================
-		log_info "--- Vdirsyncer ---"
-
-		# Decrypt or create secrets file (OAuth credentials + calendar IDs)
-		local vdirsyncer_secrets="${HOME}/.config/vdirsyncer/secrets"
-		local vdirsyncer_template
-		vdirsyncer_template="$(
-			cat <<'TMPL'
-# vdirsyncer Google OAuth2 credentials & calendar list
-# Fill in the values below after creating a Google Cloud project:
-#   1. Go to https://console.developers.google.com
-#   2. Create a project, enable the "CalDAV API"
-#   3. Create OAuth 2.0 credentials (Desktop application type)
-#   4. Paste client_id and client_secret here
-#   5. List the calendar IDs you want to sync in COLLECTIONS
-#
-# Then run:  vdirsyncer discover google_calendar
-#            vdirsyncer sync
-
-VDIRSYNCER_GOOGLE_CLIENT_ID=
-VDIRSYNCER_GOOGLE_CLIENT_SECRET=
-
-# Comma-separated list of Google Calendar IDs to sync.
-# Run `vdirsyncer discover google_calendar` first, then pick from the
-# discovered calendars.  Example:
-#   VDIRSYNCER_GOOGLE_COLLECTIONS=user@gmail.com,work@group.calendar.google.com
-VDIRSYNCER_GOOGLE_COLLECTIONS=
-
-# Default calendar for khal (used when adding new events).
-# Must match one of the calendar names from `khal printcalendars`.  Example:
-#   KHAL_DEFAULT_CALENDAR=user@gmail.com
-KHAL_DEFAULT_CALENDAR=
-TMPL
-		)"
-		decrypt_secret "${SECRETS_DIR}/vdirsyncer.env" "$vdirsyncer_secrets" "$vdirsyncer_template"
-
-		# Render vdirsyncer config from template + secrets
-		# (The template contains @@COLLECTIONS@@ which is replaced with the
-		# calendar list from the secrets file.)
-		mkdir -p "${HOME}/.config/vdirsyncer"
-		local vdirsyncer_conf="${HOME}/.config/vdirsyncer/config"
-		# shellcheck source=/dev/null
-		source "$vdirsyncer_secrets"
-		# Remove stale symlink so we don't write through it into the repo template
-		if [[ -L "$vdirsyncer_conf" ]]; then
-			rm "$vdirsyncer_conf"
-			log_info "Removed stale symlink at $vdirsyncer_conf"
-		fi
-		if [[ -z "${VDIRSYNCER_GOOGLE_COLLECTIONS:-}" ]]; then
-			log_warn "VDIRSYNCER_GOOGLE_COLLECTIONS is empty in $vdirsyncer_secrets"
-			log_warn "Skipping vdirsyncer config render — fill in calendar IDs first"
-		else
-			# Convert comma-separated IDs to Python list:
-			#   a@b.com,c@d.com  →  ["a@b.com", "c@d.com"]
-			local py_list
-			py_list=$(printf '%s' "$VDIRSYNCER_GOOGLE_COLLECTIONS" |
-				tr ',' '\n' |
-				sed 's/^[[:space:]]*//;s/[[:space:]]*$//' |
-				sed 's/.*/"&"/' |
-				paste -sd ',' - |
-				sed 's/^/[/;s/$/]/')
-			sed "s|@@COLLECTIONS@@|${py_list}|" \
-				"${DOTS_DIR}/vdirsyncer/config" >"$vdirsyncer_conf"
-			chmod 600 "$vdirsyncer_conf"
-			log_info "Rendered vdirsyncer config with $(echo "$VDIRSYNCER_GOOGLE_COLLECTIONS" | tr ',' '\n' | wc -l) calendar(s)"
-		fi
-
-		# ==========================================================================
-		# KHAL (terminal calendar UI)
-		# ==========================================================================
-		log_info "--- Khal ---"
-		mkdir -p "${HOME}/.config/khal"
-		local khal_conf="${HOME}/.config/khal/config"
-		# Remove stale symlink so we don't write through it into the repo template
-		if [[ -L "$khal_conf" ]]; then
-			rm "$khal_conf"
-			log_info "Removed stale symlink at $khal_conf"
-		fi
-		if [[ -z "${KHAL_DEFAULT_CALENDAR:-}" ]]; then
-			log_warn "KHAL_DEFAULT_CALENDAR is empty in $vdirsyncer_secrets"
-			log_warn "Rendering khal config without a default calendar"
-			sed '/@@DEFAULT_CALENDAR@@/d' \
-				"${DOTS_DIR}/khal/config" >"$khal_conf"
-		else
-			sed "s|@@DEFAULT_CALENDAR@@|${KHAL_DEFAULT_CALENDAR}|" \
-				"${DOTS_DIR}/khal/config" >"$khal_conf"
-			log_info "Rendered khal config with default calendar: $KHAL_DEFAULT_CALENDAR"
-		fi
-
-		# ==========================================================================
-		# SYSTEMD USER UNITS
-		# ==========================================================================
-		log_info "--- Systemd user units ---"
-		mkdir -p "${HOME}/.config/systemd/user"
-		for unit in "${DOTS_DIR}"/systemd-user/*; do
-			[[ -f "$unit" ]] || continue
-			unit_name="$(basename "$unit")"
-			link_dotfile "$unit" "${HOME}/.config/systemd/user/${unit_name}"
-		done
-
 	fi
 
 	log_info ""
@@ -556,10 +454,6 @@ TMPL
 		log_info "  - Secrets not decrypted (no age key found)"
 		log_info "    Paste your age private key into: $AGE_KEY_FILE"
 		log_info "    Then re-run: just dotfiles"
-	fi
-	if [[ -n "${VDIRSYNCER_GOOGLE_COLLECTIONS:-}" ]]; then
-		log_info "  - Calendar: run vdirsyncer discover google_calendar && vdirsyncer sync"
-		log_info "      systemctl --user enable --now vdirsyncer.timer"
 	fi
 	log_info "  - Zen Browser manual steps after first launch:"
 	log_info "      1. Sign into Mozilla Sync (syncs extensions, bookmarks, prefs)"

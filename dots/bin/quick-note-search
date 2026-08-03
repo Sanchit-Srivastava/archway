@@ -11,7 +11,14 @@ set -euo pipefail
 # Selecting a result opens it in neovim (at the matching line in content mode).
 # Called by quick-note inside a ghostty terminal.
 
-cd "$HOME/notes"
+NOTES_DIR="$HOME/notes"
+
+if [[ ! -d "${NOTES_DIR}/entries" ]]; then
+	printf 'Notes directory not found: %s\n' "${NOTES_DIR}/entries" >&2
+	exit 1
+fi
+
+cd "$NOTES_DIR"
 
 MODE="${1:-files}"
 INITIAL_QUERY="${2:-}"

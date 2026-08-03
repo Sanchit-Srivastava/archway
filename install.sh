@@ -62,32 +62,12 @@ ensure_supported_platform() {
 	esac
 }
 
-enable_repo_user_services() {
-	systemctl --user daemon-reload
-	if [[ ! -s "${XDG_CONFIG_HOME:-${HOME}/.config}/vdirsyncer/config" ]]; then
-		if systemctl --user is-enabled vdirsyncer.timer >/dev/null 2>&1; then
-			systemctl --user disable --now vdirsyncer.timer
-			log_warn "Vdirsyncer is not configured; disabled vdirsyncer.timer."
-		else
-			log_warn "Vdirsyncer is not configured; leaving vdirsyncer.timer disabled."
-		fi
-		return 0
-	fi
-	if systemctl --user is-enabled vdirsyncer.timer >/dev/null 2>&1; then
-		log_info "User service already enabled: vdirsyncer.timer"
-	else
-		systemctl --user enable vdirsyncer.timer
-		log_info "Enabled user service: vdirsyncer.timer"
-	fi
-}
-
 install_core_and_dotfiles() {
 	log_info "Installing the reliable Archway core..."
 	"${REPO_ROOT}/infra/bootstrap.sh" core
 
 	log_info "Applying ordinary dotfiles..."
 	"${REPO_ROOT}/infra/dotfiles.sh"
-	enable_repo_user_services
 
 	log_info "Setting up encrypted secrets..."
 	"${REPO_ROOT}/infra/secrets.sh" --prompt
