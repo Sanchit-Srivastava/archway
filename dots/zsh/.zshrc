@@ -286,3 +286,11 @@ export PATH="$HOME/.grok/bin:$PATH"
 fpath=(~/.grok/completions/zsh $fpath)
 autoload -Uz compinit && compinit -C
 # <<< grok installer <<<
+
+# =============================================================================
+# LOGIN BANNER
+# =============================================================================
+# Show the configured system summary when an interactive terminal opens.
+if [[ -o interactive ]] && command -v fastfetch &>/dev/null; then
+    command fastfetch
+fi
