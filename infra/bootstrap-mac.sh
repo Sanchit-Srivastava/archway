@@ -9,7 +9,7 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-SCRIPT_VERSION="2026-08-07-1"
+SCRIPT_VERSION="2026-08-07-2"
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
@@ -148,16 +148,16 @@ install_brew_casks() {
 install_zathura() {
 	log_info "Setting up zathura..."
 
-	# The tap moved from zegervdv/zathura to homebrew-zathura/zathura. Accept
-	# the old name on existing machines, but qualify formulae because Homebrew
-	# considers their short names ambiguous when both tap names are present.
-	local zathura_tap
-	if brew tap | grep -qxF "homebrew-zathura/zathura"; then
-		zathura_tap="homebrew-zathura/zathura"
-	elif brew tap | grep -qxF "zegervdv/zathura"; then
-		zathura_tap="zegervdv/zathura"
-	else
-		zathura_tap="homebrew-zathura/zathura"
+	# The tap moved from zegervdv/zathura to homebrew-zathura/zathura.
+	# Keeping both names makes Homebrew's dependency resolution ambiguous, and
+	# the legacy tap also fails current tap-trust checks, so migrate it away.
+	local zathura_tap="homebrew-zathura/zathura"
+	if brew tap | grep -qxF "zegervdv/zathura"; then
+		log_info "Removing legacy zegervdv/zathura tap..."
+		brew untap zegervdv/zathura
+	fi
+
+	if ! brew tap | grep -qxF "$zathura_tap"; then
 		log_info "Tapping ${zathura_tap}..."
 		brew tap "$zathura_tap"
 	fi
