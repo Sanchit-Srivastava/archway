@@ -9,7 +9,7 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-SCRIPT_VERSION="2026-02-21-1"
+SCRIPT_VERSION="2026-08-07-1"
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
@@ -148,26 +148,34 @@ install_brew_casks() {
 install_zathura() {
 	log_info "Setting up zathura..."
 
-	# Tap the homebrew-zathura repository (maintained by zegervdv)
-	if ! brew tap | grep -q "^zegervdv/zathura$"; then
-		log_info "Tapping zegervdv/zathura..."
-		brew tap zegervdv/zathura
+	# The tap moved from zegervdv/zathura to homebrew-zathura/zathura. Accept
+	# the old name on existing machines, but qualify formulae because Homebrew
+	# considers their short names ambiguous when both tap names are present.
+	local zathura_tap
+	if brew tap | grep -qxF "homebrew-zathura/zathura"; then
+		zathura_tap="homebrew-zathura/zathura"
+	elif brew tap | grep -qxF "zegervdv/zathura"; then
+		zathura_tap="zegervdv/zathura"
 	else
-		log_info "zegervdv/zathura tap already present"
+		zathura_tap="homebrew-zathura/zathura"
+		log_info "Tapping ${zathura_tap}..."
+		brew tap "$zathura_tap"
 	fi
 
 	# Install zathura and the MuPDF plugin
-	brew install zathura
-	brew install zathura-pdf-mupdf
+	local zathura_formula="${zathura_tap}/zathura"
+	local mupdf_formula="${zathura_tap}/zathura-pdf-mupdf"
+	brew install "$zathura_formula"
+	brew install "$mupdf_formula"
 
 	# Post-install: symlink the plugin into zathura's lib directory
 	# Without this, zathura cannot find its PDF rendering plugin
 	local zathura_lib
-	zathura_lib="$(brew --prefix zathura)/lib/zathura"
+	zathura_lib="$(brew --prefix "$zathura_formula")/lib/zathura"
 	mkdir -p "$zathura_lib"
 
 	local mupdf_plugin
-	mupdf_plugin="$(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib"
+	mupdf_plugin="$(brew --prefix "$mupdf_formula")/libpdf-mupdf.dylib"
 	if [[ -f "$mupdf_plugin" ]]; then
 		if [[ ! -e "${zathura_lib}/libpdf-mupdf.dylib" ]]; then
 			ln -s "$mupdf_plugin" "$zathura_lib/"
