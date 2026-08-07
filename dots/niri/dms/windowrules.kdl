@@ -19,12 +19,14 @@ window-rule {
     opacity 0.80
 }
 
-// @id=wr_1773424314984648902 @name=Bitwarden
+// @id=wr_1785832932152255176 @name=com.mitchellh.ghostty
+window-rule {
+    match app-id="^com.mitchellh.ghostty$"
+    open-maximized true
+}
+
+// @id=wr_1786086469169706710 @name=Bitwarden
 window-rule {
     match app-id="^Bitwarden$"
     opacity 0.75
-    open-floating true
-    open-focused true
-    default-column-width { fixed 800; }
-    default-window-height { fixed 600; }
 }
