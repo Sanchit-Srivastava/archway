@@ -5,7 +5,9 @@
 # =============================================================================
 # AI CODING CLIENT
 # =============================================================================
-chatgpt
+# ChatGPT self-updates and may already be installed directly from OpenAI.
+# Do not manage it with Homebrew, which refuses to adopt an existing app bundle.
+# chatgpt
 
 # =============================================================================
 # FONTS (Nerd Fonts for terminal/editor icons)
