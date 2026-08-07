@@ -2,7 +2,6 @@
 # https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md
 
 git:
-  pagers:
-    - pager: delta --dark --paging=never --line-numbers --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"
+  diffRenderers:
+    - command: delta --dark --paging=never --line-numbers --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"
       colorArg: always
-      externalDiffCommand: ""
