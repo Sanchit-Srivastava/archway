@@ -1,9 +1,10 @@
 # archway
 
 Personal configuration-as-code for a familiar Arch Linux, CachyOS, or macOS
-environment. The operating-system installer owns boot, filesystems, KDE, GPU
-drivers, networking, audio, repositories, and mirrors. Archway adds personal
-packages, dotfiles, secrets, and optional DMS/niri configuration.
+environment. The operating-system installer owns boot, filesystems, the base
+desktop profile and display manager, GPU drivers, networking, audio,
+repositories, and mirrors. Archway adds personal packages, dotfiles, secrets,
+and optional DMS/niri configuration.
 
 This is a public but heavily personal repository. It is intended to be cloned
 and run by its owner, not used as a general-purpose distribution installer.
@@ -12,16 +13,20 @@ and run by its owner, not used as a general-purpose distribution installer.
 
 First install either:
 
-- Arch Linux with `archinstall` and the KDE Plasma profile; or
+- Arch Linux with `archinstall` and the Niri or KDE Plasma profile; or
 - CachyOS with KDE Plasma and its suggested defaults.
 
-Boot into KDE, open a terminal, and run:
+For the lightest Arch installation, prefer the Niri profile. In either Arch
+profile, select NetworkManager and PipeWire. Keep the display manager selected
+by the OS installer; Archway does not replace it.
+
+Boot into the installed graphical profile, open a terminal, and run:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
 ```
 
-For a recovery install that skips DMS and all AUR extras:
+For a recovery install that skips DMS and optional applications:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) safe
@@ -40,7 +45,7 @@ The normal installer:
 2. applies ordinary dotfiles;
 3. installs Bitwarden and prompts for the SOPS age key without echoing it;
 4. decrypts secrets when a valid key is provided;
-5. installs optional extras and DMS/niri from native packages;
+5. installs optional applications and the DMS/niri desktop independently;
 6. runs upstream's `dms setup` and binds DMS to niri's systemd session; and
 7. offers to reboot.
 
@@ -61,18 +66,34 @@ rerun.
 
 ```bash
 just install       # normal first stage
-just install-safe  # core only; skip DMS and AUR extras
+just install-safe  # core only; skip DMS and optional applications
 just finish        # finish DMS/secrets after first niri login
 just core          # install/reapply reliable native packages and services
-just extras        # install/retry optional native and AUR extras
+just extras        # install/retry optional applications
 just dms           # install/retry DMS and run `dms setup`
 just dms-config    # reapply portable DMS/niri preferences
 just secrets       # securely onboard/validate the age key and decrypt secrets
 just dotfiles      # reapply ordinary dotfiles
 ```
 
-Core failure stops installation. Extras and DMS failure leave KDE and the
-Archway core usable; retry them later with `just extras` or `just dms`.
+Core failure stops installation. Extras and DMS failure leave the original base
+desktop and the Archway core usable; retry them later with `just extras` or
+`just dms`.
+
+### Default applications
+
+Archway installs and selects a small cross-session set of defaults:
+
+- imv for common image formats;
+- mpv for audio and video;
+- Kate for plain and structured text;
+- Okular for PDFs, EPUB, DjVu, and comic archives; and
+- Ark for ordinary archives.
+
+Zathura remains installed for explicit LaTeX/PDF workflows. The defaults are
+stored in `dots/mimeapps.list` and apply in both Niri and Plasma sessions.
+Office-suite formats are deliberately not assigned because Archway does not
+currently install a full office suite.
 
 ### Slow optional applications
 

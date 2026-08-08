@@ -15,7 +15,7 @@ PENDING_FILE="${STATE_DIR}/dms-config.pending"
 # shellcheck source=infra/lib/platform.sh
 . "${SCRIPT_DIR}/infra/lib/platform.sh"
 
-SCRIPT_VERSION="2026-07-29-1"
+SCRIPT_VERSION="2026-08-08-1"
 
 die() {
 	log_error "$1"
@@ -34,14 +34,14 @@ Usage:
   ./install.sh dms-config
 
 Commands:
-  install      Core + dotfiles + secrets prompt + optional DMS/extras (default)
+  install      Core + dotfiles + secrets prompt + optional applications and DMS (default)
   finish       Apply secrets and DMS preferences after the first niri login
   secrets      Onboard/validate the age key and decrypt secret targets
   dms          Install/retry DMS and generate upstream compositor defaults
   dms-config   Apply portable preferences after DMS has initialized once
 
 Options:
-  --safe       Install core, dotfiles, and secrets only; skip DMS/AUR extras
+  --safe       Install core, dotfiles, and secrets only; skip optional applications and DMS
   --no-reboot  Do not offer to reboot at the end
 EOF
 }
@@ -60,6 +60,16 @@ ensure_supported_platform() {
 	arch | cachyos) ;;
 	*) die "This installer supports Arch Linux and CachyOS (detected: $platform)." ;;
 	esac
+}
+
+ensure_desktop_baseline() {
+	command -v nmcli >/dev/null 2>&1 ||
+		die "NetworkManager is missing. Select it in the OS installer before deploying Archway."
+	command -v wpctl >/dev/null 2>&1 ||
+		die "WirePlumber/PipeWire is missing. Select PipeWire in the OS installer before deploying Archway."
+	if ! systemctl is-active NetworkManager.service >/dev/null 2>&1; then
+		die "NetworkManager is not active. Repair the base OS profile before deploying Archway."
+	fi
 }
 
 install_core_and_dotfiles() {
@@ -88,6 +98,7 @@ run_install() {
 	ensure_interactive
 	ensure_supported_platform
 	[[ $EUID -ne 0 ]] || die "Run as a regular user, not root."
+	ensure_desktop_baseline
 
 	install_core_and_dotfiles
 
@@ -97,9 +108,13 @@ run_install() {
 		return 0
 	fi
 
+	if ! "${REPO_ROOT}/infra/bootstrap.sh" extras --no-upgrade; then
+		log_warn "Some optional applications failed. The core and DMS installation can continue."
+	fi
+
 	if ! install_dms; then
-		log_warn "DMS/extras did not complete, but the Archway core is ready."
-		log_warn "KDE remains fully usable. Retry later with: just dms"
+		log_warn "DMS did not complete, but the Archway core is ready."
+		log_warn "The base desktop remains fully usable. Retry later with: just dms"
 		return 0
 	fi
 

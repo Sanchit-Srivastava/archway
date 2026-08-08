@@ -33,13 +33,14 @@ The base OS installer owns:
 - filesystem, encryption, snapshots, bootloader, and kernel;
 - GPU and hardware drivers;
 - repositories and mirrors;
-- KDE Plasma and the display manager;
+- the selected graphical profile and display manager;
 - networking and audio baseline.
 
 Archway must not duplicate those responsibilities.
 
-Arch installations always begin with `archinstall` and KDE Plasma. CachyOS
-installations use its graphical installer, KDE Plasma, and suggested defaults.
+Arch installations always begin with `archinstall` and its Niri or KDE Plasma
+profile. CachyOS installations use its graphical installer, KDE Plasma, and
+suggested defaults.
 
 ## Installation contract
 
@@ -56,12 +57,13 @@ The explicit phases are:
 
 There is no automatic resume or autostart state machine.
 
-`just install-safe` installs only core, dotfiles, and secrets. KDE is already a
-fully usable fallback.
+`just install-safe` installs only core, dotfiles, and secrets. The OS-provided
+graphical profile is already a fully usable fallback.
 
 ## Package lists
 
 - `infra/pkgs/core.txt`: reliable native packages; failure is fatal.
+- `infra/pkgs/dms.txt`: optional native DMS/niri desktop packages.
 - `infra/pkgs/extras.txt`: optional native packages.
 - `infra/pkgs/extras.aur.txt`: optional AUR packages.
 - `infra/pkgs/tex.txt`: slow optional TeX toolchain.

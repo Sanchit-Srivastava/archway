@@ -1,6 +1,7 @@
 # DMS and niri
 
-DMS and niri are optional. KDE Plasma remains the reliable fallback session.
+DMS and niri are optional. The graphical profile installed by the OS remains
+the reliable fallback.
 
 ## Installation
 
@@ -8,7 +9,7 @@ DMS and niri are optional. KDE Plasma remains the reliable fallback session.
 just dms
 ```
 
-Archway installs native repository packages and runs:
+Archway installs only the native DMS/niri package set and runs:
 
 ```bash
 dms setup
@@ -60,5 +61,13 @@ If `dms.service` is not listed under `niri.service`, repair the session binding:
 systemctl --user add-wants niri.service dms.service
 ```
 
-If DMS cannot start, select KDE Plasma at the login screen. Repair DMS from
-KDE without changing the OS or bootloader.
+If DMS cannot start, select the original base session at the login screen.
+Repair DMS from the original Niri or Plasma environment without changing the
+OS, display manager, or bootloader.
+
+## Display manager
+
+Archway does not install or switch greeters. Keep the display manager selected
+during the base OS installation. A display manager can discover both the Niri
+and Plasma Wayland session entries, so installing another desktop does not
+require replacing it. Only one `display-manager.service` should be enabled.

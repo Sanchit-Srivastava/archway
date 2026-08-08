@@ -1,7 +1,7 @@
 # Stability and recovery
 
 Start from the ownership boundary: Archway does not own boot, GPU drivers,
-filesystems, mirrors, or the KDE baseline.
+filesystems, mirrors, or the base graphical profile.
 
 ## Filesystem choice
 
@@ -92,20 +92,21 @@ Archway's changes fall into four different risk levels:
    are global behavior changes. They do not explain Btrfs corruption, but can
    affect networking, container ingress, input, discovery, and boot diagnostics.
 3. DMS/niri, AUR packages, Oh My Zsh plugins, and DMS plugins are moving
-   third-party components. KDE remains the recovery session, and optional
-   failures must not invalidate core.
+   third-party components. The OS-provided desktop remains the recovery
+   session, and optional failures must not invalidate core.
 4. Ordinary application dotfiles are user-scoped. They can break one program
    but should not make the root filesystem read-only. Existing files are moved
    to unique `*.pre-archway.bak*` paths rather than overwritten.
 
-Archway leaves KDE's KWallet enabled. A previous version globally masked it and
-installed GNOME Keyring; re-running `just dotfiles` removes only the retired
-Archway-owned mask. Credential-provider replacement is desktop integration and
-must not be imposed on the stable KDE fallback.
+Archway leaves KDE's KWallet enabled when Plasma is installed. A previous
+version globally masked it and installed GNOME Keyring; re-running
+`just dotfiles` removes only the retired Archway-owned mask. Credential-provider
+replacement is desktop integration and must not be imposed on another desktop
+session.
 
 ## DMS or niri fails
 
-Select KDE Plasma in the display manager, then inspect:
+Select the original base session in the display manager, then inspect:
 
 ```bash
 dms doctor
@@ -114,7 +115,7 @@ dms restart
 just dms-config
 ```
 
-KDE is the supported fallback; a DMS failure is not an OS failure.
+The base profile is the supported fallback; a DMS failure is not an OS failure.
 
 ## Optional packages fail
 

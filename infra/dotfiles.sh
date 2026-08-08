@@ -419,6 +419,12 @@ EOF
 	# LINUX-ONLY SECTIONS
 	# ==========================================================================
 	if [[ "$(uname)" != "Darwin" ]]; then
+		# ==========================================================================
+		# DEFAULT APPLICATIONS
+		# ==========================================================================
+		log_info "--- Default applications ---"
+		link_dotfile "${DOTS_DIR}/mimeapps.list" "${HOME}/.config/mimeapps.list"
+
 		# Remove Archway's retired KWallet mask. KDE owns its credential service,
 		# and disabling it globally can break the otherwise-stable Plasma
 		# fallback. Never remove a user-owned file at this path.

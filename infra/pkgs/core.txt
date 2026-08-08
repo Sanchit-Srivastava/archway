@@ -1,5 +1,5 @@
 # Archway core — reliable native packages shared by Arch and CachyOS.
-# The base OS installer owns KDE, boot, networking, audio, GPU drivers,
+# The base OS installer owns the desktop profile, boot, networking, audio, GPU drivers,
 # filesystems, repositories, mirrors, and the display manager.
 
 # System integration
@@ -39,6 +39,7 @@ ufw
 upower
 
 # Shell, editor, and CLI
+7zip
 bash-completion
 bash-language-server
 bat
@@ -89,6 +90,7 @@ zsh
 
 # Desktop applications and utilities
 alacritty
+ark
 avahi
 bitwarden
 bitwarden-cli
@@ -102,22 +104,21 @@ ghostty
 gnome-disk-utility
 grim
 imv
+kate
+kdeconnect
+mpv
 nautilus
 nautilus-python
 nss-mdns
+okular
 pamixer
 pavucontrol
-plasma-x11-session
-polkit-gnome
 proton-vpn-cli
 qutebrowser
 slurp
 system-config-printer
-thunar
 wl-clipboard
 wtype
 xdg-desktop-portal
-xdg-desktop-portal-gnome
-xdg-desktop-portal-gtk
 zathura
 zathura-pdf-mupdf

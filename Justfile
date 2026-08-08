@@ -7,7 +7,7 @@ default:
 install:
     ./install.sh install
 
-# Panic/recovery mode: reliable core only; KDE remains available.
+# Panic/recovery mode: reliable core only; the base desktop remains available.
 install-safe:
     ./install.sh install --safe
 

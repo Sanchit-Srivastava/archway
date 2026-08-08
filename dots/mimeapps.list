@@ -1,0 +1,49 @@
+[Default Applications]
+# Images
+image/avif=imv.desktop
+image/bmp=imv.desktop
+image/gif=imv.desktop
+image/jpeg=imv.desktop
+image/png=imv.desktop
+image/svg+xml=imv.desktop
+image/tiff=imv.desktop
+image/webp=imv.desktop
+
+# Audio and video
+audio/flac=mpv.desktop
+audio/mpeg=mpv.desktop
+audio/ogg=mpv.desktop
+audio/x-wav=mpv.desktop
+video/mp4=mpv.desktop
+video/mpeg=mpv.desktop
+video/quicktime=mpv.desktop
+video/webm=mpv.desktop
+video/x-matroska=mpv.desktop
+video/x-msvideo=mpv.desktop
+
+# Text and structured text
+application/json=org.kde.kate.desktop
+application/xml=org.kde.kate.desktop
+text/csv=org.kde.kate.desktop
+text/markdown=org.kde.kate.desktop
+text/plain=org.kde.kate.desktop
+text/x-python=org.kde.kate.desktop
+text/x-shellscript=org.kde.kate.desktop
+
+# Documents and comics. Zathura remains available for explicit LaTeX workflows.
+application/epub+zip=org.kde.okular.desktop
+application/pdf=org.kde.okular.desktop
+application/vnd.comicbook+rar=org.kde.okular.desktop
+application/vnd.comicbook+zip=org.kde.okular.desktop
+application/x-cbr=org.kde.okular.desktop
+application/x-cbz=org.kde.okular.desktop
+image/vnd.djvu=org.kde.okular.desktop
+
+# Archives
+application/gzip=org.kde.ark.desktop
+application/vnd.rar=org.kde.ark.desktop
+application/x-7z-compressed=org.kde.ark.desktop
+application/x-bzip2=org.kde.ark.desktop
+application/x-rar=org.kde.ark.desktop
+application/x-tar=org.kde.ark.desktop
+application/zip=org.kde.ark.desktop

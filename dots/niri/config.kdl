@@ -165,8 +165,8 @@ overview {
 environment {
     // These make apps and toolkits launched from niri (and DMS) use native
     // Wayland + good defaults. They are deliberately *not* set in the global
-    // ~/.config/environment.d/50-archway.conf so that KDE Plasma (X11) and
-    // Plasma Wayland remain fully functional fallbacks (on NVIDIA and non-NVIDIA).
+    // ~/.config/environment.d/50-archway.conf so that other Wayland sessions,
+    // including Plasma, remain independent.
     XDG_CURRENT_DESKTOP "niri"
     QT_QPA_PLATFORM "wayland"
     QT_WAYLAND_DISABLE_WINDOWDECORATION "1"

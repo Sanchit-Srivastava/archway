@@ -3,7 +3,7 @@
 Archway is a thin, idempotent personal layer over an already working operating
 system. It supports:
 
-- Arch Linux installed with `archinstall` and KDE Plasma;
+- Arch Linux installed with `archinstall` and Niri or KDE Plasma;
 - CachyOS installed with KDE Plasma; and
 - a smaller shared user-environment layer on macOS.
 
@@ -18,7 +18,7 @@ The operating system owns:
 - GPU and other hardware drivers;
 - repositories, signing keys, and mirrors;
 - networking and audio baseline;
-- KDE Plasma and the display manager.
+- the base graphical profile and display manager.
 
 Archway owns:
 
@@ -39,13 +39,15 @@ platforms look identical.
 `infra/pkgs/core.txt` contains reliable native packages available through the
 configured distro repositories. A core failure stops the install.
 
-KDE remains usable before Archway runs and after a core failure.
+The OS-provided graphical profile remains usable before Archway runs and after
+a core failure.
 
 ### Extras
 
-`infra/pkgs/extras.txt` and `infra/pkgs/extras.aur.txt` contain optional
-applications and DMS-related packages. Failures are reported without
-invalidating core.
+`infra/pkgs/dms.txt` contains the native DMS/niri desktop packages.
+`infra/pkgs/extras.txt` and `infra/pkgs/extras.aur.txt` contain unrelated
+optional applications. Their installation and failure states are independent,
+and neither invalidates core.
 
 ### Slow optional tools
 
@@ -70,7 +72,7 @@ Stage 1:
 2. installs core;
 3. applies dotfiles;
 4. offers secure age-key onboarding and secret decryption;
-5. installs optional extras and DMS;
+5. installs optional applications and DMS independently;
 6. runs `dms setup` and binds DMS to niri's systemd user session; and
 7. requests one reboot/session transition.
 

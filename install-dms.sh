@@ -30,12 +30,10 @@ main() {
 	}
 
 	log_info "Installing DMS/niri native packages..."
-	"${SCRIPT_DIR}/infra/bootstrap.sh" extras --no-upgrade || {
-		log_warn "Some optional extras failed. Attempting DMS setup if the CLI is available."
-	}
+	"${SCRIPT_DIR}/infra/bootstrap.sh" dms --no-upgrade
 
 	if ! command -v dms >/dev/null 2>&1; then
-		log_error "DMS is unavailable. Retry with: just extras"
+		log_error "DMS is unavailable. Retry with: just dms"
 		exit 1
 	fi
 
