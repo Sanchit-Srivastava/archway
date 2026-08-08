@@ -92,8 +92,8 @@ Archway's changes fall into four different risk levels:
    are global behavior changes. They do not explain Btrfs corruption, but can
    affect networking, container ingress, input, discovery, and boot diagnostics.
 3. DMS/niri, AUR packages, Oh My Zsh plugins, and DMS plugins are moving
-   third-party components. The OS-provided desktop remains the recovery
-   session, and optional failures must not invalidate core.
+   third-party components. Archinstall owns the Niri+DMS graphical baseline;
+   Archway validates it but does not repair or replace it.
 4. Ordinary application dotfiles are user-scoped. They can break one program
    but should not make the root filesystem read-only. Existing files are moved
    to unique `*.pre-archway.bak*` paths rather than overwritten.
@@ -105,7 +105,7 @@ second Secret Service provider beside KWallet.
 
 ## DMS or niri fails
 
-Select the original base session in the display manager, then inspect:
+From the active session, or from a TTY if the greeter is unavailable, inspect:
 
 ```bash
 dms doctor
@@ -114,7 +114,8 @@ dms restart
 just dms-config
 ```
 
-The base profile is the supported fallback; a DMS failure is not an OS failure.
+The normal installer stops if the OS-provided DMS services or greeter command
+are invalid. Archway does not rewrite those components.
 
 ## Optional packages fail
 
@@ -122,7 +123,6 @@ Core remains usable. Retry only the failed capability:
 
 ```bash
 just extras
-just dms
 just tex
 just zotero
 ```

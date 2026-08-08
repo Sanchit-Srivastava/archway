@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pasteable first-stage launcher. It only clones/selects the repository and
+# Pasteable launcher. It only clones/selects the repository and
 # hands off to install.sh; all target-machine work lives in the checked-out
 # version so it is reviewable and retryable.
 #
@@ -10,11 +10,9 @@ set -euo pipefail
 #   --dir <path>   Clone destination (default: ~/archway)
 #   --ref <ref>    Git ref to check out (tag, branch, or sha; default: main HEAD)
 #                  Use this for reproducible installs:
-#                    bash <(curl ...) --ref v2026.05.03 safe
-#
-# A bare `safe` argument is accepted as shorthand for `--safe`.
+#                    bash <(curl ...) --ref v2026.05.03 minimal
 
-SCRIPT_VERSION="2026-07-29-1"
+SCRIPT_VERSION="2026-08-08-1"
 
 REPO_URL="https://github.com/Sanchit-Srivastava/archway.git"
 REPO_DIR="${HOME}/archway"
@@ -35,7 +33,6 @@ die() {
 }
 
 # --- Parse arguments (pass-through to install.sh, except --repo/--dir/--ref) ---
-# Bare `safe` is sugar for `--safe`.
 
 PASSTHROUGH_ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -54,10 +51,6 @@ while [[ $# -gt 0 ]]; do
 		[[ $# -ge 2 ]] || die "--ref requires a value"
 		REPO_REF="$2"
 		shift 2
-		;;
-	safe)
-		PASSTHROUGH_ARGS+=(--safe)
-		shift
 		;;
 	*)
 		PASSTHROUGH_ARGS+=("$1")

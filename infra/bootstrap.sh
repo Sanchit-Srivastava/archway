@@ -15,7 +15,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=lib/platform.sh
 . "${SCRIPT_DIR}/lib/platform.sh"
 
-SCRIPT_VERSION="2026-08-08-2"
+SCRIPT_VERSION="2026-08-08-3"
 CURRENT_PHASE="initialization"
 BOOTSTRAP_STARTED=0
 
@@ -49,10 +49,9 @@ trap 'on_exit "$?"' EXIT
 
 usage() {
 	cat <<EOF
-Usage: $(basename "$0") [core|dms|extras|zotero] [--no-upgrade]
+Usage: $(basename "$0") [core|extras|zotero] [--no-upgrade]
 
   core       Install reliable native packages and Archway-owned services
-  dms        Install the native DMS/niri desktop packages
   extras     Install optional native and AUR packages (best effort)
   zotero     Install the optional Zotero AUR package
 
@@ -249,17 +248,12 @@ install_extras() {
 	fi
 }
 
-install_dms_packages() {
-	CURRENT_PHASE="installing DMS/niri packages"
-	install_native_list "${SCRIPT_DIR}/pkgs/dms.txt"
-}
-
 main() {
 	local operation="core"
 	NO_UPGRADE=0
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		core | dms | extras | zotero) operation="$1" ;;
+		core | extras | zotero) operation="$1" ;;
 		--no-upgrade) NO_UPGRADE=1 ;;
 		-h | --help)
 			usage
@@ -285,7 +279,6 @@ main() {
 
 	case "$operation" in
 	core) install_core ;;
-	dms) install_dms_packages ;;
 	extras) install_extras ;;
 	zotero)
 		CURRENT_PHASE="installing Zotero"

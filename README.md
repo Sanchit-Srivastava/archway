@@ -4,25 +4,23 @@ Personal configuration-as-code for a familiar Arch Linux, CachyOS, or macOS
 environment. The operating-system installer owns boot, filesystems, the base
 desktop profile and display manager, GPU drivers, networking, audio,
 repositories, and mirrors. Archway adds personal packages, dotfiles, secrets,
-and optional DMS/niri configuration.
+and portable configuration for an existing Niri+DMS desktop.
 
 This is a public but heavily personal repository. It is intended to be cloned
 and run by its owner, not used as a general-purpose distribution installer.
 
 ## Fresh Linux installation
 
-First install one of:
+The normal installation contract is Arch Linux installed with `archinstall`'s
+**Niri + DankMaterialShell** profile. Select NetworkManager, PipeWire, and
+TuneD; do not combine that profile with `power-profiles-daemon` because it
+already installs `tuned-ppd`. Keep the profile's DMS greeter. Archway validates
+the graphical baseline but does not install, replace, or repair it.
 
-- Arch Linux with `archinstall` and the Niri + DankMaterialShell, conventional
-  Niri, or KDE Plasma profile; or
-- CachyOS with KDE Plasma and its suggested defaults.
-
-For the lightest Arch installation that will use DMS, prefer the Niri +
-DankMaterialShell profile. Select NetworkManager, PipeWire, and TuneD; do not
-combine that profile with the power-profiles-daemon application because the
-profile already installs `tuned-ppd`. Keep the display manager selected by the
-OS installer; Archway does not replace it. See the profile-specific
-[archinstall choices](docs/INSTALL-ARCH.md) before installing.
+Arch or CachyOS with KDE Plasma is supported by the separate minimal install.
+That path installs the Archway core, dotfiles, and secrets while leaving the
+desktop and display manager untouched. See the profile-specific
+[archinstall choices](docs/INSTALL-ARCH.md) before installing Arch.
 
 NetworkManager is a required base-install choice. Do not select "Copy ISO
 network configuration": that preserves standalone iwd/systemd-networkd rather
@@ -35,10 +33,10 @@ Boot into the installed graphical profile, open a terminal, and run:
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
 ```
 
-For a recovery install that skips DMS and optional applications:
+For KDE or another base that should remain graphically untouched:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) safe
+bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) minimal
 ```
 
 For reproducibility, replace `main` with a known-good release tag or pass a
@@ -48,46 +46,40 @@ specific ref:
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh) --ref vYYYY.MM.DD
 ```
 
-The normal installer:
+Run the normal installer only after logging into the working archinstall
+Niri+DMS session. It:
 
 1. installs the reliable native core;
 2. applies ordinary dotfiles;
 3. installs Bitwarden and prompts for the SOPS age key without echoing it;
 4. decrypts secrets when a valid key is provided;
-5. installs optional applications and the DMS/niri desktop independently;
-6. runs upstream's `dms setup` and binds DMS to niri's systemd session; and
-7. offers to reboot.
+5. installs optional applications;
+6. verifies that package updates did not break the OS-provided Niri, DMS, or
+   greetd baseline; and
+7. merges portable preferences, installs and enables selected DMS plugins, and
+   restarts DMS.
 
-After reboot, select **niri**, log in once, then run:
-
-```bash
-cd ~/archway
-just finish
-```
-
-`just finish` reapplies secrets, merges portable preferences into DMS's
-current generated settings, installs plugins, and restarts DMS. It is safe to
-rerun.
+The installation completes in one pass. There is no intermediate reboot or
+mandatory finish command.
 
 ## Commands
 
 ### Installation
 
 ```bash
-just install       # normal first stage
-just install-safe  # core only; skip DMS and optional applications
-just finish        # finish DMS/secrets after first niri login
+just install          # configure an existing archinstall Niri+DMS base
+just install-minimal  # core, dotfiles, and secrets; leave the desktop alone
 just core          # install/reapply reliable native packages and services
 just extras        # install/retry optional applications
-just dms           # install/retry DMS and run `dms setup`
 just dms-config    # reapply portable DMS/niri preferences
 just secrets       # securely onboard/validate the age key and decrypt secrets
 just dotfiles      # reapply ordinary dotfiles
 ```
 
-Core failure stops installation. Extras and DMS failure leave the original base
-desktop and the Archway core usable; retry them later with `just extras` or
-`just dms`.
+Core failure stops installation. Extras failure leaves the OS-provided desktop
+and the Archway core usable; retry it later with `just extras`. Archway does not
+provide a command for adding DMS to another profile; use DMS's own installer if
+that is ever desired.
 
 ### Default applications
 

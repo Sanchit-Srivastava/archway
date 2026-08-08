@@ -3,17 +3,13 @@
 default:
     @just --list
 
-# Complete first stage: core, dotfiles, secrets, and DMS.
+# Configure an existing archinstall Niri+DMS base in one pass.
 install:
     ./install.sh install
 
-# Panic/recovery mode: reliable core only; the base desktop remains available.
-install-safe:
-    ./install.sh install --safe
-
-# Complete DMS preferences after logging into niri once.
-finish:
-    ./install.sh finish
+# Core, dotfiles, and secrets only; leave the base desktop untouched.
+install-minimal:
+    ./install.sh minimal
 
 # Reliable native package baseline.
 core:
@@ -23,11 +19,7 @@ core:
 extras:
     ./infra/bootstrap.sh extras
 
-# Install/retry DMS and generate its compositor defaults.
-dms:
-    ./install.sh dms
-
-# Apply portable DMS preferences after its first launch.
+# Reapply portable preferences from an active Niri+DMS session.
 dms-config:
     ./install.sh dms-config
 
@@ -83,7 +75,7 @@ setup-mac: bootstrap-mac dotfiles
 
 # Static shell analysis; never executes target-machine infrastructure.
 lint:
-    shellcheck -x -P SCRIPTDIR infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh
+    shellcheck -x -P SCRIPTDIR infra/lib/*.sh infra/*.sh install.sh remote-install.sh
 
 # Read-only target-system filesystem and kernel-error report.
 health:
@@ -91,8 +83,8 @@ health:
 
 # Format shell files in place.
 fmt:
-    shfmt -w infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh
+    shfmt -w infra/lib/*.sh infra/*.sh install.sh remote-install.sh
 
 # Check formatting without modifying files.
 check-fmt:
-    shfmt -d infra/lib/*.sh infra/*.sh install.sh remote-install.sh install-dms.sh
+    shfmt -d infra/lib/*.sh infra/*.sh install.sh remote-install.sh

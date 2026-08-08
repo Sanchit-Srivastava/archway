@@ -29,6 +29,9 @@
   "dankStickerSearch": {
     "enabled": true
   },
+  "dankscale": {
+    "enabled": true
+  },
   "sshConnections": {
     "enabled": true,
     "server_list": [],
@@ -44,9 +47,7 @@
     "enabled": true
   },
   "commandRunner": {
-    "enabled": true,
-    "terminal": "alacritty",
-    "history": []
+    "enabled": true
   },
   "dankPomodoroTimer": {
     "enabled": true,
@@ -61,9 +62,6 @@
     "trigger": ""
   },
   "timeUntil": {
-    "enabled": true,
-    "targetTimestamp": "",
-    "label": ""
+    "enabled": true
   }
 }
-

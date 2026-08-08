@@ -16,20 +16,18 @@ Choose:
 
 ## Graphical profile
 
-- **Niri + DankMaterialShell** is the preferred light base when DMS is wanted.
-  Archinstall installs Niri, DMS, the DMS greeter, the niri/DMS systemd binding,
-  and `tuned-ppd`. A normal Archway install safely reapplies its own DMS/niri
-  preferences; `just install-safe` leaves the OS-provided DMS setup in place.
-- **Niri** is the light non-DMS base. Choose it when DMS should remain optional
-  or when testing Niri independently of DMS. A normal Archway install adds DMS;
-  a safe install preserves the conventional Niri shell.
-- **KDE Plasma** is the fuller base and strongest graphical fallback. A normal
-  Archway install adds a selectable Niri+DMS session without changing Plasma.
+- **Niri + DankMaterialShell** is the required base for the normal Archway
+  install. Archinstall owns Niri, DMS, the DMS greeter, the niri/DMS systemd
+  binding, and `tuned-ppd`. Log into this session once before running Archway.
+- **Niri** is supported only by `just install-minimal`. Archway leaves its
+  conventional shell and display manager unchanged and does not add DMS.
+- **KDE Plasma** is supported by `just install-minimal`. Archway leaves Plasma
+  and its display manager unchanged and does not add Niri or DMS.
 
 Keep the profile's default display manager. Niri + DankMaterialShell uses the
 DMS greeter on greetd, conventional Niri defaults to LightDM, and Plasma uses
-Plasma Login Manager. Archway never switches it. One display manager can launch
-all installed Wayland sessions, so do not enable a second one.
+Plasma Login Manager. Archway validates the DMS greeter on its normal path but
+never rewrites or switches a display manager.
 
 ## Applications menu
 
@@ -46,9 +44,9 @@ Use these choices for all three profiles unless noted otherwise:
 For **Niri + DankMaterialShell**, never select **power-profiles-daemon**: that
 profile already includes the conflicting `tuned-ppd` package. Selecting TuneD
 is safe (the packages are deduplicated) and ensures `tuned.service` is enabled.
-For conventional Niri or Plasma, power-profiles-daemon is also compatible with
-Archway's optional DMS install, but TuneD keeps one consistent answer across
-all profile choices. Archway intentionally installs neither daemon.
+For conventional Niri or Plasma, `power-profiles-daemon` is also compatible,
+but TuneD keeps one consistent answer across all profile choices. Archway
+intentionally installs neither daemon.
 
 NetworkManager is selected in the separate network-configuration menu rather
 than the Applications menu. Prefer **Use Network Manager (default backend)**,
@@ -91,18 +89,18 @@ does not install, replace, or reconfigure either bootloader.
 
 Archway does not install or repair the graphical profile, networking, audio
 stack, GPU driver, or bootloader. Confirm that those components work before
-running Archway.
+running Archway. For the normal path, log into Niri+DMS and launch the installer
+from that active session.
 
 ## Profile behavior
 
-- An archinstall Niri+DMS base already has DMS packages and integration.
-  Running `just dms` is still safe: native packages use `--needed`, upstream
-  `dms setup` backs up an existing compositor configuration, and Archway then
-  applies its owned niri files and portable preference overlays.
-- A conventional Niri base remains usable without DMS. Running `just dms`
-  replaces the session shell behavior with DMS but not the display manager.
-- A KDE base remains a normal Plasma installation. Running `just dms` adds a
-  selectable Niri+DMS session.
+- On Niri+DMS, the normal installer validates the active user services and DMS
+  greeter, applies Archway's portable configuration, and completes in one pass.
+  It does not run `dms setup` or install DMS packages.
+- On conventional Niri or KDE, use the minimal installer. It applies core,
+  dotfiles, and secrets without touching the graphical profile.
+- Archway does not provide a DMS conversion command. Use upstream DMS tooling
+  directly if changing an existing graphical base later.
 
 Then follow the fresh-install command in the repository README.
 

@@ -26,9 +26,6 @@ ehthumbs.db
 hs_err_pid*.log
 replay_pid*.log
 
-# Install scripts (one-time wrappers)
-# install-dms.sh  # Keep in repo for target laptop
-
 # Environment
 .env
 .env.local

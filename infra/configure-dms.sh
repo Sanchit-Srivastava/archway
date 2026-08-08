@@ -20,6 +20,7 @@ DMS_PLUGINS=(
 	dankKDEConnect
 	dankPomodoroTimer
 	dankStickerSearch
+	dankscale
 	dmsSessionizer
 	niriWindows
 	qcalCalendar
@@ -82,7 +83,7 @@ apply_niri_files() {
 }
 
 main() {
-	command -v dms >/dev/null 2>&1 || die "DMS is not installed. Run 'just dms' first."
+	command -v dms >/dev/null 2>&1 || die "DMS is not installed. Install it through the base OS or upstream DMS installer first."
 	command -v jq >/dev/null 2>&1 || die "jq is required."
 	[[ -d "$DMS_DIR" ]] ||
 		die "DMS has not initialized $DMS_DIR. Log into niri/DMS once, then rerun."
@@ -93,13 +94,9 @@ main() {
 	apply_niri_files
 
 	install_plugins
-	if [[ -s "${DMS_DIR}/plugin_settings.json" ]]; then
-		merge_json_overlay \
-			"${DMS_DIR}/plugin_settings.json" \
-			"${DOTS_DIR}/DankMaterialShell/plugin_preferences.json"
-	else
-		log_warn "DMS has not generated plugin_settings.json; plugin preferences were skipped."
-	fi
+	merge_json_overlay \
+		"${DMS_DIR}/plugin_settings.json" \
+		"${DOTS_DIR}/DankMaterialShell/plugin_preferences.json"
 
 	if [[ -f "${DOTS_DIR}/Wallpaper/wallpaper.png" ]] &&
 		dms ipc call wallpaper set "${DOTS_DIR}/Wallpaper/wallpaper.png"; then

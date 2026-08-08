@@ -12,7 +12,8 @@ Never run these on a development machine:
 
 - `install.sh` or `remote-install.sh`
 - `infra/bootstrap.sh`, `infra/dotfiles.sh`, or other target infrastructure
-- `just install`, `just core`, `just extras`, `just dms`, `just finish`
+- `just install`, `just install-minimal`, `just core`, `just extras`, or
+  `just dms-config`
 - boot, package, service, or secret recipes
 
 Safe development commands:
@@ -47,23 +48,21 @@ installations use its graphical installer, KDE Plasma, and suggested defaults.
 The pasteable entry point is `remote-install.sh`, which clones the repository
 and delegates to `install.sh`.
 
-The explicit phases are:
+The normal `just install` contract requires an already working archinstall
+Niri + DankMaterialShell session. It installs core, dotfiles, secrets, and
+extras, then applies portable DMS/niri preferences and plugins in one pass.
+There is no intermediate reboot, resume state, or finish phase.
 
-1. `just install` — core, dotfiles, secure age-key onboarding, extras, DMS, and
-   upstream `dms setup`.
-2. Reboot and log into niri/DMS once.
-3. `just finish` — secrets retry, portable DMS/niri preferences, plugins, and
-   DMS restart.
+`just install-minimal` installs only core, dotfiles, and secrets. Use it on KDE
+or another base that Archway must leave graphically untouched.
 
-There is no automatic resume or autostart state machine.
-
-`just install-safe` installs only core, dotfiles, and secrets. The OS-provided
-graphical profile is already a fully usable fallback.
+`just dms-config` may configure an active Niri+DMS session installed either by
+archinstall or by upstream DMS tooling. It must not install DMS, switch the
+display manager, or require greetd.
 
 ## Package lists
 
 - `infra/pkgs/core.txt`: reliable native packages; failure is fatal.
-- `infra/pkgs/dms.txt`: optional native DMS/niri desktop packages.
 - `infra/pkgs/extras.txt`: optional native packages.
 - `infra/pkgs/extras.aur.txt`: optional AUR packages.
 - `infra/pkgs/tex.txt`: slow optional TeX toolchain.
@@ -109,7 +108,10 @@ This repository is public.
 
 ## DMS
 
-Use native packages and upstream `dms setup`. DMS owns its full runtime JSON.
-Archway owns only selected niri files and small portable JSON overlays.
+The archinstall Niri+DMS profile owns DMS/niri packages, setup, session binding,
+and the greeter. On another base, upstream DMS tooling owns DMS/niri installation
+and setup. Archway validates but does not install or repair those components.
+DMS owns its full runtime JSON. Archway owns only selected niri files and small
+portable JSON overlays.
 
 Do not restore full generated `settings.json` or `plugin_settings.json` files.

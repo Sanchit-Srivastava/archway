@@ -74,7 +74,7 @@ Run commands from `~/archway`:
 | Command | Description |
 |---------|-------------|
 | `just sync` | Pull and reapply core + dotfiles |
-| `just finish` | Apply secrets and DMS preferences after first login |
+| `just dms-config` | Reapply portable DMS/niri and plugin preferences |
 | `just extras` | Retry optional native/AUR packages |
 
 ---

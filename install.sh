@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 set -eEuo pipefail
 
-# Canonical Archway installer. There is no automatic resume: installation and
-# post-first-login DMS configuration are explicit, independently retryable.
+# Canonical Archway installer. The normal path runs from an already working
+# archinstall Niri+DMS session; the minimal path leaves the base desktop alone.
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
-STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/archway"
-PENDING_FILE="${STATE_DIR}/dms-config.pending"
+DMS_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/DankMaterialShell"
 
 # shellcheck source=infra/lib/common.sh
 . "${SCRIPT_DIR}/infra/lib/common.sh"
 # shellcheck source=infra/lib/platform.sh
 . "${SCRIPT_DIR}/infra/lib/platform.sh"
 
-SCRIPT_VERSION="2026-08-08-2"
+SCRIPT_VERSION="2026-08-08-3"
 
 die() {
 	log_error "$1"
@@ -27,22 +26,16 @@ usage() {
 Archway installer v${SCRIPT_VERSION}
 
 Usage:
-  ./install.sh [install] [--safe] [--no-reboot]
-  ./install.sh finish
+  ./install.sh [install]
+  ./install.sh minimal
   ./install.sh secrets
-  ./install.sh dms
   ./install.sh dms-config
 
 Commands:
-  install      Core + dotfiles + secrets prompt + optional applications and DMS (default)
-  finish       Apply secrets and DMS preferences after the first niri login
+  install      Configure an existing archinstall Niri+DMS base (default)
+  minimal      Core + dotfiles + secrets; leave the base desktop untouched
   secrets      Onboard/validate the age key and decrypt secret targets
-  dms          Install/retry DMS and generate upstream compositor defaults
-  dms-config   Apply portable preferences after DMS has initialized once
-
-Options:
-  --safe       Install core, dotfiles, and secrets only; skip optional applications and DMS
-  --no-reboot  Do not offer to reboot at the end
+  dms-config   Reapply portable preferences to an active Niri+DMS session
 EOF
 }
 
@@ -64,12 +57,61 @@ ensure_supported_platform() {
 
 ensure_desktop_baseline() {
 	command -v nmcli >/dev/null 2>&1 ||
-		die "NetworkManager is missing. In archinstall, select 'Use Network Manager' under Network configuration before deploying Archway."
+		die "NetworkManager is missing. Select it in the OS installer before deploying Archway."
 	command -v wpctl >/dev/null 2>&1 ||
 		die "WirePlumber/PipeWire is missing. Select PipeWire in the OS installer before deploying Archway."
 	if ! systemctl is-active NetworkManager.service >/dev/null 2>&1; then
 		die "NetworkManager is not active. Repair the base OS network configuration before deploying Archway."
 	fi
+}
+
+validate_greetd_command() {
+	local config="/etc/greetd/config.toml"
+	local command_line=""
+	local token=""
+	local wrapper=""
+	local command_parts=()
+
+	systemctl is-enabled greetd.service >/dev/null 2>&1 ||
+		die "greetd is not enabled. Install Arch with archinstall's Niri + DankMaterialShell profile before running the normal installer."
+	[[ -r "$config" ]] ||
+		die "Cannot read $config. Repair the archinstall Niri+DMS base before deploying Archway."
+
+	command_line="$(sed -n '/^[[:space:]]*\[default_session\][[:space:]]*$/,/^[[:space:]]*\[/s/^[[:space:]]*command[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | sed -n '1p')"
+	[[ -n "$command_line" ]] || die "No greetd default-session command was found in $config."
+	[[ "$command_line" == *dms-greeter* ]] ||
+		die "greetd is not configured for the DMS greeter. Archway will not replace the display manager selected by the OS installer."
+
+	read -r -a command_parts <<<"$command_line"
+	for token in "${command_parts[@]}"; do
+		token="${token#\"}"
+		token="${token%\"}"
+		if [[ "$token" == /*dms-greeter* ]]; then
+			wrapper="$token"
+			break
+		fi
+	done
+	[[ -n "$wrapper" ]] || die "Could not resolve the DMS greeter executable from $config."
+	[[ -x "$wrapper" ]] ||
+		die "greetd points to missing or non-executable $wrapper. Repair the OS-provided DMS greeter before rebooting; Archway will not rewrite it."
+}
+
+ensure_active_niri_dms_session() {
+	command -v niri >/dev/null 2>&1 ||
+		die "niri is missing. Install Niri through the base OS or upstream DMS installer first."
+	command -v dms >/dev/null 2>&1 ||
+		die "DMS is missing. Install it through archinstall's Niri+DMS profile or the upstream DMS installer first."
+	[[ -d "$DMS_DIR" ]] ||
+		die "DMS has not initialized $DMS_DIR. Log into Niri+DMS once before applying Archway preferences."
+	systemctl --user is-active niri.service >/dev/null 2>&1 ||
+		die "niri.service is not active. Run this command from an active Niri+DMS session."
+	systemctl --user is-active dms.service >/dev/null 2>&1 ||
+		die "dms.service is not active. Repair the Niri+DMS session before applying Archway preferences."
+}
+
+ensure_archinstall_niri_dms_baseline() {
+	ensure_active_niri_dms_session
+	validate_greetd_command
 }
 
 install_core_and_dotfiles() {
@@ -83,55 +125,55 @@ install_core_and_dotfiles() {
 	"${REPO_ROOT}/infra/secrets.sh" --prompt
 }
 
-install_dms() {
-	"${REPO_ROOT}/install-dms.sh"
-	mkdir -p "$STATE_DIR"
-	cat >"$PENDING_FILE" <<EOF
-ARCHWAY_DMS_CONFIG_PENDING_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-ARCHWAY_REPO_ROOT="${REPO_ROOT}"
-EOF
+secrets_ready() {
+	if "${REPO_ROOT}/infra/secrets.sh" --check; then
+		return 0
+	fi
+	log_warn "Archway configuration is complete, but secrets remain pending."
+	log_warn "Run 'just secrets' after retrieving the age key."
+	return 1
+}
+
+run_dms_config() {
+	ensure_supported_platform
+	[[ $EUID -ne 0 ]] || die "Run as a regular user, not root."
+	ensure_desktop_baseline
+	ensure_active_niri_dms_session
+	"${REPO_ROOT}/infra/configure-dms.sh"
 }
 
 run_install() {
-	local safe="$1"
-	local no_reboot="$2"
 	ensure_interactive
 	ensure_supported_platform
 	[[ $EUID -ne 0 ]] || die "Run as a regular user, not root."
 	ensure_desktop_baseline
+	ensure_archinstall_niri_dms_baseline
 
 	install_core_and_dotfiles
 
-	if [[ "$safe" -eq 1 ]]; then
-		log_info "Safe installation complete. DMS and optional extras were skipped."
-		log_info "Install them later with: just dms"
-		return 0
-	fi
+	# Core performs a full package upgrade. Revalidate the distro-owned desktop
+	# and greeter afterward, before applying any user configuration.
+	ensure_desktop_baseline
+	ensure_archinstall_niri_dms_baseline
 
 	if ! "${REPO_ROOT}/infra/bootstrap.sh" extras --no-upgrade; then
-		log_warn "Some optional applications failed. The core and DMS installation can continue."
+		log_warn "Some optional applications failed. The core and DMS configuration can continue."
 	fi
 
-	if ! install_dms; then
-		log_warn "DMS did not complete, but the Archway core is ready."
-		log_warn "The base desktop remains fully usable. Retry later with: just dms"
-		return 0
-	fi
+	run_dms_config
+	secrets_ready || true
+	log_info "Archway installation is complete. No intermediate reboot or finish phase is required."
+}
 
-	log_info ""
-	log_info "Stage 1 complete."
-	log_info "After reboot:"
-	log_info "  1. Select niri in the login manager."
-	log_info "  2. Log in once and confirm DMS starts with the niri session."
-	log_info "  3. Open a terminal and run: cd ${REPO_ROOT} && just finish"
-
-	if [[ "$no_reboot" -eq 0 ]]; then
-		local answer=""
-		IFS= read -r -p "Reboot now? [Y/n] " answer
-		if [[ -z "$answer" || "$answer" =~ ^[Yy]$ ]]; then
-			sudo reboot
-		fi
-	fi
+run_minimal() {
+	ensure_interactive
+	ensure_supported_platform
+	[[ $EUID -ne 0 ]] || die "Run as a regular user, not root."
+	ensure_desktop_baseline
+	install_core_and_dotfiles
+	ensure_desktop_baseline
+	secrets_ready || true
+	log_info "Minimal Archway installation is complete. The base desktop was not modified."
 }
 
 run_secrets() {
@@ -139,37 +181,12 @@ run_secrets() {
 	"${REPO_ROOT}/infra/secrets.sh" --prompt
 }
 
-run_dms_config() {
-	"${REPO_ROOT}/infra/configure-dms.sh"
-	rm -f "$PENDING_FILE"
-}
-
-run_finish() {
-	ensure_interactive
-	run_secrets
-	local secrets_ready=1
-	if ! "${REPO_ROOT}/infra/secrets.sh" --check; then
-		secrets_ready=0
-	fi
-	run_dms_config
-	if [[ "$secrets_ready" -eq 1 ]]; then
-		log_info "Archway installation is complete."
-	else
-		log_warn "DMS configuration is complete, but secrets remain pending."
-		log_warn "Run 'just secrets' after retrieving the age key."
-	fi
-}
-
 main() {
 	local command="install"
-	local safe=0
-	local no_reboot=0
 
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		install | finish | secrets | dms | dms-config) command="$1" ;;
-		safe | --safe) safe=1 ;;
-		--no-reboot) no_reboot=1 ;;
+		install | minimal | secrets | dms-config) command="$1" ;;
 		-h | --help)
 			usage
 			return 0
@@ -184,10 +201,9 @@ main() {
 	done
 
 	case "$command" in
-	install) run_install "$safe" "$no_reboot" ;;
-	finish) run_finish ;;
+	install) run_install ;;
+	minimal) run_minimal ;;
 	secrets) run_secrets ;;
-	dms) install_dms ;;
 	dms-config) run_dms_config ;;
 	esac
 }
