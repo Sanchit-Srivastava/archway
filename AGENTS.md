@@ -34,13 +34,13 @@ The base OS installer owns:
 - GPU and hardware drivers;
 - repositories and mirrors;
 - the selected graphical profile and display manager;
-- networking and audio baseline.
+- networking, audio, and power-management baseline.
 
 Archway must not duplicate those responsibilities.
 
-Arch installations always begin with `archinstall` and its Niri or KDE Plasma
-profile. CachyOS installations use its graphical installer, KDE Plasma, and
-suggested defaults.
+Arch installations always begin with `archinstall` and its Niri +
+DankMaterialShell, conventional Niri, or KDE Plasma profile. CachyOS
+installations use its graphical installer, KDE Plasma, and suggested defaults.
 
 ## Installation contract
 

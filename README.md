@@ -11,14 +11,23 @@ and run by its owner, not used as a general-purpose distribution installer.
 
 ## Fresh Linux installation
 
-First install either:
+First install one of:
 
-- Arch Linux with `archinstall` and the Niri or KDE Plasma profile; or
+- Arch Linux with `archinstall` and the Niri + DankMaterialShell, conventional
+  Niri, or KDE Plasma profile; or
 - CachyOS with KDE Plasma and its suggested defaults.
 
-For the lightest Arch installation, prefer the Niri profile. In either Arch
-profile, select NetworkManager and PipeWire. Keep the display manager selected
-by the OS installer; Archway does not replace it.
+For the lightest Arch installation that will use DMS, prefer the Niri +
+DankMaterialShell profile. Select NetworkManager, PipeWire, and TuneD; do not
+combine that profile with the power-profiles-daemon application because the
+profile already installs `tuned-ppd`. Keep the display manager selected by the
+OS installer; Archway does not replace it. See the profile-specific
+[archinstall choices](docs/INSTALL-ARCH.md) before installing.
+
+NetworkManager is a required base-install choice. Do not select "Copy ISO
+network configuration": that preserves standalone iwd/systemd-networkd rather
+than installing NetworkManager. Archway checks this baseline but does not
+replace or migrate the selected network stack.
 
 Boot into the installed graphical profile, open a terminal, and run:
 

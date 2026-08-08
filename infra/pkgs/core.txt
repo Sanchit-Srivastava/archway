@@ -1,6 +1,7 @@
 # Archway core — reliable native packages shared by Arch and CachyOS.
-# The base OS installer owns the desktop profile, boot, networking, audio, GPU drivers,
-# filesystems, repositories, mirrors, and the display manager.
+# The base OS installer owns the desktop profile, boot, networking, audio,
+# power management, GPU drivers, filesystems, repositories, mirrors, and the
+# display manager.
 
 # System integration
 accountsservice
@@ -21,13 +22,11 @@ keyd
 libfprint
 libsecret
 man-db
-networkmanager
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
 polkit
-power-profiles-daemon
 sops
 sshfs
 tailscale
@@ -106,6 +105,7 @@ grim
 imv
 kate
 kdeconnect
+kwallet
 mpv
 nautilus
 nautilus-python

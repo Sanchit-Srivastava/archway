@@ -3,7 +3,8 @@ set -eEuo pipefail
 
 # Archway Linux package/configuration engine.
 # The base distro owns boot, filesystems, GPU drivers, mirrors, repositories,
-# the base graphical profile, display manager, networking, and audio.
+# the base graphical profile, display manager, networking, audio, and power
+# management.
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
@@ -14,7 +15,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=lib/platform.sh
 . "${SCRIPT_DIR}/lib/platform.sh"
 
-SCRIPT_VERSION="2026-08-08-1"
+SCRIPT_VERSION="2026-08-08-2"
 CURRENT_PHASE="initialization"
 BOOTSTRAP_STARTED=0
 
@@ -99,7 +100,7 @@ check_prerequisites() {
 		die "At least 5 GB free is required; found ${available_gb:-unknown} GB."
 
 	log_info "Platform: $PLATFORM"
-	log_info "The base OS remains responsible for boot, GPU, the graphical profile, and filesystem configuration."
+	log_info "The base OS remains responsible for boot, GPU, the graphical profile, networking, audio, power management, and filesystem configuration."
 }
 
 upgrade_system() {

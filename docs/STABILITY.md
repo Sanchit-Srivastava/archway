@@ -98,11 +98,10 @@ Archway's changes fall into four different risk levels:
    but should not make the root filesystem read-only. Existing files are moved
    to unique `*.pre-archway.bak*` paths rather than overwritten.
 
-Archway leaves KDE's KWallet enabled when Plasma is installed. A previous
-version globally masked it and installed GNOME Keyring; re-running
-`just dotfiles` removes only the retired Archway-owned mask. Credential-provider
-replacement is desktop integration and must not be imposed on another desktop
-session.
+Archway uses KWallet as its Secret Service provider for both Niri and Plasma. A
+previous version globally masked it and installed GNOME Keyring; re-running
+`just dotfiles` removes only the retired Archway-owned mask. Do not enable a
+second Secret Service provider beside KWallet.
 
 ## DMS or niri fails
 

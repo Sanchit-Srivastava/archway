@@ -3,7 +3,8 @@
 Archway is a thin, idempotent personal layer over an already working operating
 system. It supports:
 
-- Arch Linux installed with `archinstall` and Niri or KDE Plasma;
+- Arch Linux installed with `archinstall` and Niri + DankMaterialShell,
+  conventional Niri, or KDE Plasma;
 - CachyOS installed with KDE Plasma; and
 - a smaller shared user-environment layer on macOS.
 
@@ -17,7 +18,7 @@ The operating system owns:
 - bootloader and kernel;
 - GPU and other hardware drivers;
 - repositories, signing keys, and mirrors;
-- networking and audio baseline;
+- networking, audio, and power-management baseline;
 - the base graphical profile and display manager.
 
 Archway owns:
@@ -41,6 +42,10 @@ configured distro repositories. A core failure stops the install.
 
 The OS-provided graphical profile remains usable before Archway runs and after
 a core failure.
+
+Power management is deliberately absent from the core package list. The OS
+installer may choose either TuneD's PPD compatibility service or
+`power-profiles-daemon`; Archway must not try to install the other one later.
 
 ### Extras
 

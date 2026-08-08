@@ -15,7 +15,7 @@ PENDING_FILE="${STATE_DIR}/dms-config.pending"
 # shellcheck source=infra/lib/platform.sh
 . "${SCRIPT_DIR}/infra/lib/platform.sh"
 
-SCRIPT_VERSION="2026-08-08-1"
+SCRIPT_VERSION="2026-08-08-2"
 
 die() {
 	log_error "$1"
@@ -64,11 +64,11 @@ ensure_supported_platform() {
 
 ensure_desktop_baseline() {
 	command -v nmcli >/dev/null 2>&1 ||
-		die "NetworkManager is missing. Select it in the OS installer before deploying Archway."
+		die "NetworkManager is missing. In archinstall, select 'Use Network Manager' under Network configuration before deploying Archway."
 	command -v wpctl >/dev/null 2>&1 ||
 		die "WirePlumber/PipeWire is missing. Select PipeWire in the OS installer before deploying Archway."
 	if ! systemctl is-active NetworkManager.service >/dev/null 2>&1; then
-		die "NetworkManager is not active. Repair the base OS profile before deploying Archway."
+		die "NetworkManager is not active. Repair the base OS network configuration before deploying Archway."
 	fi
 }
 

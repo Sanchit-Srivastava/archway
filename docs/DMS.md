@@ -20,6 +20,14 @@ That upstream command creates compositor integration files. Choose **niri** and
 `niri.service` and applies its niri config, which deliberately contains no
 second manual `dms run` startup.
 
+If the base OS used archinstall's Niri + DankMaterialShell profile, most native
+packages and the systemd binding are already present. Pacman's `--needed`
+behavior skips those packages, and `dms setup` offers timestamped backups for
+the existing compositor configuration before deploying its current defaults.
+Archway then applies its owned niri files as usual. This is intentionally the
+same path used by a conventional Niri or Plasma base rather than a separate
+profile-specific installer.
+
 Log out, select niri in the display manager, and log in once. DMS should start
 with the niri systemd session. DMS can render from built-in defaults without
 writing `settings.json`; `just dms-config` initializes that file from the
