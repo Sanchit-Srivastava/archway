@@ -56,12 +56,10 @@ Archway package list, owns Niri and DMS.
 
 ### Slow optional tools
 
-TeX and Zotero have independent commands because their installation can take a
-long time:
+TeX has an independent command because its installation can take a long time:
 
 ```bash
 just tex
-just zotero
 ```
 
 Gaming is outside Archway's scope. CachyOS owns its gaming setup.

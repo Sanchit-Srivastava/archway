@@ -124,7 +124,6 @@ Core remains usable. Retry only the failed capability:
 ```bash
 just extras
 just tex
-just zotero
 ```
 
 ## Secrets are unavailable

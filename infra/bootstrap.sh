@@ -49,11 +49,10 @@ trap 'on_exit "$?"' EXIT
 
 usage() {
 	cat <<EOF
-Usage: $(basename "$0") [core|extras|zotero] [--no-upgrade]
+Usage: $(basename "$0") [core|extras] [--no-upgrade]
 
   core       Install reliable native packages and Archway-owned services
   extras     Install optional native and AUR packages (best effort)
-  zotero     Install the optional Zotero AUR package
 
 Default operation: core
 EOF
@@ -253,7 +252,7 @@ main() {
 	NO_UPGRADE=0
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		core | extras | zotero) operation="$1" ;;
+		core | extras) operation="$1" ;;
 		--no-upgrade) NO_UPGRADE=1 ;;
 		-h | --help)
 			usage
@@ -280,10 +279,6 @@ main() {
 	case "$operation" in
 	core) install_core ;;
 	extras) install_extras ;;
-	zotero)
-		CURRENT_PHASE="installing Zotero"
-		install_aur_list "${SCRIPT_DIR}/pkgs/zotero.aur.txt"
-		;;
 	esac
 
 	CURRENT_PHASE="complete"

@@ -100,11 +100,12 @@ currently install a full office suite.
 
 ```bash
 just tex           # install the large TeX Live toolchain
-just zotero        # install Zotero separately through the AUR
 ```
 
-These are deliberately excluded from the normal install because they can take
-a long time and are not required for an immediately usable machine.
+TeX is deliberately excluded from the normal install because it can take a
+long time and is not required for an immediately usable machine. Install
+optional applications such as Zotero through your usual package-management
+workflow.
 
 ### Maintenance
 

@@ -35,10 +35,6 @@ dotfiles:
 tex:
     ./infra/install-tex.sh
 
-# Heavy optional Zotero installation.
-zotero:
-    ./infra/bootstrap.sh zotero --no-upgrade
-
 # Pull live niri files into the repo (DMS runtime JSON stays DMS-owned).
 pull-dots:
     ./infra/pull-dots.sh

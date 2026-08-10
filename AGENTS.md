@@ -66,7 +66,6 @@ display manager, or require greetd.
 - `infra/pkgs/extras.txt`: optional native packages.
 - `infra/pkgs/extras.aur.txt`: optional AUR packages.
 - `infra/pkgs/tex.txt`: slow optional TeX toolchain.
-- `infra/pkgs/zotero.aur.txt`: slow optional Zotero install.
 - `infra/services/core.txt`: only services deliberately owned by Archway.
 
 One package per line. Ignore blank lines and `#` comments. Group by comment
