@@ -1,5 +1,28 @@
 [Default Applications]
-# Images
+application/epub+zip=org.kde.okular.desktop
+application/gzip=org.kde.ark.desktop
+application/json=nvim.desktop
+application/pdf=org.pwmt.zathura-pdf-mupdf.desktop
+application/vnd.comicbook+rar=org.kde.okular.desktop
+application/vnd.comicbook+zip=org.pwmt.zathura-pdf-mupdf.desktop
+application/vnd.comicbook-rar=org.pwmt.zathura-pdf-mupdf.desktop
+application/vnd.rar=org.kde.ark.desktop
+application/x-7z-compressed=org.kde.ark.desktop
+application/x-bzip2=org.kde.ark.desktop
+application/x-bzpdf=org.pwmt.zathura-pdf-mupdf.desktop
+application/x-cbr=org.kde.okular.desktop
+application/x-cbz=org.kde.okular.desktop
+application/x-ext-pdf=org.pwmt.zathura-pdf-mupdf.desktop
+application/x-gzpdf=org.pwmt.zathura-pdf-mupdf.desktop
+application/x-rar=org.kde.ark.desktop
+application/x-tar=org.kde.ark.desktop
+application/x-zerosize=nvim.desktop
+application/xml=org.kde.kate.desktop
+application/zip=org.kde.ark.desktop
+audio/flac=mpv.desktop
+audio/mpeg=mpv.desktop
+audio/ogg=mpv.desktop
+audio/x-wav=mpv.desktop
 image/avif=imv.desktop
 image/bmp=imv.desktop
 image/gif=imv.desktop
@@ -7,43 +30,58 @@ image/jpeg=imv.desktop
 image/png=imv.desktop
 image/svg+xml=imv.desktop
 image/tiff=imv.desktop
+image/vnd.djvu=org.kde.okular.desktop
 image/webp=imv.desktop
-
-# Audio and video
-audio/flac=mpv.desktop
-audio/mpeg=mpv.desktop
-audio/ogg=mpv.desktop
-audio/x-wav=mpv.desktop
+text/csv=org.kde.kate.desktop
+text/markdown=nvim.desktop
+text/plain=nvim.desktop
+text/x-c++src=nvim.desktop
+text/x-csrc=nvim.desktop
+text/x-python=nvim.desktop
+text/x-shellscript=nvim.desktop
 video/mp4=mpv.desktop
 video/mpeg=mpv.desktop
 video/quicktime=mpv.desktop
 video/webm=mpv.desktop
 video/x-matroska=mpv.desktop
 video/x-msvideo=mpv.desktop
+x-scheme-handler/calendar=dms-open.desktop
+x-scheme-handler/http=zen.desktop
+x-scheme-handler/https=zen.desktop
+x-scheme-handler/chrome=zen.desktop
+text/html=zen.desktop
+application/x-extension-htm=zen.desktop
+application/x-extension-html=zen.desktop
+application/x-extension-shtml=zen.desktop
+application/xhtml+xml=zen.desktop
+application/x-extension-xhtml=zen.desktop
+application/x-extension-xht=zen.desktop
 
-# Text and structured text
-application/json=org.kde.kate.desktop
-application/xml=org.kde.kate.desktop
-text/csv=org.kde.kate.desktop
-text/markdown=org.kde.kate.desktop
-text/plain=org.kde.kate.desktop
-text/x-python=org.kde.kate.desktop
-text/x-shellscript=org.kde.kate.desktop
+[Added Associations]
+application/json=nvim.desktop;
+application/pdf=org.pwmt.zathura-pdf-mupdf.desktop;
+application/vnd.comicbook+zip=org.pwmt.zathura-pdf-mupdf.desktop;
+application/vnd.comicbook-rar=org.pwmt.zathura-pdf-mupdf.desktop;
+application/x-bzpdf=org.pwmt.zathura-pdf-mupdf.desktop;
+application/x-ext-pdf=org.pwmt.zathura-pdf-mupdf.desktop;
+application/x-gzpdf=org.pwmt.zathura-pdf-mupdf.desktop;
+application/x-zerosize=nvim.desktop;
+text/markdown=nvim.desktop;
+text/plain=nvim.desktop;
+text/x-c++src=nvim.desktop;
+text/x-csrc=nvim.desktop;
+text/x-python=nvim.desktop;
+text/x-shellscript=nvim.desktop;
+x-scheme-handler/calendar=dms-open.desktop;
+x-scheme-handler/http=zen.desktop;
+x-scheme-handler/https=zen.desktop;
+x-scheme-handler/chrome=zen.desktop;
+text/html=zen.desktop;
+application/x-extension-htm=zen.desktop;
+application/x-extension-html=zen.desktop;
+application/x-extension-shtml=zen.desktop;
+application/xhtml+xml=zen.desktop;
+application/x-extension-xhtml=zen.desktop;
+application/x-extension-xht=zen.desktop;
 
-# Documents and comics. Zathura remains available for explicit LaTeX workflows.
-application/epub+zip=org.kde.okular.desktop
-application/pdf=org.kde.okular.desktop
-application/vnd.comicbook+rar=org.kde.okular.desktop
-application/vnd.comicbook+zip=org.kde.okular.desktop
-application/x-cbr=org.kde.okular.desktop
-application/x-cbz=org.kde.okular.desktop
-image/vnd.djvu=org.kde.okular.desktop
-
-# Archives
-application/gzip=org.kde.ark.desktop
-application/vnd.rar=org.kde.ark.desktop
-application/x-7z-compressed=org.kde.ark.desktop
-application/x-bzip2=org.kde.ark.desktop
-application/x-rar=org.kde.ark.desktop
-application/x-tar=org.kde.ark.desktop
-application/zip=org.kde.ark.desktop
+[Removed Associations]
