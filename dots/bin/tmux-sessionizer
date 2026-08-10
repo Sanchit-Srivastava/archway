@@ -1,36 +1,66 @@
 #!/usr/bin/env bash
 # tmux-sessionizer - fuzzy-jump to a project session
 # Usage: tmux-sessionizer [directory]
+#        tmux-sessionizer --list
 #
 # If a directory is passed, use it directly (e.g. from zsh completion).
-# Otherwise opens an fzf picker over your zoxide history (same list as `zi`),
-# so candidates reflect actual frecency rather than a static directory scan.
+# Otherwise opens an fzf picker over zoxide history plus Git repositories found
+# below the colon-separated roots in SESSIONIZER_DIRS. `--list` prints that
+# merged, de-duplicated candidate list for shell completion.
 set -euo pipefail
+
+# Keep the picker useful when invoked by tmux directly, before a shell has
+# exported its configuration.
+SESSIONIZER_DIRS="${SESSIONIZER_DIRS:-$HOME/Projects}"
+
+list_candidate_dirs() {
+	local scan_root
+	local -a scan_roots
+
+	{
+		if command -v zoxide &>/dev/null; then
+			zoxide query --list
+		fi
+
+		if [[ -n "${SESSIONIZER_DIRS:-}" ]]; then
+			IFS=: read -r -a scan_roots <<<"$SESSIONIZER_DIRS"
+			for scan_root in "${scan_roots[@]}"; do
+				[[ -d "$scan_root" ]] || continue
+				# A worktree has a .git file; a normal clone has a .git
+				# directory. -prune prevents descending into either.
+				find "$scan_root" -name .git -prune -exec dirname {} \; 2>/dev/null
+			done
+		fi
+	} | awk 'NF && !seen[$0]++'
+}
+
+if [[ "${1:-}" == "--list" ]]; then
+	list_candidate_dirs
+	exit 0
+fi
 
 # ── resolve target directory ──────────────────────────────────────────────────
 if [[ -n "${1:-}" ]]; then
-    selected="$1"
+	selected="$1"
 else
-    if ! command -v zoxide &>/dev/null; then
-        echo "tmux-sessionizer: zoxide is not installed" >&2
-        exit 1
-    fi
-
-    selected=$(zoxide query --list | fzf --prompt='session: ' --height=40% --layout=reverse --border)
+	selected=$(list_candidate_dirs | fzf --prompt='session: ' --height=40% --layout=reverse --border) || exit 0
 fi
 
 [[ -z "${selected:-}" ]] && exit 0
-[[ -d "$selected" ]] || { echo "tmux-sessionizer: not a directory: $selected" >&2; exit 1; }
+[[ -d "$selected" ]] || {
+	echo "tmux-sessionizer: not a directory: $selected" >&2
+	exit 1
+}
 
 session_name=$(basename "$selected" | tr '.' '_')
 
 if ! tmux has-session -t="$session_name" 2>/dev/null; then
-    tmux new-session -ds "$session_name" -c "$selected"
+	tmux new-session -ds "$session_name" -c "$selected"
 fi
 
 # Switch if already inside tmux, otherwise attach
 if [[ -n "${TMUX:-}" ]]; then
-    tmux switch-client -t "$session_name"
+	tmux switch-client -t "$session_name"
 else
-    tmux attach-session -t "$session_name"
+	tmux attach-session -t "$session_name"
 fi

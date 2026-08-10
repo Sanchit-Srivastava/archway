@@ -180,11 +180,16 @@ alias ....='cd ../../..'
 # =============================================================================
 if command -v tmux &>/dev/null; then
     # x [dir] - sessionizer: create or attach to a tmux session for a project dir.
-    # With no arg, opens an fzf picker (also used as the completion backend).
-    # Set SESSIONIZER_DIRS (colon-separated) to control which dirs are searched.
-    #   export SESSIONIZER_DIRS="$HOME/projects:$HOME/work"
+    # With no arg, opens an fzf picker of zoxide history plus Git repositories
+    # below the colon-separated SESSIONIZER_DIRS roots.
+    export SESSIONIZER_DIRS="${SESSIONIZER_DIRS:-$HOME/Projects}"
     x() {
         ~/bin/tmux-sessionizer "${1:-}"
+    }
+
+    # xc - create or attach to a session for the current directory.
+    xc() {
+        x "$PWD"
     }
 
     # xa [session] - attach to an existing session (fzf picker if no arg)
@@ -209,12 +214,10 @@ if command -v tmux &>/dev/null; then
 
     # ── Completions ────────────────────────────────────────────────────────────
 
-    # x: complete with zoxide history (same source as `zi`)
+    # x: complete from the same candidate list shown by its fzf picker.
     _x_complete() {
         local -a dirs
-        if command -v zoxide &>/dev/null; then
-            dirs=( ${(f)"$(zoxide query --list 2>/dev/null)"} )
-        fi
+        dirs=( ${(f)"$(~/bin/tmux-sessionizer --list 2>/dev/null)"} )
         _wanted directories expl 'project directory' compadd -a dirs
     }
     compdef _x_complete x
