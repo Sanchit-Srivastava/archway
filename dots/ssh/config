@@ -14,6 +14,10 @@
 #   2. Add SSH keys to Bitwarden vault (type: SSH Key)
 #   3. Unlock Bitwarden when you need SSH access
 #
+# Optional FIDO2 fallback:
+#   See dots/ssh/README.md. Configure a separate per-host fallback alias with
+#   IdentityAgent none and IdentityFile ~/.ssh/archway-fido-access.
+#
 # Local overrides
 # ---------------
 # Machine-specific host entries go in ~/.ssh/config.local (not committed).

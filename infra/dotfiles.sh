@@ -73,24 +73,28 @@ decrypt_secret() {
 	fi
 }
 
-# Install the public key used for SSH between Archway-managed machines.
+# Install a public key used for SSH between Archway-managed machines.
 #
 # The committed public key serves two purposes:
-#   1. ~/.ssh/archway-access.pub selects the matching key from the SSH agent.
+#   1. ~/.ssh/<key-name>.pub selects the matching key from the SSH agent.
 #   2. ~/.ssh/authorized_keys permits that key to log into this account.
 #
 # Existing authorized_keys entries are preserved. Match on key type + key data
 # so changing a key's trailing comment does not append a duplicate.
 install_ssh_access_key() {
-	local src="${DOTS_DIR}/ssh/archway-access.pub"
-	local selector="${HOME}/.ssh/archway-access.pub"
+	local key_name="$1"
+	local required="${2:-false}"
+	local src="${DOTS_DIR}/ssh/${key_name}.pub"
+	local selector="${HOME}/.ssh/${key_name}.pub"
 	local authorized_keys="${HOME}/.ssh/authorized_keys"
 	local key_type
 	local key_data
 
 	if [[ ! -f "$src" ]]; then
-		log_warn "No Archway SSH access key found: $src"
-		log_warn "  See dots/ssh/README.md to enable SSH access deployment."
+		if [[ "$required" == true ]]; then
+			log_warn "No Archway SSH access key found: $src"
+			log_warn "  See dots/ssh/README.md to enable SSH access deployment."
+		fi
 		return 0
 	fi
 
@@ -300,7 +304,10 @@ main() {
 	chmod 700 "${HOME}/.ssh"
 	link_dotfile "${DOTS_DIR}/ssh/config" "${HOME}/.ssh/config"
 	chmod 600 "${HOME}/.ssh/config" 2>/dev/null || true
-	install_ssh_access_key
+	# The Bitwarden-backed identity is the existing primary key.  A FIDO key is
+	# optional and is deliberately authorized alongside it as a recovery path.
+	install_ssh_access_key "archway-access" true
+	install_ssh_access_key "archway-fido-access"
 
 	# Decrypt machine-specific SSH host entries (config.local)
 	# The main config already includes config.local via: Include config.local
