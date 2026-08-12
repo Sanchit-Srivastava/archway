@@ -98,6 +98,7 @@ chromium
 cups
 cups-browsed
 cups-filters
+firefox
 fuzzel
 ghostty
 gnome-disk-utility

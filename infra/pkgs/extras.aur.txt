@@ -3,5 +3,3 @@ dsearch-bin
 ltex-ls-plus-bin
 vale-bin
 wayfreeze
-zen-browser-bin
-

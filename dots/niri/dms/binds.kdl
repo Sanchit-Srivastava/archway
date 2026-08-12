@@ -133,7 +133,7 @@ binds {
     Mod+Tab repeat=false { toggle-overview; }
 
     // Application launchers
-    Mod+B hotkey-overlay-title="Open Browser" { spawn "zen-browser"; }
+    Mod+B hotkey-overlay-title="Open Browser" { spawn "firefox"; }
     Mod+E hotkey-overlay-title="Open Files" { spawn "nautilus" "--new-window"; }
     Mod+P hotkey-overlay-title="Open Bitwarden" { spawn "bitwarden"; }
     Mod+Y hotkey-overlay-title="Open Yazi" { spawn "ghostty" "-e" "yazi"; }
