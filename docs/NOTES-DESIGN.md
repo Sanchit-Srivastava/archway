@@ -1,8 +1,7 @@
 # Notes System Redesign
 
-> **Status: Proposed.** This document describes the intended replacement for
-> the current notes workflow. It is a design record, not documentation of
-> functionality that has already been implemented.
+> **Status: Proposed.** This describes a replacement for the current notes
+> workflow. The commands and format below are not implemented yet.
 
 ## Goals
 
@@ -16,7 +15,7 @@ The system should provide:
 - immediate, reliable note capture without mandatory metadata entry;
 - filenames that are unique, chronological, and searchable by note kind;
 - plain Markdown files that remain useful without `zk` or an editor plugin;
-- the same canonical creation workflow on Linux and macOS;
+- the same creation workflow on Linux and macOS;
 - optional integrations for niri, KDE, terminals, and Neovim;
 - simple Git-based synchronization and migration; and
 - room for later validation or publishing without requiring either now.
@@ -26,7 +25,7 @@ custom note-taking application.
 
 ## Design principles
 
-### The notes repository is canonical
+### Keep notebook rules with the notes
 
 Anything that defines the notebook belongs in the notes repository:
 
@@ -48,7 +47,7 @@ or polished metadata. The creator should generate every value needed for a
 valid and collision-free file. Optional fields can be completed while editing
 or during later review.
 
-### Prefer explicit, repairable automation
+### Keep automation easy to repair
 
 Creation-time automation should be limited to facts the computer knows:
 
@@ -62,7 +61,7 @@ Checks and generated output should initially be invoked explicitly. A broken
 indexer or validator must never prevent an urgent meeting note from being
 saved or committed.
 
-### Plain files are the durable interface
+### Keep the Markdown useful on its own
 
 `zk`, `rg`, `fzf`, Neovim, and future publishing tools are consumers of the
 Markdown files. None of them should define the only usable interface to the
@@ -113,7 +112,7 @@ The underscore separates structural fields. Dates and slugs use hyphens for
 readability. Including seconds makes collisions unlikely even when notes are
 created on more than one machine.
 
-The initial kinds should remain deliberately small:
+Start with four note kinds:
 
 - `note` for ordinary research notes and uncategorized capture;
 - `meeting` for discussions and meeting records;
@@ -159,9 +158,8 @@ tags: []
 The creator supplies `id`, `created`, `kind`, and the heading. Tags are an
 empty valid list. The remaining sections are prompts, not requirements.
 
-The timestamp ID is intentionally simple and readable. A UUID is unnecessary
-unless real collision problems appear. The ID should remain unchanged if the
-file is renamed.
+The timestamp ID is simple, readable, and sufficient unless collisions become
+a real problem. It should remain unchanged if the file is renamed.
 
 Specialized metadata is added only when it is useful. For example:
 
@@ -180,7 +178,7 @@ doi: 10.example/example
 Avoid placing every possible specialized field in the common template. Empty
 frontmatter creates visual noise and makes capture feel like form filling.
 
-## Canonical creation command
+## One creation command
 
 The notes repository should provide one implementation, tentatively:
 
@@ -205,8 +203,8 @@ command flags so it works with the tools normally available on Linux and
 macOS. It must quote titles safely and should use an exclusive-create or
 equivalent check rather than overwriting an existing path.
 
-Convenience recipes such as `just meeting` may exist, but they must remain
-thin aliases to the same creator. They are not separate formats or templates.
+Convenience recipes such as `just meeting` may exist, but they should be simple
+aliases to the same creator, not separate formats or templates.
 
 ## Search and navigation
 
@@ -233,7 +231,7 @@ or Git operation should be required.
 
 The user may refine the title, add tags and references, add specialized
 metadata, and turn rough actions into tasks. Editor integrations may assist
-but must not alter the storage contract.
+but must not alter the file format.
 
 ### Before committing
 
@@ -253,17 +251,17 @@ pre-commit hooks until they have proved fast, portable, and nearly infallible.
 CI may eventually run stricter checks or publishing builds. CI should report
 format problems without making local capture dependent on external services.
 
-## Ownership boundary with Archway
+## What belongs in each repository
 
 ### Notes repository
 
-The notes repository will own the common template, creator, schema, filename
-rules, `.zk` configuration, aliases, checks, migration code, and notebook
-documentation.
+The notes repository will contain the common template, creator, schema,
+filename rules, `.zk` configuration, aliases, checks, migration code, and
+notebook documentation.
 
 ### Archway
 
-Archway may own:
+Archway may provide:
 
 - package installation for `zk`, `fzf`, `ripgrep`, and `bat`;
 - Neovim plugin configuration and machine-level keybindings;
@@ -274,12 +272,12 @@ Archway launchers should call the repository interface, for example
 `just --working-directory "$HOME/notes" new meeting`. They must not reproduce
 the template, filename generation, or kind rules.
 
-KDE and macOS must remain first-class environments. The canonical command must
-work in a normal terminal; Niri and Fuzzel are optional presentation layers.
+The main command must work equally well from a terminal on KDE, niri, and
+macOS. Niri and Fuzzel can provide optional shortcuts around it.
 
 ## Migration plan
 
-Implement the new system before bulk-converting the stale repository:
+Implement the new system before bulk-converting the existing notebook:
 
 1. Create the minimal repository layout.
 2. Implement and manually test `bin/new-note` and `just new`.
@@ -292,13 +290,13 @@ Implement the new system before bulk-converting the stale repository:
 8. Back up and migrate the full old repository.
 9. Add `just check` after the stored format is stable.
 10. Update Archway to delegate creation to the new repository and then remove
-    Archway's legacy `zk-init`, template knowledge, and `zk-index` integration.
+    the existing `zk-init`, template knowledge, and `zk-index` integration.
 
 The migration must preserve original material and should record old paths or
 identifiers when useful for traceability. It should never silently overwrite a
 destination file.
 
-## Deferred decisions
+## Questions to answer after using it
 
 Do not decide these until the basic workflow has been used with real notes:
 
@@ -311,12 +309,11 @@ Do not decide these until the basic workflow has been used with real notes:
 - whether attachments belong in Git, Git LFS, Zotero, or external storage; and
 - whether stricter validation belongs in CI or local hooks.
 
-The default answer to each deferred feature is to omit it until repeated use
-demonstrates its value.
+Leave these features out until repeated use demonstrates their value.
 
-## Archway changes after the notes repository exists
+## Connecting Archway to the notes repository
 
-Do not extend the current Archway-owned templates or creation branches. Once
+Do not extend Archway's existing templates or creation branches. Once
 the new notes repository exposes its stable commands:
 
 1. change `quick-note` creation actions to call the repository's `just new`;
@@ -324,8 +321,6 @@ the new notes repository exposes its stable commands:
 3. update Neovim creation mappings to call the same repository interface;
 4. remove `zk-init` from Archway;
 5. remove the `zk-index` symlink setup from `infra/dotfiles.sh`; and
-6. update `RESEARCH-WORKFLOW.md` from legacy behavior to the implemented
-   portable workflow.
+6. update `RESEARCH-WORKFLOW.md` to describe the implemented workflow.
 
-Until then, the current implementation remains available but should be treated
-as temporary compatibility code rather than the source of the new design.
+Until then, the existing commands remain available for the current notebook.

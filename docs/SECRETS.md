@@ -3,9 +3,9 @@
 Committed secret documents are encrypted with SOPS and age. The age recipient
 is public; the age private key is not.
 
-## Fresh-machine onboarding
+## Setting up a new machine
 
-The normal installer installs Bitwarden first, then offers a hidden terminal
+The full installer installs Bitwarden first, then offers a hidden terminal
 prompt:
 
 1. open Bitwarden;
@@ -29,7 +29,7 @@ Skipping is safe:
 just secrets
 ```
 
-reopens the same onboarding flow later.
+opens the same setup prompt later.
 
 ## Editing
 

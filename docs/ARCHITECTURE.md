@@ -1,58 +1,57 @@
 # Architecture
 
-Archway is a thin, idempotent personal layer over an already working operating
-system. It supports:
+Archway configures an already working operating system. It supports:
 
-- a normal Linux path for Arch installed with `archinstall`'s Niri +
+- a full Linux setup for Arch installed with `archinstall`'s Niri +
   DankMaterialShell profile;
-- a minimal Linux path for Arch or CachyOS with an existing KDE Plasma or other
+- a minimal setup for Arch or CachyOS with an existing KDE Plasma or other
   graphical profile; and
-- a smaller shared user-environment layer on macOS.
+- a smaller set of shared user tools and dotfiles on macOS.
 
 It is not an OS installer.
 
-## Ownership boundary
+## What each layer manages
 
-The operating system owns:
+The operating-system installer manages:
 
 - partitions, filesystems, encryption, and snapshots;
 - bootloader and kernel;
 - GPU and other hardware drivers;
 - repositories, signing keys, and mirrors;
-- networking, audio, and power-management baseline;
+- networking, audio, and power management;
 - the base graphical profile and display manager.
 
-Archway owns:
+Archway manages:
 
-- explicitly selected personal packages;
+- personal package lists;
 - a small list of Archway-used services;
 - keyd configuration;
 - shell, editor, and application dotfiles;
 - SOPS-encrypted personal data;
-- portable preferences for the existing archinstall Niri+DMS profile.
+- selected preferences for the existing archinstall Niri+DMS profile.
 
-Archway must not duplicate or rewrite distro-owned state merely to make two
-platforms look identical.
+Archway leaves the operating-system settings listed above alone, even when
+different platforms use different defaults.
 
-## Capability model
+## Package groups
 
 ### Core
 
-`infra/pkgs/core.txt` contains reliable native packages available through the
-configured distro repositories. A core failure stops the install.
+`infra/pkgs/core.txt` contains required native packages from the configured
+distribution repositories. A failure in this group stops the install.
 
-The OS-provided graphical profile remains usable before Archway runs and after
-a core failure.
+The graphical profile supplied by the OS installer remains usable before
+Archway runs and after a core failure.
 
-Power management is deliberately absent from the core package list. The OS
-installer may choose either TuneD's PPD compatibility service or
-`power-profiles-daemon`; Archway must not try to install the other one later.
+Power management stays with the OS installer. Depending on the selected
+profile, it may use TuneD's PPD compatibility service or
+`power-profiles-daemon`; Archway does not install either one.
 
 ### Extras
 
 `infra/pkgs/extras.txt` and `infra/pkgs/extras.aur.txt` contain optional
-applications. Their failure does not invalidate core. The OS installer, not an
-Archway package list, owns Niri and DMS.
+applications. Their failure does not affect the core installation. Niri and
+DMS come from the OS installer rather than an Archway package list.
 
 ### Slow optional tools
 
@@ -62,27 +61,27 @@ TeX has an independent command because its installation can take a long time:
 just tex
 ```
 
-Gaming is outside Archway's scope. CachyOS owns its gaming setup.
+Gaming setup is left to CachyOS and its own tools.
 
-## Installation modes
+## How installation works
 
 The initial pasteable command clones the repository and hands off to the
 checked-out `install.sh`.
 
-The normal `just install` runs from an already initialized archinstall
+The full `just install` command runs from an initialized archinstall
 Niri+DMS session:
 
 1. detects Arch or CachyOS;
 2. verifies active Niri and DMS user services and the executable configured for
-   the OS-provided DMS greeter;
-3. installs core, applies dotfiles, and offers secure age-key onboarding;
-4. revalidates the graphical baseline after the core's full package upgrade;
+   the DMS greeter supplied by the OS installer;
+3. installs core, applies dotfiles, and offers secure age-key setup;
+4. checks the graphical session again after the full package upgrade;
 5. installs optional applications;
-6. applies Archway's niri files and small portable DMS JSON overlays;
-7. installs selected DMS plugins and merges their portable settings; and
+6. applies Archway's niri files and small DMS JSON overlays;
+7. installs selected DMS plugins and merges their settings; and
 8. restarts DMS.
 
-There is no intermediate reboot, resume marker, or finish phase. The normal
+There is no intermediate reboot, resume marker, or finish phase. The full
 installer never runs `dms setup` or modifies the display manager.
 
 `just install-minimal` installs only core, dotfiles, and secrets. It does not
@@ -92,18 +91,18 @@ install optional applications or inspect, install, or configure Niri and DMS.
 
 - Native packages use `pacman -S --needed`.
 - Existing distro mirrors and repositories are never replaced.
-- Only Archway-owned services are enabled.
+- Only the services listed in `infra/services/core.txt` are enabled.
 - Dotfile linking preserves existing non-symlink data with backups.
 - DMS runtime settings are generated by DMS; Archway merges a small overlay.
 - Secret keys and decrypted files use restrictive permissions.
 - State markers are advisory; commands verify real files and commands before
   acting.
 
-## Public-repository boundary
+## Files that can be public
 
-Encrypted SOPS documents, age recipients, and portable configuration may be
-public. Private age keys, decrypted data, machine addresses, device IDs, and
-session tokens must not be committed.
+Encrypted SOPS documents, age recipients, and shared configuration may be
+committed. Private age keys, decrypted data, machine addresses, device IDs,
+and session tokens must stay out of the repository.
 
-Generated DMS JSON is intentionally excluded because it contains schema noise
-and can include machine-specific identifiers.
+Generated DMS JSON is excluded because it contains machine-specific identifiers
+and many settings that Archway does not manage.

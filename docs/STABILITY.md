@@ -1,7 +1,8 @@
 # Stability and recovery
 
-Start from the ownership boundary: Archway does not own boot, GPU drivers,
-filesystems, mirrors, or the base graphical profile.
+Archway does not manage boot, GPU drivers, filesystems, mirrors, or the base
+graphical profile. Troubleshoot those parts of the system with the
+distribution's tools and documentation.
 
 ## Filesystem choice
 
@@ -12,8 +13,8 @@ accounting and recovery knowledge.
 
 For this repository, either is supported because Archway does not create or
 modify filesystems. A repeated Btrfs failure on one machine is not by itself
-proof that Btrfs is the cause. Btrfs deliberately switches to read-only when an
-internal consistency check fails; the initiating fault may instead be storage,
+proof that Btrfs is the cause. Btrfs switches to read-only when an internal
+consistency check fails; the initiating fault may instead be storage,
 RAM, PCIe/power, firmware, a kernel bug, or exhaustion of allocatable metadata.
 Ext4 can make recovery simpler, but it does not fix any of those underlying
 faults and does not checksum ordinary file data.
@@ -38,7 +39,7 @@ accepting the checksum/compression tradeoff.
 
 ## Before deployment
 
-Run the read-only preflight:
+Check the system before installing:
 
 ```bash
 cd ~/archway
@@ -86,22 +87,20 @@ Archway's changes fall into four different risk levels:
 
 1. Package upgrades and installs are the largest system-wide mutation. Core
    performs a full rolling-release upgrade, then installs a broad personal
-   package set. A conflict now stops instead of silently authorizing removal of
-   a distro package.
+   package set. Package conflicts stop the operation instead of authorizing
+   removal of a distribution package.
 2. Enabled system services (`ufw`, `tailscaled`, `keyd`, Avahi, and Bluetooth)
    are global behavior changes. They do not explain Btrfs corruption, but can
    affect networking, container ingress, input, discovery, and boot diagnostics.
-3. DMS/niri, AUR packages, Oh My Zsh plugins, and DMS plugins are moving
-   third-party components. Archinstall owns the Niri+DMS graphical baseline;
-   Archway validates it but does not repair or replace it.
+3. DMS/niri, AUR packages, Oh My Zsh plugins, and DMS plugins change outside
+   this repository. Archinstall supplies the Niri+DMS desktop; Archway checks
+   it but does not repair or replace it.
 4. Ordinary application dotfiles are user-scoped. They can break one program
    but should not make the root filesystem read-only. Existing files are moved
    to unique `*.pre-archway.bak*` paths rather than overwritten.
 
-Archway uses KWallet as its Secret Service provider for both Niri and Plasma. A
-previous version globally masked it and installed GNOME Keyring; re-running
-`just dotfiles` removes only the retired Archway-owned mask. Do not enable a
-second Secret Service provider beside KWallet.
+Archway uses KWallet as its Secret Service provider for both Niri and Plasma.
+Do not enable a second Secret Service provider beside KWallet.
 
 ## DMS or niri fails
 
@@ -114,12 +113,12 @@ dms restart
 just dms-config
 ```
 
-The normal installer stops if the OS-provided DMS services or greeter command
-are invalid. Archway does not rewrite those components.
+The full installer stops if the DMS services or greeter command supplied by the
+OS are invalid. Archway does not rewrite those components.
 
 ## Optional packages fail
 
-Core remains usable. Retry only the failed capability:
+Core remains usable. Retry the failed package group:
 
 ```bash
 just extras
@@ -137,9 +136,8 @@ decrypting targets.
 
 ## Arch/systemd-boot entry disappears
 
-`infra/fix-boot.sh` is retained only for an Arch installation using
-systemd-boot. It is not part of normal installation and must not be used on a
-different bootloader:
+`infra/fix-boot.sh` supports Arch installations that use systemd-boot. Do not
+run it with another bootloader:
 
 ```bash
 just fix-boot

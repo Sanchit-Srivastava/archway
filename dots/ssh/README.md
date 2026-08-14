@@ -1,8 +1,8 @@
 # SSH key setup
 
-Archway installs public-key identity selectors for SSH connections between
-managed machines. The normal private key is supplied by the Bitwarden SSH
-agent. An optional FIDO2 key provides a hardware-backed fallback.
+Archway keeps a copy of each SSH public key so OpenSSH can ask the Bitwarden
+agent for the matching private key. An optional FIDO2 key provides a
+hardware-backed fallback.
 
 ## One-time setup
 
@@ -41,18 +41,18 @@ Do not create a plaintext copy of `config.local` inside the repository. Saving
 and closing the SOPS editor updates the encrypted
 `secrets/ssh_config.local` file.
 
-## Identity-selector deployment
+## Client key selection
 
 When `just dotfiles` runs and `dots/ssh/archway-access.pub` exists, Archway:
 
 1. validates the public key;
 2. installs it at `~/.ssh/archway-access.pub`; and
-3. uses that public key to select the matching private key from the SSH agent
-   for configured hosts.
+3. uses it to select the matching private key from the SSH agent for configured
+   hosts.
 
 If the committed public key is absent, deployment prints a warning and
-continues. Identity selectors configure the SSH client and do not grant
-incoming SSH access to the local account.
+continues. This configures the SSH client; it does not grant incoming access to
+the local account.
 
 ## Authorizing incoming access
 
@@ -82,11 +82,10 @@ Review `~/.ssh/authorized_keys` directly when rotating or revoking access.
 
 ## Optional FIDO2 fallback (TrustKey T110)
 
-The TrustKey T110 supports FIDO2 and can create an OpenSSH hardware-backed
-key. Unlike the Bitwarden key, its device-private material never leaves the
-security key, and SSH requires the key to be plugged in and touched. This is a
-separate fallback identity: retain the Bitwarden key and authorize both keys
-before relying on it.
+The TrustKey T110 can hold an OpenSSH FIDO2 key whose private material never
+leaves the device. SSH requires the key to be plugged in and touched. Keep the
+Bitwarden key authorized as the primary login method while setting up this
+fallback.
 
 On a current Arch machine, plug in the T110 and generate a resident key. Use
 ECDSA-P256 (`ecdsa-sk`): it is the broadly supported FIDO algorithm. The touch
@@ -98,14 +97,12 @@ ssh-keygen -t ecdsa-sk -O resident \
     -f ~/.ssh/archway-fido-access
 ```
 
-Do not add `-O verify-required` initially: it depends on optional FIDO PIN
-verification support. If the command succeeds, you may generate a new key with
-that option later if you specifically want a PIN for every SSH signature. A
-resident key is important here because it lets you recover the local SSH key
-handle on another machine using the same security key. If this command reports
-that resident credentials are unsupported, retry without `-O resident`; that
-still makes a hardware-backed key, but keep its local key-handle file backed up
-securely because it cannot be recovered from the T110 alone.
+Start without `-O verify-required`, which needs optional FIDO PIN verification
+support. Add it when generating a later key if every SSH signature should
+require a PIN. The resident key can restore its local SSH handle on another
+machine. If resident credentials are unsupported, retry without `-O resident`
+and back up the local key-handle file; the T110 cannot restore that file by
+itself.
 
 Commit only the generated public key, under this exact name:
 
@@ -115,8 +112,8 @@ cp ~/.ssh/archway-fido-access.pub dots/ssh/archway-fido-access.pub
 
 Do **not** commit `~/.ssh/archway-fido-access`. It is a local FIDO key handle,
 not the device-private key, but retaining it locally avoids a recovery step.
-When `just dotfiles` runs, Archway installs the public-key identity selector.
-Authorize the FIDO2 key on each intended target using the incoming-access steps
+When `just dotfiles` runs, Archway installs the public key for client-side
+selection. Authorize the FIDO2 key on each intended target using the steps
 above.
 
 Add a separate fallback alias to the encrypted `ssh_config.local` for each

@@ -16,9 +16,10 @@ Choose:
 
 ## Graphical profile
 
-- **Niri + DankMaterialShell** is the required base for the normal Archway
-  install. Archinstall owns Niri, DMS, the DMS greeter, the niri/DMS systemd
-  binding, and `tuned-ppd`. Log into this session once before running Archway.
+- **Niri + DankMaterialShell** is the required base for the full Archway
+  install. Archinstall supplies Niri, DMS, the DMS greeter, the niri/DMS
+  systemd binding, and `tuned-ppd`. Log into this session once before running
+  Archway.
 - **Niri** is supported only by `just install-minimal`. Archway leaves its
   conventional shell and display manager unchanged and does not add DMS.
 - **KDE Plasma** is supported by `just install-minimal`. Archway leaves Plasma
@@ -26,7 +27,7 @@ Choose:
 
 Keep the profile's default display manager. Niri + DankMaterialShell uses the
 DMS greeter on greetd, conventional Niri defaults to LightDM, and Plasma uses
-Plasma Login Manager. Archway validates the DMS greeter on its normal path but
+Plasma Login Manager. The full Archway installer checks the DMS greeter but
 never rewrites or switches a display manager.
 
 ## Applications menu
@@ -35,18 +36,18 @@ Use these choices for all three profiles unless noted otherwise:
 
 | Item | Recommended choice | Reason |
 | --- | --- | --- |
-| Audio | **PipeWire** | Archway requires the `wpctl`/WirePlumber baseline and does not install or repair audio. |
+| Audio | **PipeWire** | Archway requires `wpctl` and WirePlumber but does not install or repair the audio stack. |
 | Bluetooth | **Enable** when the machine has or may use Bluetooth | Archway also installs and enables BlueZ, so the overlap is harmless and the base works before Archway runs. |
-| Firewall | **UFW** | This matches the firewall Archway installs and enables. Do not choose firewalld, because Archway deliberately owns UFW. |
-| Print service | **Enable** when printing may be needed | Archinstall enables CUPS; Archway supplies CUPS utilities and discovery packages but does not own the CUPS service. |
+| Firewall | **UFW** | Archway installs and enables UFW. Do not choose firewalld alongside it. |
+| Print service | **Enable** when printing may be needed | Archinstall enables CUPS; Archway supplies CUPS utilities and discovery packages but does not manage the service. |
 | Power management | **TuneD** | This is compatible with every supported profile and gives desktop shells the PPD API through `tuned-ppd`. |
 
 For **Niri + DankMaterialShell**, never select **power-profiles-daemon**: that
 profile already includes the conflicting `tuned-ppd` package. Selecting TuneD
 is safe (the packages are deduplicated) and ensures `tuned.service` is enabled.
 For conventional Niri or Plasma, `power-profiles-daemon` is also compatible,
-but TuneD keeps one consistent answer across all profile choices. Archway
-intentionally installs neither daemon.
+but TuneD works consistently across all supported profiles. Archway installs
+neither daemon.
 
 NetworkManager is selected in the separate network-configuration menu rather
 than the Applications menu. Prefer **Use Network Manager (default backend)**,
@@ -71,7 +72,7 @@ make Bitwarden's dependency deterministic.
 
 GNOME Keyring is a reasonable alternative for a GNOME-oriented system, but is
 not preferred for this Niri/Plasma combination. Choose KeePassXC only when a
-KeePassXC database is intended to be the machine's active Secret Service; its
+KeePassXC database will be the machine's active Secret Service; its
 integration must be enabled and the database must be open and unlocked. Avoid
 running multiple providers because only one process can own the Secret Service
 D-Bus name.
@@ -89,13 +90,13 @@ does not install, replace, or reconfigure either bootloader.
 
 Archway does not install or repair the graphical profile, networking, audio
 stack, GPU driver, or bootloader. Confirm that those components work before
-running Archway. For the normal path, log into Niri+DMS and launch the installer
+running Archway. For a full installation, log into Niri+DMS and launch Archway
 from that active session.
 
 ## Profile behavior
 
-- On Niri+DMS, the normal installer validates the active user services and DMS
-  greeter, applies Archway's portable configuration, and completes in one pass.
+- On Niri+DMS, the full installer checks the active user services and DMS
+  greeter, applies Archway's settings, and completes in one pass.
   It does not run `dms setup` or install DMS packages.
 - On conventional Niri or KDE, use the minimal installer. It applies core,
   dotfiles, and secrets without touching the graphical profile.
@@ -105,5 +106,5 @@ from that active session.
 Then follow the fresh-install command in the repository README.
 
 For boot recovery on the supported systemd-boot layout, see
-[STABILITY.md](STABILITY.md). The recovery tool is deliberately separate from
-normal installation.
+[STABILITY.md](STABILITY.md). Run the recovery tool only when repairing a
+supported systemd-boot installation.
