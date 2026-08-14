@@ -73,20 +73,16 @@ decrypt_secret() {
 	fi
 }
 
-# Install a public key used for SSH between Archway-managed machines.
+# Install a public key as an SSH client identity selector.
 #
-# The committed public key serves two purposes:
-#   1. ~/.ssh/<key-name>.pub selects the matching key from the SSH agent.
-#   2. ~/.ssh/authorized_keys permits that key to log into this account.
-#
-# Existing authorized_keys entries are preserved. Match on key type + key data
-# so changing a key's trailing comment does not append a duplicate.
-install_ssh_access_key() {
+# The public half lets OpenSSH select the matching private key from an agent
+# without storing private key material on disk. Incoming SSH authorization is
+# configured separately by the machine owner.
+install_ssh_identity_selector() {
 	local key_name="$1"
 	local required="${2:-false}"
 	local src="${DOTS_DIR}/ssh/${key_name}.pub"
 	local selector="${HOME}/.ssh/${key_name}.pub"
-	local authorized_keys="${HOME}/.ssh/authorized_keys"
 	local key_type
 	local key_data
 
@@ -125,17 +121,6 @@ install_ssh_access_key() {
 
 	install -m 644 "$src" "$selector"
 	log_info "Installed SSH identity selector: $selector"
-
-	touch "$authorized_keys"
-	chmod 600 "$authorized_keys"
-	if awk -v key_type="$key_type" -v key_data="$key_data" \
-		'$1 == key_type && $2 == key_data { found = 1 } END { exit !found }' \
-		"$authorized_keys"; then
-		log_info "SSH access key already authorized"
-	else
-		printf '%s\n' "$(cat "$src")" >>"$authorized_keys"
-		log_info "Added Archway SSH access key to: $authorized_keys"
-	fi
 }
 
 # Link a dotfile or directory
@@ -304,10 +289,11 @@ main() {
 	chmod 700 "${HOME}/.ssh"
 	link_dotfile "${DOTS_DIR}/ssh/config" "${HOME}/.ssh/config"
 	chmod 600 "${HOME}/.ssh/config" 2>/dev/null || true
-	# The Bitwarden-backed identity is the existing primary key.  A FIDO key is
-	# optional and is deliberately authorized alongside it as a recovery path.
-	install_ssh_access_key "archway-access" true
-	install_ssh_access_key "archway-fido-access"
+	# The Bitwarden-backed identity is the primary key. A FIDO identity is an
+	# optional hardware-backed fallback. Authorization is configured explicitly
+	# on each target machine; dotfiles only install client-side selectors.
+	install_ssh_identity_selector "archway-access" true
+	install_ssh_identity_selector "archway-fido-access"
 
 	# Decrypt machine-specific SSH host entries (config.local)
 	# The main config already includes config.local via: Include config.local

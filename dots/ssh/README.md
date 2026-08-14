@@ -1,8 +1,8 @@
-# SSH access deployment
+# SSH key setup
 
-Archway can deploy public keys for SSH connections between managed machines.
-The normal key is supplied by the Bitwarden SSH agent. An optional FIDO2 key
-can be authorized alongside it as a hardware-backed fallback.
+Archway installs public-key identity selectors for SSH connections between
+managed machines. The normal private key is supplied by the Bitwarden SSH
+agent. An optional FIDO2 key provides a hardware-backed fallback.
 
 ## One-time setup
 
@@ -41,21 +41,44 @@ Do not create a plaintext copy of `config.local` inside the repository. Saving
 and closing the SOPS editor updates the encrypted
 `secrets/ssh_config.local` file.
 
-## Deployment behavior
+## Identity-selector deployment
 
 When `just dotfiles` runs and `dots/ssh/archway-access.pub` exists, Archway:
 
 1. validates the public key;
-2. installs it at `~/.ssh/archway-access.pub` for identity selection; and
-3. appends it to `~/.ssh/authorized_keys` only if the same key is not already
-   present.
+2. installs it at `~/.ssh/archway-access.pub`; and
+3. uses that public key to select the matching private key from the SSH agent
+   for configured hosts.
 
-Existing authorized keys are preserved. If the committed public key is absent,
-deployment prints a warning and continues.
+If the committed public key is absent, deployment prints a warning and
+continues. Identity selectors configure the SSH client and do not grant
+incoming SSH access to the local account.
 
-Removing or rotating the committed key does not remove old entries from
-`authorized_keys`; remove obsolete keys deliberately after confirming the new
-key works.
+## Authorizing incoming access
+
+Authorize the key explicitly on each target account. From a machine that can
+already authenticate to the target with a password or another key, run:
+
+```bash
+ssh-copy-id -i ~/.ssh/archway-access.pub your-user@target-host
+```
+
+Alternatively, open a local terminal on the target machine and prepare the
+OpenSSH authorization file:
+
+```bash
+install -d -m 700 ~/.ssh
+touch ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+${EDITOR:-vi} ~/.ssh/authorized_keys
+```
+
+Paste the complete line from `dots/ssh/archway-access.pub`, save the file, and
+confirm that key-based login works before disabling any existing login method.
+Repeat with `dots/ssh/archway-fido-access.pub` when the FIDO2 fallback should
+also be accepted by the target account.
+
+Review `~/.ssh/authorized_keys` directly when rotating or revoking access.
 
 ## Optional FIDO2 fallback (TrustKey T110)
 
@@ -92,8 +115,9 @@ cp ~/.ssh/archway-fido-access.pub dots/ssh/archway-fido-access.pub
 
 Do **not** commit `~/.ssh/archway-fido-access`. It is a local FIDO key handle,
 not the device-private key, but retaining it locally avoids a recovery step.
-When `just dotfiles` runs, Archway installs the public key and adds it to
-`~/.ssh/authorized_keys` without removing the Bitwarden key.
+When `just dotfiles` runs, Archway installs the public-key identity selector.
+Authorize the FIDO2 key on each intended target using the incoming-access steps
+above.
 
 Add a separate fallback alias to the encrypted `ssh_config.local` for each
 managed host (retain the existing Bitwarden-backed host entry):
