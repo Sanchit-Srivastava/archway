@@ -28,6 +28,7 @@ x-scheme-handler/https=firefox.desktop
 x-scheme-handler/mailto=userapp-Thunderbird-5OWJT3.desktop
 x-scheme-handler/mid=userapp-Thunderbird-5OWJT3.desktop
 x-scheme-handler/net.thunderbird=userapp-Thunderbird-QXMJT3.desktop
+x-scheme-handler/codex=chatgpt.desktop
 
 [Added Associations]
 application/json=nvim.desktop;
