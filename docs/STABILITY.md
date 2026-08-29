@@ -90,8 +90,10 @@ Archway's changes fall into four different risk levels:
    package set. Package conflicts stop the operation instead of authorizing
    removal of a distribution package.
 2. Enabled system services (`ufw`, `tailscaled`, `keyd`, Avahi, and Bluetooth)
-   are global behavior changes. They do not explain Btrfs corruption, but can
-   affect networking, container ingress, input, discovery, and boot diagnostics.
+   are global behavior changes. The enabled Syncthing user service can also
+   affect networking and file replication after login. These services do not
+   explain Btrfs corruption, but can affect networking, container ingress,
+   input, discovery, and boot diagnostics.
 3. DMS/niri, AUR packages, Oh My Zsh plugins, and DMS plugins change outside
    this repository. Archinstall supplies the Niri+DMS desktop; Archway checks
    it but does not repair or replace it.

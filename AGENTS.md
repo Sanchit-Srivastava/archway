@@ -66,7 +66,8 @@ display manager, or require greetd.
 - `infra/pkgs/extras.txt`: optional native packages.
 - `infra/pkgs/extras.aur.txt`: optional AUR packages.
 - `infra/pkgs/tex.txt`: slow optional TeX toolchain.
-- `infra/services/core.txt`: only services deliberately owned by Archway.
+- `infra/services/core.txt`: system services deliberately owned by Archway.
+- `infra/services/user.txt`: user services deliberately owned by Archway.
 
 One package per line. Ignore blank lines and `#` comments. Group by comment
 headers and alphabetize within a group.

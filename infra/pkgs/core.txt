@@ -29,6 +29,7 @@ noto-fonts-extra
 polkit
 sops
 sshfs
+syncthing
 tailscale
 trash-cli
 ttf-cascadia-mono-nerd

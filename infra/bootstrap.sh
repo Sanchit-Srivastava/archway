@@ -15,7 +15,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=lib/platform.sh
 . "${SCRIPT_DIR}/lib/platform.sh"
 
-SCRIPT_VERSION="2026-08-08-3"
+SCRIPT_VERSION="2026-08-29-1"
 CURRENT_PHASE="initialization"
 BOOTSTRAP_STARTED=0
 
@@ -182,6 +182,20 @@ enable_services() {
 	done
 }
 
+enable_user_services() {
+	local services=()
+	read_list "${SCRIPT_DIR}/services/user.txt" services
+	local service
+	for service in "${services[@]}"; do
+		if systemctl --user is-enabled "$service" >/dev/null 2>&1; then
+			log_info "User service already enabled: $service"
+		else
+			systemctl --user enable "$service"
+			log_info "Enabled user service: $service"
+		fi
+	done
+}
+
 configure_keyd() {
 	local source="${REPO_ROOT}/dots/keyd/default.conf"
 	local target="/etc/keyd/default.conf"
@@ -224,6 +238,7 @@ install_core() {
 	install_native_list "${SCRIPT_DIR}/pkgs/core.txt"
 	CURRENT_PHASE="enabling Archway-owned services"
 	enable_services
+	enable_user_services
 	CURRENT_PHASE="configuring keyd"
 	configure_keyd
 	CURRENT_PHASE="setting the login shell"
