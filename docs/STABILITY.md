@@ -115,8 +115,12 @@ dms restart
 just dms-config
 ```
 
-The full installer stops if the DMS services or greeter command supplied by the
-OS are invalid. Archway does not rewrite those components.
+The full installer stops if the Niri/DMS services are inactive, the persistent
+display-manager selection is missing or dangling, or the selected service is
+not loaded and active. Archway does not rewrite those components. A running
+service alone does not prove that its next login will succeed; test login and
+reboot after login-related updates. See [DMS.md](DMS.md#login-manager) for the
+legacy DMS Greeter path mismatch and recovery without reinstalling the OS.
 
 ## Optional packages fail
 
