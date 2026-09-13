@@ -3,7 +3,7 @@
 default:
     @just --list
 
-# Configure an existing archinstall Niri+DMS base in one pass.
+# Configure an existing Niri+DMS base; keep its chosen display manager.
 install:
     ./install.sh install
 

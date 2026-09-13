@@ -12,10 +12,13 @@ is not a general-purpose Linux installer.
 ## Fresh Linux installation
 
 The usual Arch setup starts with `archinstall`'s **Niri + DankMaterialShell**
-profile. Select NetworkManager, PipeWire, and TuneD, and keep the DMS greeter
-provided by the profile. Do not add `power-profiles-daemon`; the profile already
-includes the conflicting `tuned-ppd` package. Archway checks that this desktop
-is working but leaves its installation and repair to `archinstall`.
+profile. Select NetworkManager, PipeWire, and TuneD. Do not add
+`power-profiles-daemon`; the profile already includes the conflicting
+`tuned-ppd` package. Archway checks the active Niri+DMS session and keeps the
+working display manager selected on the machine, including Plasma Login
+Manager, SDDM, or greetd. It does not install or repair them. See
+[login-manager setup and recovery](docs/DMS.md#login-manager) before relying on
+the DMS greeter supplied by an older installation.
 
 For Arch or CachyOS with KDE Plasma, use the minimal installer. It installs the
 required packages, dotfiles, and secrets without changing the desktop or
@@ -53,7 +56,7 @@ Run the full installer after logging into the working Niri+DMS session. It:
 3. installs Bitwarden and prompts for the SOPS age key without echoing it;
 4. decrypts secrets when a valid key is provided;
 5. installs optional applications;
-6. checks Niri, DMS, and the greetd configuration after package updates; and
+6. checks Niri, DMS, and the selected display manager after package updates; and
 7. applies selected preferences, installs and enables DMS plugins, and
    restarts DMS.
 
@@ -65,7 +68,7 @@ mandatory finish command.
 ### Installation
 
 ```bash
-just install          # configure an existing archinstall Niri+DMS session
+just install          # configure an existing Niri+DMS session; keep its login manager
 just install-minimal  # core, dotfiles, and secrets; leave the desktop alone
 just core          # install/reapply required native packages and services
 just extras        # install/retry optional applications

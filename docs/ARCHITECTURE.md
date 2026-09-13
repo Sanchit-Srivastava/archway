@@ -2,8 +2,8 @@
 
 Archway configures an already working operating system. It supports:
 
-- a full Linux setup for Arch installed with `archinstall`'s Niri +
-  DankMaterialShell profile;
+- a full Linux setup for an existing Niri + DankMaterialShell session,
+  normally supplied by archinstall, with the machine's chosen display manager;
 - a minimal setup for Arch or CachyOS with an existing KDE Plasma or other
   graphical profile; and
 - a smaller set of shared user tools and dotfiles on macOS.
@@ -28,7 +28,7 @@ Archway manages:
 - keyd configuration;
 - shell, editor, and application dotfiles;
 - SOPS-encrypted personal data;
-- selected preferences for the existing archinstall Niri+DMS profile.
+- selected preferences for the existing Niri+DMS session.
 
 Archway leaves the operating-system settings listed above alone, even when
 different platforms use different defaults.
@@ -68,12 +68,12 @@ Gaming setup is left to CachyOS and its own tools.
 The initial pasteable command clones the repository and hands off to the
 checked-out `install.sh`.
 
-The full `just install` command runs from an initialized archinstall
-Niri+DMS session:
+The full `just install` command runs from an initialized Niri+DMS session:
 
 1. detects Arch or CachyOS;
-2. verifies active Niri and DMS user services and the executable configured for
-   the DMS greeter supplied by the OS installer;
+2. verifies active Niri and DMS user services, resolves the persistent
+   `display-manager.service` selection, and checks that its unit is loaded
+   and active;
 3. installs core, applies dotfiles, and offers secure age-key setup;
 4. checks the graphical session again after the full package upgrade;
 5. installs optional applications;
@@ -83,6 +83,11 @@ Niri+DMS session:
 
 There is no intermediate reboot, resume marker, or finish phase. The full
 installer never runs `dms setup` or modifies the display manager.
+
+Plasma Login Manager, SDDM, and greetd are all valid existing choices. These
+are service-state checks, not an end-to-end login test or a parser for each
+manager's configuration. After login-related updates, test logout/login and
+a reboot separately. Autologin and authentication settings stay machine-local.
 
 `just install-minimal` installs only core, dotfiles, and secrets. It does not
 install optional applications or inspect, install, or configure Niri and DMS.

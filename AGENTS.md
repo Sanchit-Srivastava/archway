@@ -48,10 +48,12 @@ installations use its graphical installer, KDE Plasma, and suggested defaults.
 The pasteable entry point is `remote-install.sh`, which clones the repository
 and delegates to `install.sh`.
 
-The normal `just install` contract requires an already working archinstall
-Niri + DankMaterialShell session. It installs core, dotfiles, secrets, and
-extras, then applies portable DMS/niri preferences and plugins in one pass.
-There is no intermediate reboot, resume state, or finish phase.
+The normal `just install` contract requires an already working Niri +
+DankMaterialShell session, normally supplied by archinstall. It installs core,
+dotfiles, secrets, and extras, then applies portable DMS/niri preferences and
+plugins in one pass. It checks the existing persistent display-manager
+selection and its service state without requiring greetd or a particular
+greeter. There is no intermediate reboot, resume state, or finish phase.
 
 `just install-minimal` installs only core, dotfiles, and secrets. Use it on KDE
 or another base that Archway must leave graphically untouched.
@@ -108,10 +110,14 @@ This repository is public.
 
 ## DMS
 
-The archinstall Niri+DMS profile owns DMS/niri packages, setup, session binding,
-and the greeter. On another base, upstream DMS tooling owns DMS/niri installation
-and setup. Archway validates but does not install or repair those components.
-DMS owns its full runtime JSON. Archway owns only selected niri files and small
-portable JSON overlays.
+The archinstall Niri+DMS profile supplies DMS/niri packages, setup, and session
+binding. On another base, upstream DMS tooling owns DMS/niri installation and
+setup. The machine's chosen display manager may differ from the installer's
+original choice. Archway performs read-only session and login-service checks;
+it must not install, enable, disable, restart, or reconfigure a display manager.
+DMS Greeter is a separate upstream component, not a required part of DMS.
+Autologin, login usernames, and PAM settings stay machine-local. DMS owns its
+full runtime JSON. Archway owns only selected niri files and small portable
+JSON overlays.
 
 Do not restore full generated `settings.json` or `plugin_settings.json` files.

@@ -8,7 +8,7 @@ Choose:
 - LUKS encryption;
 - ext4 for the simplest recovery model;
 - one of the graphical profiles described below;
-- the installer-provided display manager;
+- a working display manager for the chosen profile;
 - PipeWire;
 - NetworkManager;
 - the appropriate GPU driver offered by `archinstall`; and
@@ -16,19 +16,28 @@ Choose:
 
 ## Graphical profile
 
-- **Niri + DankMaterialShell** is the required base for the full Archway
-  install. Archinstall supplies Niri, DMS, the DMS greeter, the niri/DMS
-  systemd binding, and `tuned-ppd`. Log into this session once before running
-  Archway.
+- **Niri + DankMaterialShell** is the usual base for the full Archway install.
+  Archinstall supplies Niri, DMS, the niri/DMS systemd binding, and `tuned-ppd`.
+  Log into this session once before running Archway. The full installer also
+  accepts an existing Niri+DMS session configured through upstream DMS tooling.
 - **Niri** is supported only by `just install-minimal`. Archway leaves its
   conventional shell and display manager unchanged and does not add DMS.
 - **KDE Plasma** is supported by `just install-minimal`. Archway leaves Plasma
   and its display manager unchanged and does not add Niri or DMS.
 
-Keep the profile's default display manager. Niri + DankMaterialShell uses the
-DMS greeter on greetd, conventional Niri defaults to LightDM, and Plasma uses
-Plasma Login Manager. The full Archway installer checks the DMS greeter but
-never rewrites or switches a display manager.
+Keep an existing working display manager. Conventional Niri defaults to
+LightDM, and Plasma uses Plasma Login Manager. Plasma Login Manager and SDDM
+can also launch Niri, so adding Plasma or changing the login screen does not
+require reinstalling Niri+DMS.
+
+Archinstall's Niri+DMS greeter integration has used a wrapper inside
+`dms-shell` that current packages no longer ship. If choosing DMS Greeter,
+install and configure its separate upstream package before relying on it for
+login. Otherwise keep Plasma Login Manager or SDDM if already configured.
+See [DMS login-manager setup and recovery](DMS.md#login-manager).
+
+The full Archway installer checks the selected display manager's unit file
+and service state, but never installs, rewrites, or switches a display manager.
 
 ## Applications menu
 
@@ -95,8 +104,8 @@ from that active session.
 
 ## Profile behavior
 
-- On Niri+DMS, the full installer checks the active user services and DMS
-  greeter, applies Archway's settings, and completes in one pass.
+- On Niri+DMS, the full installer checks the active user services and selected
+  display manager, applies Archway's settings, and completes in one pass.
   It does not run `dms setup` or install DMS packages.
 - On conventional Niri or KDE, use the minimal installer. It applies core,
   dotfiles, and secrets without touching the graphical profile.
