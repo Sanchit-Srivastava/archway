@@ -8,8 +8,8 @@ Choose:
 
 - LUKS encryption;
 - ext4 for the simplest recovery model;
-- one of the graphical profiles described below;
-- a working display manager for the chosen profile;
+- **KDE Plasma**, with the recommended **plasma-meta** flavor;
+- **Plasma Login Manager** (Plasma's default greeter in archinstall 4.5);
 - PipeWire;
 - NetworkManager;
 - the appropriate GPU driver offered by `archinstall`; and
@@ -17,14 +17,15 @@ Choose:
 
 ## Graphical profile
 
-- **Niri** is the direct base for a Niri-first machine. Establish a working
-  session and login manager, then use the separate
+- **KDE Plasma + Plasma Login Manager is the default.** Establish password
+  login, logout, and reboot first. Then add Niri+DMS through the Dux Installer
+  with its optional greeter disabled, retaining Plasma as a recovery session.
+  Follow [Reliable graphical login](LOGIN.md), then run the full Archway
+  install from Niri+DMS. Use `just install-minimal` if staying with Plasma alone.
+- **Niri** is an alternative for a deliberately smaller base without Plasma
+  recovery. Establish a working session and login manager, then use the separate
   [Dux Installer](DMS.md#upstream-installation-and-upgrades) to configure DMS.
   Until DMS is set up, only `just install-minimal` applies.
-- **KDE Plasma** provides a working desktop and recovery session. Keep its
-  login manager when adding Niri+DMS with the Dux Installer. Use the full
-  Archway install from Niri+DMS afterward, or `just install-minimal` if staying
-  with Plasma alone.
 - **niri - DankMaterialShell** is still the label of archinstall 4.5's combined
   profile. It requests the removed `dms-shell-niri` package and selects an
   obsolete bundled greeter command. Do not use it for a fresh install until
@@ -67,7 +68,7 @@ Do not start a nested `niri` inside Plasma as a substitute.
 
 ## Applications menu
 
-Use these choices for either recommended base:
+Use these choices for the default Plasma base or the conventional Niri alternative:
 
 | Item | Recommended choice | Reason |
 | --- | --- | --- |
@@ -154,6 +155,7 @@ supported systemd-boot installation.
 ## Upstream references
 
 - [Archinstall 4.5 Niri+DMS profile](https://github.com/archlinux/archinstall/blob/4.5/archinstall/default_profiles/desktops/niri_dms.py)
+- [Archinstall 4.5 Plasma profile and login-manager default](https://github.com/archlinux/archinstall/blob/4.5/archinstall/default_profiles/desktops/plasma.py)
 - [Archinstall 4.5 greeter setup](https://github.com/archlinux/archinstall/blob/4.5/archinstall/lib/profile/profiles_handler.py)
 - [Current Arch Dux package](https://archlinux.org/packages/extra/x86_64/dux-shell/)
 - [Archinstall power-management choices](https://github.com/archlinux/archinstall/blob/4.5/archinstall/applications/power_management.py)

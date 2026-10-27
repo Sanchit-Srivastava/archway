@@ -44,9 +44,13 @@ The base OS installer owns:
 
 Archway must not duplicate those responsibilities.
 
-Arch installations begin with `archinstall`. Use conventional Niri or KDE
-Plasma as a working base, then the separate upstream Dux Installer when DMS
-is wanted. Archinstall 4.5's Niri+DMS profile has stale package and greeter
+Arch installations begin with `archinstall`. The default is KDE Plasma
+(`plasma-meta`) with Plasma Login Manager, then the upstream Dux Installer
+for Niri+DMS with its optional greeter disabled. Keep Plasma as a recovery
+session; Niri+DMS remains the daily desktop. Preserve a working existing
+manager such as SDDM rather than switching it automatically. The staged
+verification process is in `docs/LOGIN.md`.
+Archinstall 4.5's Niri+DMS profile has stale package and greeter
 references; do not recommend it until a released fix is verified. CachyOS
 installations use its graphical installer, KDE Plasma, and suggested defaults.
 

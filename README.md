@@ -15,9 +15,12 @@ Archway supports the new `~/.config/dms` directory and existing legacy setups.
 
 ## Fresh Linux installation
 
-The target desktop is **Niri + Dux Shell**. Start with a working conventional
-Niri or KDE Plasma base from `archinstall`, then use the
-[Dux Installer](docs/DMS.md#upstream-installation-and-upgrades) to add DMS.
+The daily desktop is **Niri + Dux Shell**. The default fresh-install path is
+**KDE Plasma + Plasma Login Manager**, followed by the
+[Dux Installer](docs/DMS.md#upstream-installation-and-upgrades) to add Niri+DMS
+**without DMS Greeter**. Keep Plasma installed as a recovery desktop and keep
+its login manager independent of DMS. Follow the staged checks in
+[Reliable graphical login](docs/LOGIN.md) before applying Archway.
 Archinstall **4.5** still references the removed `dms-shell-niri` package and
 old bundled greeter, so its **niri - DankMaterialShell** profile is not the
 recommended fresh-install route. See the [Arch guide](docs/INSTALL-ARCH.md)
@@ -29,9 +32,9 @@ manager, including Plasma Login Manager, SDDM, or greetd. It does not install
 or repair them. See [login-manager setup and recovery](docs/DMS.md#login-manager)
 before relying on a DMS greeter from an older installation.
 
-For Arch or CachyOS with KDE Plasma, use the minimal installer. It installs the
-required packages, dotfiles, and secrets without changing the desktop or
-display manager. See the profile-specific
+If staying on Plasma without adding Niri+DMS, use the minimal installer. It
+installs the required packages, dotfiles, and secrets without changing the
+desktop or display manager. See the profile-specific
 [Arch installation guide](docs/INSTALL-ARCH.md) before installing Arch.
 
 NetworkManager must be selected during OS installation. Do not choose "Copy

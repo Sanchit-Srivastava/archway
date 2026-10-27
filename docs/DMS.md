@@ -3,8 +3,10 @@
 Archway's full Linux installer requires an already working **Niri +
 Dux Shell (formerly DankMaterialShell)** session. The DMS/niri
 packages, compositor setup, and systemd binding come from the OS installer or
-upstream Dux Installer. The login screen is independent: keep the working
-display manager selected on the machine.
+upstream Dux Installer. The login screen is independent: the fresh-install
+default is Plasma Login Manager with Plasma retained as a recovery desktop.
+Keep a working existing manager rather than switching it automatically. See
+[Reliable graphical login](LOGIN.md) for the installation and acceptance checks.
 
 Archway applies personal settings to that working session. It does not run
 `dms setup`, install DMS packages, or convert another desktop to DMS. Use the
@@ -173,9 +175,19 @@ login manager.
 
 ## Login manager
 
-Keep Plasma Login Manager or SDDM if either already works. Both can launch
+**Plasma Login Manager is the recommended fresh-install default, not DMS
+Greeter.** Use the distro's stable package and keep Plasma as a recovery
+session. Keep SDDM if it already works; it is also a valid alternative for a
+machine where Plasma Login Manager does not pass the login checks. Both can launch
 Niri as well as Plasma; changing the login screen does not require changing
 the desktop session. DMS can continue running inside Niri without DMS Greeter.
+
+This choice avoids the concrete archinstall/DMS greeter packaging and
+configuration mismatch described below. It is not a claim that Plasma Login
+Manager is bug-free or that greetd itself is unreliable. The default process
+keeps login independent of DMS updates and verifies each layer separately;
+see [Reliable graphical login](LOGIN.md). DMS's in-session screen locker stays
+available without DMS Greeter.
 
 Archway leaves autologin, login usernames, and PAM configuration machine-local.
 Configure Plasma Login Manager through KDE's **Login Screen** settings.

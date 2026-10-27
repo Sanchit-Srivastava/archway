@@ -11,6 +11,12 @@ Archway configures an already working operating system. It supports:
 
 It is not an OS installer.
 
+The recommended fresh Linux base is KDE Plasma with Plasma Login Manager.
+Niri+DMS is added as the daily session, without DMS Greeter; Plasma stays
+available for recovery. This is a base-installer choice, not an Archway
+service-enablement rule. Existing working managers are preserved. See
+[Reliable graphical login](LOGIN.md) for the staged installation checks.
+
 ## What each layer manages
 
 The operating-system installer manages:
