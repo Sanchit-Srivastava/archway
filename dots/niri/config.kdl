@@ -2,9 +2,7 @@
 // "/-" comments out the following node.
 // Check the wiki for a full description of the configuration:
 // https://github.com/YaLTeR/niri/wiki/Configuration:-Introduction
-config-notification {
-    disable-failed
-}
+
 // Outputs from existing configuration
 /-output "eDP-2" {
     mode "2560x1600@239.998993"
@@ -263,7 +261,9 @@ window-rule {
 }
 // Open dms windows as floating by default
 window-rule {
-    match app-id=r#"org.quickshell$"#
+    match app-id=r#"^dev\.duxlabs\.shell$"#
+    match app-id=r#"^com\.danklinux\.dms$"#
+    match app-id=r#"^org\.quickshell$"#
     open-floating true
 }
 debug {
@@ -280,12 +280,13 @@ recent-windows {
     }
 }
 
-// Include dms files
-include "dms/colors.kdl"
-include "dms/layout.kdl"
-include "dms/alttab.kdl"
+// DMS-generated fragments can be absent until their features are initialized.
+// Requires niri 26.04 or newer for optional includes.
+include optional=true "dms/colors.kdl"
+include optional=true "dms/layout.kdl"
+include optional=true "dms/alttab.kdl"
 include "dms/binds.kdl"
-include "dms/outputs.kdl"
-include "dms/cursor.kdl"
+include optional=true "dms/outputs.kdl"
+include optional=true "dms/cursor.kdl"
 
 include "dms/windowrules.kdl"

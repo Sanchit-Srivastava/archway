@@ -28,9 +28,11 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/m
 This installs core, dotfiles, and secrets without installing or configuring
 Niri, DMS, or another display manager.
 
-To add a separate Niri+DMS work session later, use the upstream DMS installer.
+To add a separate Niri+DMS work session later, use the
+[Dux Installer](DMS.md#upstream-installation-and-upgrades) (`duxinstall`).
 Choose Niri, systemd integration, and Ghostty, but leave the optional DMS
-greeter disabled so CachyOS retains Plasma Login Manager. Log out, select Niri,
+greeter disabled so CachyOS retains its existing working login manager. Do not
+select `--all-features`, which includes the greeter. Log out, select Niri,
 log in once, and then run `just dms-config` to apply Archway's Niri/DMS
 preferences. Bar layout, terminal defaults, and fingerprint authentication
 remain the documented manual steps in [DMS.md](DMS.md).

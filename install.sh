@@ -7,14 +7,15 @@ set -eEuo pipefail
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
-DMS_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/DankMaterialShell"
 
 # shellcheck source=infra/lib/common.sh
 . "${SCRIPT_DIR}/infra/lib/common.sh"
 # shellcheck source=infra/lib/platform.sh
 . "${SCRIPT_DIR}/infra/lib/platform.sh"
+# shellcheck source=infra/lib/dms.sh
+. "${SCRIPT_DIR}/infra/lib/dms.sh"
 
-SCRIPT_VERSION="2026-09-13-1"
+SCRIPT_VERSION="2026-10-27-1"
 
 die() {
 	log_error "$1"
@@ -84,12 +85,17 @@ validate_display_manager() {
 }
 
 ensure_active_niri_dms_session() {
+	local dms_dir
+	# Resolve again after upgrades: DMS 2.0 migrates the directory on launch.
+	dms_dir="$(dms_config_dir)"
 	command -v niri >/dev/null 2>&1 ||
-		die "niri is missing. Install Niri through the base OS or upstream DMS installer first."
+		die "niri is missing. Install Niri through the base OS or upstream Dux Installer first (docs/DMS.md)."
 	command -v dms >/dev/null 2>&1 ||
-		die "DMS is missing. Install it through archinstall's Niri+DMS profile or the upstream DMS installer first."
-	[[ -d "$DMS_DIR" ]] ||
-		die "DMS has not initialized $DMS_DIR. Log into Niri+DMS once before applying Archway preferences."
+		die "DMS is missing. Use the upstream Dux Installer first; see docs/INSTALL-ARCH.md for current archinstall profile caveats."
+	niri validate -c "${REPO_ROOT}/dots/niri/config.kdl" ||
+		die "The installed niri cannot validate Archway's configuration. Use niri 26.04 or newer and resolve the errors above before applying preferences."
+	[[ -d "$dms_dir" ]] ||
+		die "DMS has not initialized $dms_dir. Log into Niri+DMS once before applying Archway preferences."
 	systemctl --user is-active niri.service >/dev/null 2>&1 ||
 		die "niri.service is not active. Run this command from an active Niri+DMS session."
 	systemctl --user is-active dms.service >/dev/null 2>&1 ||

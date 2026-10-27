@@ -7,12 +7,13 @@ set -euo pipefail
 #
 # Safe to re-run (idempotent).
 
-SCRIPT_VERSION="2026-03-13-1"
+SCRIPT_VERSION="2026-10-27-1"
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOTS_DIR="${REPO_ROOT}/dots"
+NIRI_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/niri"
 
 # shellcheck source=lib/common.sh
 . "${SCRIPT_DIR}/lib/common.sh"
@@ -54,14 +55,14 @@ main() {
 	log_info ""
 
 	# Niri main config
-	pull_file "${HOME}/.config/niri/config.kdl" \
+	pull_file "${NIRI_DIR}/config.kdl" \
 		"${DOTS_DIR}/niri/config.kdl"
 
 	# DMS-managed niri files
-	pull_file "${HOME}/.config/niri/dms/binds.kdl" \
+	pull_file "${NIRI_DIR}/dms/binds.kdl" \
 		"${DOTS_DIR}/niri/dms/binds.kdl"
 
-	pull_file "${HOME}/.config/niri/dms/windowrules.kdl" \
+	pull_file "${NIRI_DIR}/dms/windowrules.kdl" \
 		"${DOTS_DIR}/niri/dms/windowrules.kdl"
 
 	# DMS settings

@@ -1,7 +1,7 @@
 local present, base46 = pcall(require, "base46")
 if not present or not base46._DMS_SUPPORT then
 	vim.notify(
-		"base46 plugin not found or incorrect, make sure to install AvengeMedia/base46",
+		"base46 plugin not found or incorrect, make sure to install duxlabs-dev/base46",
 		vim.log.levels.ERROR,
 		{ title = "dms integration" }
 	)
@@ -12,11 +12,15 @@ local config_home = vim.env.XDG_CONFIG_HOME
 if config_home == nil or #config_home == 0 then
 	config_home = vim.fs.joinpath(vim.env.HOME, ".config")
 end
-local settings_file_path = vim.fs.joinpath(config_home, "DankMaterialShell", "settings.json")
+local settings_dir = vim.fs.joinpath(config_home, "dms")
+if vim.fn.isdirectory(settings_dir) == 0 then
+	settings_dir = vim.fs.joinpath(config_home, "DankMaterialShell")
+end
+local settings_file_path = vim.fs.joinpath(settings_dir, "settings.json")
 local settings_file = io.open(settings_file_path, "r")
 if settings_file == nil then
 	vim.notify(
-		"cannnot read dms settings file at '" .. settings_file_path .. "'",
+		"cannot read dms settings file at '" .. settings_file_path .. "'",
 		vim.log.levels.ERROR,
 		{ title = "dms integration" }
 	)

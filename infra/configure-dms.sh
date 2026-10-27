@@ -7,11 +7,13 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOTS_DIR="${REPO_ROOT}/dots"
-DMS_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/DankMaterialShell"
+DMS_DIR=""
 NIRI_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/niri"
 
 # shellcheck source=lib/common.sh
 . "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/dms.sh
+. "${SCRIPT_DIR}/lib/dms.sh"
 
 DMS_PLUGINS=(
 	commandRunner
@@ -83,8 +85,12 @@ apply_niri_files() {
 }
 
 main() {
-	command -v dms >/dev/null 2>&1 || die "DMS is not installed. Install it through the base OS or upstream DMS installer first."
+	command -v dms >/dev/null 2>&1 || die "DMS is not installed. Use the base OS or upstream Dux Installer first (docs/DMS.md)."
 	command -v jq >/dev/null 2>&1 || die "jq is required."
+	command -v niri >/dev/null 2>&1 || die "niri is required."
+	niri validate -c "${DOTS_DIR}/niri/config.kdl" ||
+		die "Archway requires a compatible niri (26.04 or newer). Resolve validation errors before applying preferences."
+	DMS_DIR="$(dms_config_dir)"
 	[[ -d "$DMS_DIR" ]] ||
 		die "DMS has not initialized $DMS_DIR. Log into niri/DMS once, then rerun."
 

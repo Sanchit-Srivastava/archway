@@ -7,19 +7,16 @@
   "monoFontFamily": "CaskaydiaMono NFM",
   "launcherStyle": "spotlight",
   "spotlightBarShowModeChips": true,
-  "showDock": false,
   "barElevationEnabled": false,
   "clipboardEnterToPaste": true,
   "fadeToDpmsEnabled": false,
-  "lockScreenShowDate": false,
-  "lockScreenShowMediaPlayer": false,
-  "lockScreenShowPasswordField": false,
-  "lockScreenShowProfileImage": false,
-  "lockScreenShowSystemIcons": false,
-  "mediaUseAlbumArtAccent": true,
+  "dashOptions": {
+    "media": {
+      "albumArtAccent": true
+    }
+  },
   "notificationCompactMode": true,
   "powerActionConfirm": false,
-  "showWorkspaceIndex": true,
   "acLockTimeout": 3600,
   "acSuspendTimeout": 0,
   "lockBeforeSuspend": true,

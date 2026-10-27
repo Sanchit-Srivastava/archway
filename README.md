@@ -9,16 +9,25 @@ mirrors, and the base desktop.
 The repository is public, but it reflects my own machines and preferences. It
 is not a general-purpose Linux installer.
 
+DankMaterialShell is now **Dux Shell** (DMS 2.0). Upstream's installer is
+`duxinstall`; the shell still uses the `dms` command and `dms.service`.
+Archway supports the new `~/.config/dms` directory and existing legacy setups.
+
 ## Fresh Linux installation
 
-The usual Arch setup starts with `archinstall`'s **Niri + DankMaterialShell**
-profile. Select NetworkManager, PipeWire, and TuneD. Do not add
-`power-profiles-daemon`; the profile already includes the conflicting
-`tuned-ppd` package. Archway checks the active Niri+DMS session and keeps the
-working display manager selected on the machine, including Plasma Login
-Manager, SDDM, or greetd. It does not install or repair them. See
-[login-manager setup and recovery](docs/DMS.md#login-manager) before relying on
-the DMS greeter supplied by an older installation.
+The target desktop is **Niri + Dux Shell**. Start with a working conventional
+Niri or KDE Plasma base from `archinstall`, then use the
+[Dux Installer](docs/DMS.md#upstream-installation-and-upgrades) to add DMS.
+Archinstall **4.5** still references the removed `dms-shell-niri` package and
+old bundled greeter, so its **niri - DankMaterialShell** profile is not the
+recommended fresh-install route. See the [Arch guide](docs/INSTALL-ARCH.md)
+for the current workaround and source references.
+
+Select NetworkManager, PipeWire, and TuneD (or `power-profiles-daemon`, never
+both). Archway checks the active Niri+DMS session and keeps the working display
+manager, including Plasma Login Manager, SDDM, or greetd. It does not install
+or repair them. See [login-manager setup and recovery](docs/DMS.md#login-manager)
+before relying on a DMS greeter from an older installation.
 
 For Arch or CachyOS with KDE Plasma, use the minimal installer. It installs the
 required packages, dotfiles, and secrets without changing the desktop or
@@ -26,11 +35,10 @@ display manager. See the profile-specific
 [Arch installation guide](docs/INSTALL-ARCH.md) before installing Arch.
 
 NetworkManager must be selected during OS installation. Do not choose "Copy
-ISO network configuration," which copies standalone iwd and systemd-networkd
-instead. Archway checks that NetworkManager is running but does not replace or
-migrate another network setup.
+ISO network configuration" or standalone iwd instead. Archway checks that
+NetworkManager is running but does not replace or migrate another network setup.
 
-Boot into the installed graphical profile, open a terminal, and run:
+After upstream setup, log into **Niri+DMS**, open a terminal, and run:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
@@ -79,7 +87,9 @@ just dotfiles      # reapply dotfiles
 
 A core failure stops the installation. If an optional application fails, the
 desktop and core packages remain usable; retry it later with `just extras`. To
-add DMS to another desktop, use the upstream DMS installer.
+add DMS to another desktop, use the
+[Dux Installer](docs/DMS.md#upstream-installation-and-upgrades) first. A working
+existing DMS session only needs its normal package update, not a reinstall.
 
 ### Default applications
 
@@ -133,6 +143,9 @@ These are safe on a development machine:
 ```bash
 just lint
 just check-fmt
+just test          # isolated read-only helpers; no installation
+just check-niri    # requires niri 26.04+; validates configs without starting it
+just check-nvim    # isolated theme-path checks; no live DMS or user config
 just fmt           # writes formatting changes
 ```
 

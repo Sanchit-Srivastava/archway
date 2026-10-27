@@ -73,6 +73,18 @@ setup-mac: bootstrap-mac dotfiles
 lint:
     shellcheck -x -P SCRIPTDIR infra/lib/*.sh infra/*.sh install.sh remote-install.sh
 
+# Isolated read-only helper tests; never invokes target installers.
+test:
+    python3 -B -m unittest discover -s tests -v
+
+# Requires niri 26.04+; parse configs only, never starts a compositor.
+check-niri:
+    python3 -B tests/validate_niri.py -v
+
+# Neovim theme discovery with stubbed DMS/plugin calls and temporary fixtures.
+check-nvim:
+    nvim --headless -u NONE -i NONE -n -l tests/validate_dms_theme.lua
+
 # Read-only target-system filesystem and kernel-error report.
 health:
     ./infra/system-health.sh
