@@ -89,6 +89,29 @@ starting over it; the shell should be attached to the Niri session, not every
 graphical session. Test with only one graphical session for this user open
 at a time, because the systemd user manager is shared between sessions.
 
+### Older DMS service enablement
+
+The current installer attaches DMS to `niri.service`. Do not instead run
+`systemctl --user enable dms.service`: the shipped unit's install target is
+`graphical-session.target`, which can start DMS in Plasma too. When setting
+up the binding manually, use `dms systemd enable --compositor niri`, without
+`--now` while in Plasma.
+
+On an existing installation where DMS was globally enabled for this user,
+correct that binding manually, as the normal desktop user:
+
+```bash
+systemctl --user disable dms.service &&
+dms systemd enable --compositor niri
+```
+
+This removes the old per-user enablement before adding the Niri binding; it
+does not change the system login manager. Without `--now` it also does not
+stop a running shell. Log out and test both desktops again. `dms systemd status`
+reports compositor bindings but does not detect every legacy global startup
+path; if DMS still starts in Plasma, inspect user/system-wide autostart and
+service configuration rather than assuming this correction covered it.
+
 ## 3. Apply Archway, then test the result
 
 Log back into Niri+DMS and run the full installer from the README. If Archway
@@ -139,3 +162,5 @@ Reviewed 2026-10-27; the process still requires testing on the target hardware.
 - [Plasma Login Manager setup](https://wiki.archlinux.org/title/Plasma_Login_Manager)
 - [Niri 26.04 session entry](https://github.com/niri-wm/niri/blob/v26.04/resources/niri.desktop)
 - [Dux Installer options](https://duxlabs.dev/docs/duxinstall)
+- [DMS 2.0 compositor-specific service binding](https://github.com/duxlabs-dev/dux-shell/blob/v2.0.0/core/internal/config/session_units.go)
+- [DMS 2.0 systemd unit](https://github.com/duxlabs-dev/dux-shell/blob/v2.0.0/assets/systemd/dms.service)
