@@ -1,14 +1,15 @@
 # Installing the Arch base
 
-Run `archinstall` from the official Arch ISO and prefer its defaults.
+Boot the official Arch ISO in **UEFI mode**, run `archinstall`, and prefer its
+defaults except for the explicit choices below. Check `archinstall --version`:
+the profile guidance here was checked against **4.5** on **2026-10-27**.
 
 Choose:
 
-- UEFI;
 - LUKS encryption;
 - ext4 for the simplest recovery model;
-- one of the graphical profiles described below;
-- the installer-provided display manager;
+- **KDE Plasma**, with the recommended **plasma-meta** flavor;
+- **Plasma Login Manager** (Plasma's default greeter in archinstall 4.5);
 - PipeWire;
 - NetworkManager;
 - the appropriate GPU driver offered by `archinstall`; and
@@ -16,23 +17,58 @@ Choose:
 
 ## Graphical profile
 
-- **Niri + DankMaterialShell** is the required base for the full Archway
-  install. Archinstall supplies Niri, DMS, the DMS greeter, the niri/DMS
-  systemd binding, and `tuned-ppd`. Log into this session once before running
-  Archway.
-- **Niri** is supported only by `just install-minimal`. Archway leaves its
-  conventional shell and display manager unchanged and does not add DMS.
-- **KDE Plasma** is supported by `just install-minimal`. Archway leaves Plasma
-  and its display manager unchanged and does not add Niri or DMS.
+- **KDE Plasma + Plasma Login Manager is the default.** Establish password
+  login, logout, and reboot first. Then add Niri+DMS through the Dux Installer
+  with its optional greeter disabled, retaining Plasma as a recovery session.
+  Follow [Reliable graphical login](LOGIN.md), then run the full Archway
+  install from Niri+DMS. Use `just install-minimal` if staying with Plasma alone.
+- **Niri** is an alternative for a deliberately smaller base without Plasma
+  recovery. Establish a working session and login manager, then use the separate
+  [Dux Installer](DMS.md#upstream-installation-and-upgrades) to configure DMS.
+  Until DMS is set up, only `just install-minimal` applies.
+- **niri - DankMaterialShell** is still the label of archinstall 4.5's combined
+  profile. It requests the removed `dms-shell-niri` package and selects an
+  obsolete bundled greeter command. Do not use it for a fresh install until
+  those references are fixed in a released archinstall version. Existing
+  working installations do not need to be reinstalled.
 
-Keep the profile's default display manager. Niri + DankMaterialShell uses the
-DMS greeter on greetd, conventional Niri defaults to LightDM, and Plasma uses
-Plasma Login Manager. The full Archway installer checks the DMS greeter but
-never rewrites or switches a display manager.
+The current Arch package is `dux-shell`, providing `dms-shell` and replacing
+the old split packages. A `replaces` entry does not provide the missing
+`dms-shell-niri` package name for a fresh install. This is a source/package
+metadata mismatch, not a claim that an end-to-end installation was tested.
+
+Keep an existing working display manager. Conventional Niri defaults to
+LightDM, and Plasma uses Plasma Login Manager. Plasma Login Manager and SDDM
+can also launch Niri, so adding Plasma or changing the login screen does not
+require reinstalling Niri+DMS.
+
+Archinstall 4.5's DMS greeter integration still points at a wrapper that
+current `dux-shell` packages do not ship. If choosing Dux Greeter,
+install and configure its separate upstream package before relying on it for
+login. Otherwise keep Plasma Login Manager or SDDM if already configured.
+See [DMS login-manager setup and recovery](DMS.md#login-manager).
+
+The full Archway installer checks the selected display manager's unit file
+and service state, but never installs, rewrites, or switches a display manager.
+
+The Dux docs also suggest archinstall's **minimal** OS profile. That is a valid
+upstream starting point, but it is not the same as Archway's
+`just install-minimal`: a minimal OS still needs working audio, networking,
+power management, and a selected login manager before a full Archway install.
+The graphical-base route above keeps those responsibilities explicit.
+
+After adding DMS, log out and select the installed **Niri** session (which
+launches `niri-session`), then check:
+
+```bash
+systemctl --user status niri.service dms.service
+```
+
+Do not start a nested `niri` inside Plasma as a substitute.
 
 ## Applications menu
 
-Use these choices for all three profiles unless noted otherwise:
+Use these choices for the default Plasma base or the conventional Niri alternative:
 
 | Item | Recommended choice | Reason |
 | --- | --- | --- |
@@ -42,21 +78,28 @@ Use these choices for all three profiles unless noted otherwise:
 | Print service | **Enable** when printing may be needed | Archinstall enables CUPS; Archway supplies CUPS utilities and discovery packages but does not manage the service. |
 | Power management | **TuneD** | This is compatible with every supported profile and gives desktop shells the PPD API through `tuned-ppd`. |
 
-For **Niri + DankMaterialShell**, never select **power-profiles-daemon**: that
-profile already includes the conflicting `tuned-ppd` package. Selecting TuneD
-is safe (the packages are deduplicated) and ensures `tuned.service` is enabled.
-For conventional Niri or Plasma, `power-profiles-daemon` is also compatible,
-but TuneD works consistently across all supported profiles. Archway installs
-neither daemon.
+Selecting **TuneD** explicitly installs `tuned` and `tuned-ppd` and enables
+`tuned.service`. **power-profiles-daemon** is also a valid alternative; choose
+one implementation, never both. Archinstall 4.5 no longer bundles `tuned-ppd`
+in its Niri+DMS profile, unlike 4.4. An older installation may already have
+it, so check before switching power-management implementations. Archway
+installs neither daemon.
 
 NetworkManager is selected in the separate network-configuration menu rather
 than the Applications menu. Prefer **Use Network Manager (default backend)**,
 or its iwd-backend variant when there is a specific reason to use iwd. Do not
-choose **Copy ISO network configuration**: that copies standalone iwd and
-systemd-networkd into the target instead. Archway requires active
+choose **Copy ISO network configuration** or **Use standalone iwd**: these
+use the ISO's networking or standalone iwd/networkd/resolved instead of setting
+up NetworkManager. Archway requires active
 NetworkManager and will not install it, enable it, or migrate another network
-stack. No other additional packages are required; the pasteable installer
-installs Git when necessary.
+stack. The pasteable installer installs Git when necessary.
+
+For X11 applications under Niri, add **`xwayland-satellite`** through the base
+installer or let the Dux Installer supply it. Archinstall's Niri profiles
+include `xorg-xwayland`, but that alone is not Niri's X11 bridge. Current Niri
+starts satellite automatically; do not add a second startup command or a
+hard-coded `DISPLAY`. Keep `xdg-desktop-portal-gnome` for Niri screen sharing
+and a working PolicyKit authentication agent in the base session.
 
 ## Secret-service provider
 
@@ -95,9 +138,9 @@ from that active session.
 
 ## Profile behavior
 
-- On Niri+DMS, the full installer checks the active user services and DMS
-  greeter, applies Archway's settings, and completes in one pass.
-  It does not run `dms setup` or install DMS packages.
+- On Niri+DMS, the full installer checks the active user services and selected
+  display manager, applies Archway's settings, and completes in one pass.
+  It does not run `duxinstall`, `dms setup`, or install DMS packages.
 - On conventional Niri or KDE, use the minimal installer. It applies core,
   dotfiles, and secrets without touching the graphical profile.
 - Archway does not provide a DMS conversion command. Use upstream DMS tooling
@@ -108,3 +151,17 @@ Then follow the fresh-install command in the repository README.
 For boot recovery on the supported systemd-boot layout, see
 [STABILITY.md](STABILITY.md). Run the recovery tool only when repairing a
 supported systemd-boot installation.
+
+## Upstream references
+
+- [Archinstall 4.5 Niri+DMS profile](https://github.com/archlinux/archinstall/blob/4.5/archinstall/default_profiles/desktops/niri_dms.py)
+- [Archinstall 4.5 Plasma profile and login-manager default](https://github.com/archlinux/archinstall/blob/4.5/archinstall/default_profiles/desktops/plasma.py)
+- [Archinstall 4.5 greeter setup](https://github.com/archlinux/archinstall/blob/4.5/archinstall/lib/profile/profiles_handler.py)
+- [Current Arch Dux package](https://archlinux.org/packages/extra/x86_64/dux-shell/)
+- [Archinstall power-management choices](https://github.com/archlinux/archinstall/blob/4.5/archinstall/applications/power_management.py)
+- [Archinstall network choices](https://github.com/archlinux/archinstall/blob/4.5/archinstall/lib/models/network.py)
+- [Archinstall bootloader defaults](https://github.com/archlinux/archinstall/blob/4.5/archinstall/lib/models/bootloader.py)
+- [Niri Xwayland integration](https://niri-wm.github.io/niri/Xwayland.html)
+
+Package metadata is newer than some upstream quick-start examples. In
+particular, do not copy an old `pacman -S dms-shell-niri` command from a guide.

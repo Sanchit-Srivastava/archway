@@ -9,25 +9,39 @@ mirrors, and the base desktop.
 The repository is public, but it reflects my own machines and preferences. It
 is not a general-purpose Linux installer.
 
+DankMaterialShell is now **Dux Shell** (DMS 2.0). Upstream's installer is
+`duxinstall`; the shell still uses the `dms` command and `dms.service`.
+Archway supports the new `~/.config/dms` directory and existing legacy setups.
+
 ## Fresh Linux installation
 
-The usual Arch setup starts with `archinstall`'s **Niri + DankMaterialShell**
-profile. Select NetworkManager, PipeWire, and TuneD, and keep the DMS greeter
-provided by the profile. Do not add `power-profiles-daemon`; the profile already
-includes the conflicting `tuned-ppd` package. Archway checks that this desktop
-is working but leaves its installation and repair to `archinstall`.
+The daily desktop is **Niri + Dux Shell**. The default fresh-install path is
+**KDE Plasma + Plasma Login Manager**, followed by the
+[Dux Installer](docs/DMS.md#upstream-installation-and-upgrades) to add Niri+DMS
+**without DMS Greeter**. Keep Plasma installed as a recovery desktop and keep
+its login manager independent of DMS. Follow the staged checks in
+[Reliable graphical login](docs/LOGIN.md) before applying Archway.
+Archinstall **4.5** still references the removed `dms-shell-niri` package and
+old bundled greeter, so its **niri - DankMaterialShell** profile is not the
+recommended fresh-install route. See the [Arch guide](docs/INSTALL-ARCH.md)
+for the current workaround and source references.
 
-For Arch or CachyOS with KDE Plasma, use the minimal installer. It installs the
-required packages, dotfiles, and secrets without changing the desktop or
-display manager. See the profile-specific
+Select NetworkManager, PipeWire, and TuneD (or `power-profiles-daemon`, never
+both). Archway checks the active Niri+DMS session and keeps the working display
+manager, including Plasma Login Manager, SDDM, or greetd. It does not install
+or repair them. See [login-manager setup and recovery](docs/DMS.md#login-manager)
+before relying on a DMS greeter from an older installation.
+
+If staying on Plasma without adding Niri+DMS, use the minimal installer. It
+installs the required packages, dotfiles, and secrets without changing the
+desktop or display manager. See the profile-specific
 [Arch installation guide](docs/INSTALL-ARCH.md) before installing Arch.
 
 NetworkManager must be selected during OS installation. Do not choose "Copy
-ISO network configuration," which copies standalone iwd and systemd-networkd
-instead. Archway checks that NetworkManager is running but does not replace or
-migrate another network setup.
+ISO network configuration" or standalone iwd instead. Archway checks that
+NetworkManager is running but does not replace or migrate another network setup.
 
-Boot into the installed graphical profile, open a terminal, and run:
+After upstream setup, log into **Niri+DMS**, open a terminal, and run:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Sanchit-Srivastava/archway/main/remote-install.sh)
@@ -53,7 +67,7 @@ Run the full installer after logging into the working Niri+DMS session. It:
 3. installs Bitwarden and prompts for the SOPS age key without echoing it;
 4. decrypts secrets when a valid key is provided;
 5. installs optional applications;
-6. checks Niri, DMS, and the greetd configuration after package updates; and
+6. checks Niri, DMS, and the selected display manager after package updates; and
 7. applies selected preferences, installs and enables DMS plugins, and
    restarts DMS.
 
@@ -65,7 +79,7 @@ mandatory finish command.
 ### Installation
 
 ```bash
-just install          # configure an existing archinstall Niri+DMS session
+just install          # configure an existing Niri+DMS session; keep its login manager
 just install-minimal  # core, dotfiles, and secrets; leave the desktop alone
 just core          # install/reapply required native packages and services
 just extras        # install/retry optional applications
@@ -76,7 +90,9 @@ just dotfiles      # reapply dotfiles
 
 A core failure stops the installation. If an optional application fails, the
 desktop and core packages remain usable; retry it later with `just extras`. To
-add DMS to another desktop, use the upstream DMS installer.
+add DMS to another desktop, use the
+[Dux Installer](docs/DMS.md#upstream-installation-and-upgrades) first. A working
+existing DMS session only needs its normal package update, not a reinstall.
 
 ### Default applications
 
@@ -130,6 +146,9 @@ These are safe on a development machine:
 ```bash
 just lint
 just check-fmt
+just test          # isolated read-only helpers; no installation
+just check-niri    # requires niri 26.04+; validates configs without starting it
+just check-nvim    # isolated theme-path checks; no live DMS or user config
 just fmt           # writes formatting changes
 ```
 

@@ -2,19 +2,20 @@
 set -eEuo pipefail
 
 # Canonical Archway installer. The normal path runs from an already working
-# archinstall Niri+DMS session; the minimal path leaves the base desktop alone.
+# Niri+DMS session; the minimal path leaves the base desktop alone.
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
-DMS_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/DankMaterialShell"
 
 # shellcheck source=infra/lib/common.sh
 . "${SCRIPT_DIR}/infra/lib/common.sh"
 # shellcheck source=infra/lib/platform.sh
 . "${SCRIPT_DIR}/infra/lib/platform.sh"
+# shellcheck source=infra/lib/dms.sh
+. "${SCRIPT_DIR}/infra/lib/dms.sh"
 
-SCRIPT_VERSION="2026-08-08-3"
+SCRIPT_VERSION="2026-10-27-1"
 
 die() {
 	log_error "$1"
@@ -32,7 +33,7 @@ Usage:
   ./install.sh dms-config
 
 Commands:
-  install      Configure an existing archinstall Niri+DMS base (default)
+  install      Configure an existing Niri+DMS base (default)
   minimal      Core + dotfiles + secrets; leave the base desktop untouched
   secrets      Onboard/validate the age key and decrypt secret targets
   dms-config   Reapply portable preferences to an active Niri+DMS session
@@ -65,53 +66,45 @@ ensure_desktop_baseline() {
 	fi
 }
 
-validate_greetd_command() {
-	local config="/etc/greetd/config.toml"
-	local command_line=""
-	local token=""
-	local wrapper=""
-	local command_parts=()
+validate_display_manager() {
+	local unit_path
+	local unit
 
-	systemctl is-enabled greetd.service >/dev/null 2>&1 ||
-		die "greetd is not enabled. Install Arch with archinstall's Niri + DankMaterialShell profile before running the normal installer."
-	[[ -r "$config" ]] ||
-		die "Cannot read $config. Repair the archinstall Niri+DMS base before deploying Archway."
-
-	command_line="$(sed -n '/^[[:space:]]*\[default_session\][[:space:]]*$/,/^[[:space:]]*\[/s/^[[:space:]]*command[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | sed -n '1p')"
-	[[ -n "$command_line" ]] || die "No greetd default-session command was found in $config."
-	[[ "$command_line" == *dms-greeter* ]] ||
-		die "greetd is not configured for the DMS greeter. Archway will not replace the display manager selected by the OS installer."
-
-	read -r -a command_parts <<<"$command_line"
-	for token in "${command_parts[@]}"; do
-		token="${token#\"}"
-		token="${token%\"}"
-		if [[ "$token" == /*dms-greeter* ]]; then
-			wrapper="$token"
-			break
-		fi
-	done
-	[[ -n "$wrapper" ]] || die "Could not resolve the DMS greeter executable from $config."
-	[[ -x "$wrapper" ]] ||
-		die "greetd points to missing or non-executable $wrapper. Repair the OS-provided DMS greeter before rebooting; Archway will not rewrite it."
+	# Check the persistent boot selection, not merely a running login process.
+	# readlink -e rejects dangling links after a package removal or upgrade.
+	unit_path="$(readlink -e /etc/systemd/system/display-manager.service)" ||
+		die "No installed display manager is selected for boot. Enable your chosen login manager before running the full installer; Archway will not select one."
+	unit="${unit_path##*/}"
+	[[ -f "$unit_path" && "$unit" == *.service ]] ||
+		die "The display-manager.service target is invalid or masked. Repair your chosen login manager before deploying Archway."
+	[[ "$(systemctl show "$unit" --property=LoadState --value)" == loaded ]] ||
+		die "$unit is not loaded. Repair your chosen login manager before deploying Archway."
+	systemctl is-active "$unit" >/dev/null 2>&1 ||
+		die "$unit is not active. Log in through your chosen login manager before running the full installer."
+	log_info "Keeping the existing display manager: $unit"
 }
 
 ensure_active_niri_dms_session() {
+	local dms_dir
+	# Resolve again after upgrades: DMS 2.0 migrates the directory on launch.
+	dms_dir="$(dms_config_dir)"
 	command -v niri >/dev/null 2>&1 ||
-		die "niri is missing. Install Niri through the base OS or upstream DMS installer first."
+		die "niri is missing. Install Niri through the base OS or upstream Dux Installer first (docs/DMS.md)."
 	command -v dms >/dev/null 2>&1 ||
-		die "DMS is missing. Install it through archinstall's Niri+DMS profile or the upstream DMS installer first."
-	[[ -d "$DMS_DIR" ]] ||
-		die "DMS has not initialized $DMS_DIR. Log into Niri+DMS once before applying Archway preferences."
+		die "DMS is missing. Use the upstream Dux Installer first; see docs/INSTALL-ARCH.md for current archinstall profile caveats."
+	niri validate -c "${REPO_ROOT}/dots/niri/config.kdl" ||
+		die "The installed niri cannot validate Archway's configuration. Use niri 26.04 or newer and resolve the errors above before applying preferences."
+	[[ -d "$dms_dir" ]] ||
+		die "DMS has not initialized $dms_dir. Log into Niri+DMS once before applying Archway preferences."
 	systemctl --user is-active niri.service >/dev/null 2>&1 ||
 		die "niri.service is not active. Run this command from an active Niri+DMS session."
 	systemctl --user is-active dms.service >/dev/null 2>&1 ||
 		die "dms.service is not active. Repair the Niri+DMS session before applying Archway preferences."
 }
 
-ensure_archinstall_niri_dms_baseline() {
+ensure_niri_dms_baseline() {
 	ensure_active_niri_dms_session
-	validate_greetd_command
+	validate_display_manager
 }
 
 install_core_and_dotfiles() {
@@ -147,14 +140,14 @@ run_install() {
 	ensure_supported_platform
 	[[ $EUID -ne 0 ]] || die "Run as a regular user, not root."
 	ensure_desktop_baseline
-	ensure_archinstall_niri_dms_baseline
+	ensure_niri_dms_baseline
 
 	install_core_and_dotfiles
 
 	# Core performs a full package upgrade. Revalidate the distro-owned desktop
-	# and greeter afterward, before applying any user configuration.
+	# and selected display manager afterward, before applying DMS preferences.
 	ensure_desktop_baseline
-	ensure_archinstall_niri_dms_baseline
+	ensure_niri_dms_baseline
 
 	if ! "${REPO_ROOT}/infra/bootstrap.sh" extras --no-upgrade; then
 		log_warn "Some optional applications failed. The core and DMS configuration can continue."
