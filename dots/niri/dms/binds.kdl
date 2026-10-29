@@ -77,6 +77,7 @@ binds {
     Mod+Ctrl+WheelScrollLeft { move-column-left; }
     Mod+Ctrl+WheelScrollRight { move-column-right; }
     Mod+Down { focus-window-down; }
+    Mod+E hotkey-overlay-title="Open Files" { spawn "nautilus" "--new-window"; }
     Mod+End { focus-column-last; }
     Mod+Equal { set-column-width "+10%"; }
     Mod+F { maximize-column; }
@@ -123,24 +124,19 @@ binds {
     Ctrl+Print { screenshot-screen; }
     Ctrl+XF86Launch1 { screenshot-screen; }
     Print { screenshot; }
-    Super+Shift+S { screenshot; }
     Super+Shift+A { spawn "annotate-screenshot"; }
+    Super+Shift+S { screenshot; }
     Mod+Shift+E { quit; }
+    Mod+A hotkey-overlay-title="arXiv Search" { spawn "arxiv-search"; }
+    Mod+Alt+B hotkey-overlay-title="DOI/arXiv to BibTeX" { spawn "doi2bib"; }
+    Mod+Alt+T hotkey-overlay-title="Translate Clipboard" { spawn "translate-clip"; }
+    Mod+B hotkey-overlay-title="Open Browser" { spawn "librewolf"; }
+    Mod+G hotkey-overlay-title="Quick Research Note" { spawn "quick-note"; }
+    Mod+P hotkey-overlay-title="Open Bitwarden" { spawn "bitwarden"; }
     Mod+Return hotkey-overlay-title="Open Terminal" { spawn "ghostty"; }
+    Mod+Y hotkey-overlay-title="Open Yazi" { spawn "ghostty" "-e" "yazi"; }
     Mod+D repeat=false { toggle-overview; }
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
     Mod+Shift+Slash { show-hotkey-overlay; }
     Mod+Tab repeat=false { toggle-overview; }
-
-    // Application launchers
-    Mod+B hotkey-overlay-title="Open Browser" { spawn "firefox"; }
-    Mod+E hotkey-overlay-title="Open Files" { spawn "nautilus" "--new-window"; }
-    Mod+P hotkey-overlay-title="Open Bitwarden" { spawn "bitwarden"; }
-    Mod+Y hotkey-overlay-title="Open Yazi" { spawn "ghostty" "-e" "yazi"; }
-
-    // Research launcher workflows
-    Mod+A hotkey-overlay-title="arXiv Search" { spawn "arxiv-search"; }
-    Mod+Alt+B hotkey-overlay-title="DOI/arXiv to BibTeX" { spawn "doi2bib"; }
-    Mod+G hotkey-overlay-title="Quick Research Note" { spawn "quick-note"; }
-    Mod+Alt+T hotkey-overlay-title="Translate Clipboard" { spawn "translate-clip"; }
 }

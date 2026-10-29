@@ -1,17 +1,5 @@
-// DMS Window Rules - Managed by DankMaterialShell
+// DMS Window Rules - Managed by Dux Shell
 // Do not edit manually - changes may be overwritten
-
-// @id=wr_1771493762109778571 @name=zen
-window-rule {
-    match app-id="^zen$"
-    open-maximized true
-}
-
-// @id=wr_1785832932152255176 @name=com.mitchellh.ghostty
-window-rule {
-    match app-id="^com.mitchellh.ghostty$"
-    open-maximized true
-}
 
 // @id=wr_1786086469169706710 @name=Bitwarden
 window-rule {
@@ -30,4 +18,30 @@ window-rule {
     match app-id="^org.gnome.Nautilus$"
     opacity 0.75
     open-floating false
+}
+
+// @id=dms-floating-windows @name=DMS Floating Windows
+window-rule {
+    match app-id="^(dev\\.duxlabs\\.shell|com\\.danklinux\\.dms)$"
+    open-floating true
+}
+
+// @id=wr_1793255923380632380 @name=com.mitchellh.ghostty
+window-rule {
+    match app-id="^com.mitchellh.ghostty$"
+    opacity 0.75
+    open-maximized true
+}
+
+// @id=wr_1793256043331034548 @name=librewolf
+window-rule {
+    match app-id="^librewolf$"
+    open-maximized true
+    open-fullscreen true
+}
+
+// @id=dms-window-opaque @name=DMS Window Opaque
+window-rule {
+    match app-id="^(dev\\.duxlabs\\.shell|com\\.danklinux\\.dms)$"
+    opacity 1.00
 }
