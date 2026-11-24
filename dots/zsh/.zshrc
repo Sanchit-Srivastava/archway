@@ -245,6 +245,9 @@ fi
 alias please='sudo'
 alias df='df -h'
 
+# Capture in the synced notebook; the notebook owns the script and template.
+alias notes='"$HOME/notes/scripts/notes"'
+
 # Quick config edits
 alias zshconfig='${EDITOR:-nvim} ~/.zshrc'
 if [[ "$(uname)" != "Darwin" ]]; then
